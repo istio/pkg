@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"istio.io/istio/pkg/log"
+	"istio.io/common/pkg/log"
 )
 
 // The type of a variable's value
