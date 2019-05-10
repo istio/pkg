@@ -21,7 +21,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 
-	"istio.io/istio/pkg/log"
+	"istio.io/common/pkg/log"
 )
 
 // Note that this code uses go.opencensus.io/stats,
@@ -48,7 +48,7 @@ func (b BuildInfo) recordBuildTag(component string, newTagCtxFn func(context.Con
 	ctx := context.Background()
 	var err error
 	if ctx, err = newTagCtxFn(ctx, tag.Insert(gitTagKey, b.GitTag), tag.Insert(componentTagKey, component)); err != nil {
-		log.Errorf("could not establish build and component tag keys in context: %v", err)
+		log.Errorf("Could not establish build and component tag keys in context: %v", err)
 	}
 	stats.Record(ctx, istioBuildTag.M(1))
 }
