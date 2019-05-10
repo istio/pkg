@@ -20,9 +20,9 @@ import (
 	"sync"
 	"syscall"
 
-	"istio.io/istio/pkg/log"
-
 	"github.com/howeyc/fsnotify"
+
+	"istio.io/common/pkg/log"
 )
 
 var handlers struct {

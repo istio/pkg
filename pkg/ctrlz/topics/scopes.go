@@ -22,9 +22,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"istio.io/istio/pkg/ctrlz/fw"
-	"istio.io/istio/pkg/ctrlz/topics/assets"
-	"istio.io/istio/pkg/log"
+	"istio.io/common/pkg/ctrlz/fw"
+	"istio.io/common/pkg/ctrlz/topics/assets"
+	"istio.io/common/pkg/log"
 )
 
 type scopeTopic struct {

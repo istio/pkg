@@ -19,8 +19,8 @@ import (
 	"net/http"
 	"os"
 
-	"istio.io/istio/pkg/ctrlz/fw"
-	"istio.io/istio/pkg/ctrlz/topics/assets"
+	"istio.io/common/pkg/ctrlz/fw"
+	"istio.io/common/pkg/ctrlz/topics/assets"
 )
 
 type argsTopic struct {

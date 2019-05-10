@@ -21,8 +21,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prom2json"
 
-	"istio.io/istio/pkg/ctrlz/fw"
-	"istio.io/istio/pkg/ctrlz/topics/assets"
+	"istio.io/common/pkg/ctrlz/fw"
+	"istio.io/common/pkg/ctrlz/topics/assets"
 )
 
 type metricsTopic struct {

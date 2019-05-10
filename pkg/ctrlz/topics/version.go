@@ -18,9 +18,9 @@ import (
 	"html/template"
 	"net/http"
 
-	"istio.io/istio/pkg/ctrlz/fw"
-	"istio.io/istio/pkg/ctrlz/topics/assets"
-	"istio.io/istio/pkg/version"
+	"istio.io/common/pkg/ctrlz/fw"
+	"istio.io/common/pkg/ctrlz/topics/assets"
+	"istio.io/common/pkg/version"
 )
 
 type versionTopic struct {
