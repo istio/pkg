@@ -29,7 +29,10 @@ jobs:
       - checkout
       - run:
           name: Running unit tests
-          command: go test -race ./...
+          command: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - run:
+          name: Uploading code coverage data
+          command: bash <(curl -s https://codecov.io/bash)
 
 workflows:
   version: 2
