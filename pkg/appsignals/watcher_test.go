@@ -101,3 +101,10 @@ func TestReloadWatcher(t *testing.T) {
 		// Success
 	}
 }
+
+func TestBadPath(t *testing.T) {
+	err := FileTrigger("XXXXYYYY", syscall.SIGUSR2, nil)
+	if err == nil {
+		t.Error("Expecting error, got success")
+	}
+}
