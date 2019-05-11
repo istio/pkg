@@ -6,11 +6,14 @@ replace github.com/golang/glog => github.com/istio/glog v0.0.0-20190424172949-d7
 
 require (
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.7.1
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/onsi/gomega v1.5.0
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/prom2json v1.1.0
 	github.com/spf13/cobra v0.0.3
