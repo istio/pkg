@@ -1,5 +1,6 @@
 [![CircleCI](https://circleci.com/gh/istio/common.svg?style=svg)](https://circleci.com/gh/istio/common)
 [![Mergify Status](https://gh.mergify.io/badges/istio/common.png?style=cut)](https://mergify.io)
+[![codecov](https://codecov.io/gh/istio/common/branch/master/graph/badge.svg)](https://codecov.io/gh/istio/common)
 
 # Istio Common Functionality
 

@@ -1,5 +1,5 @@
 coverage:
-  precision: 0
-  round: up
-  range: 60..99
   ignore:
+    - pkg/ctrlz/assets/**/*
+    - pkg/ctrlz/topics/assets/**/*
+    - pkg/collateral
