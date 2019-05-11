@@ -32,7 +32,7 @@ jobs:
           command: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       - run:
           name: Uploading code coverage data
-          command: bash <(curl -s https://codecov.io/bash)
+          command: bash <(curl -s https://codecov.io/bash) -F unittests
 
 workflows:
   version: 2

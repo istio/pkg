@@ -5,6 +5,7 @@ pull_request_rules:
       - "status-success=ci/circleci: test"
       - "status-success=ci/circleci: lint"
       - status-success=cla/google
+      - status-success=codecov/project
       - "#approved-reviews-by>=1"
       - label!=do-not-merge
       - label!=do-not-merge/work-in-progress
