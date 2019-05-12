@@ -54,18 +54,17 @@ func (d *dummyFileInfo) Sys() interface{} {
 func TestFileClient(t *testing.T) {
 	d := &dummyFileInfo{}
 	var statErr error
-	fc := &fileClient{
-		opt: &Options{
-			Path:           "test",
-			UpdateInterval: time.Minute,
-		},
-		statFunc: func(path string) (os.FileInfo, error) {
-			if statErr != nil {
-				return nil, statErr
-			}
-			d.calledCount++
-			return d, nil
-		},
+	fc := NewFileClient(&Options{
+		Path:           "test",
+		UpdateInterval: time.Minute,
+	}).(*fileClient)
+
+	fc.statFunc = func(path string) (os.FileInfo, error) {
+		if statErr != nil {
+			return nil, statErr
+		}
+		d.calledCount++
+		return d, nil
 	}
 
 	statErr = errors.New("dummy")

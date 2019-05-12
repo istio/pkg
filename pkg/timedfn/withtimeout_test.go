@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wait
+package timedfn
 
 import (
-	"fmt"
+	"testing"
 	"time"
 )
 
-// WithTimeout waits for the function to complete or the given timeout to expire.
-func WithTimeout(fn func(), timeout time.Duration) error {
-	c := make(chan struct{}, 1)
-	go func() {
-		defer close(c)
-		fn()
-	}()
+func TestTimeout(t *testing.T) {
+	err := WithTimeout(func() {
+		time.Sleep(time.Hour * 256)
+	}, time.Millisecond*10)
 
-	select {
-	case <-c:
-		return nil
-	case <-time.After(timeout):
-		return fmt.Errorf("timed out while waiting for requested action to complete")
+	if err == nil {
+		t.Errorf("Expecting timeout, but didn't get one")
+	}
+}
+
+func TestNoTimeout(t *testing.T) {
+	err := WithTimeout(func() {
+	}, time.Hour*256)
+
+	if err != nil {
+		t.Errorf("Expecting no timeout, but get one: %v", err)
 	}
 }
