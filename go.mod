@@ -1,4 +1,4 @@
-module istio.io/common
+module istio.io/pkg
 
 go 1.12
 

@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: gcr.io/istio-testing/circleci:2019-04-22
-    working_directory: /go/src/istio.io/common
+    working_directory: /go/src/istio.io/pkg
     steps:
       - checkout
       - run:
@@ -14,7 +14,7 @@ jobs:
   lint:
     docker:
       - image: gcr.io/istio-testing/circleci:2019-04-22
-    working_directory: /go/src/istio.io/common
+    working_directory: /go/src/istio.io/pkg
     steps:
       - checkout
       - run:
@@ -24,7 +24,7 @@ jobs:
   test:
     docker:
       - image: gcr.io/istio-testing/circleci:2019-04-22
-    working_directory: /go/src/istio.io/common
+    working_directory: /go/src/istio.io/pkg
     steps:
       - checkout
       - run:

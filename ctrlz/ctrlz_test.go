@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"istio.io/common/pkg/appsignals"
+	"istio.io/pkg/appsignals"
 )
 
 func TestStartStopEnabled(t *testing.T) {
