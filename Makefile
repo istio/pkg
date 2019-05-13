@@ -3,3 +3,6 @@ lint:
 
 format:
 	@scripts/fmt.sh
+
+gen:
+	@go generate ./...
