@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Copyright 2019 Istio Authors
+# Copyright 2018 Istio Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -ex
-
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOTDIR=$(dirname "${SCRIPTPATH}")
 
-cd "${ROOTDIR}"
+img=gcr.io/istio-testing/go_generate_dependency:2018-07-26
 
-function install_golangcilint() {
-    # if you want to update this version, also change the version number in .golangci.yml
-    GOLANGCI_VERSION="v1.16.0"
-    curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b "$GOPATH"/bin "$GOLANGCI_VERSION"
-    golangci-lint --version
-}
-
-function run_golangcilint() {
-    echo 'Running golangci-lint ...'
-    env GOGC=25 golangci-lint run -j 1 -v ./...
-}
-
-install_golangcilint
-run_golangcilint
+docker run -i --sig-proxy=true --rm --entrypoint go-bindata -v "${ROOTDIR}:${ROOTDIR}" -w "$(pwd)" ${img} "$@"
