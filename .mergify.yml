@@ -3,7 +3,7 @@ pull_request_rules:
     conditions:
       - "status-success=ci/circleci: build"
       - "status-success=ci/circleci: test"
-      - "status-success=ci/circleci: lint"
+      - "status-success=GolangCI"
       - status-success=cla/google
       - status-success=codecov/project
       - "#approved-reviews-by>=1"

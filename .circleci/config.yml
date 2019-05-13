@@ -11,16 +11,6 @@ jobs:
           command:
             go build ./...
 
-  lint:
-    docker:
-      - image: gcr.io/istio-testing/circleci:2019-04-22
-    working_directory: /go/src/istio.io/pkg
-    steps:
-      - checkout
-      - run:
-          name: Linting
-          command: make lint
-
   test:
     docker:
       - image: gcr.io/istio-testing/circleci:2019-04-22
@@ -38,6 +28,5 @@ workflows:
   version: 2
   all:
     jobs:
-      - lint
       - build
       - test
