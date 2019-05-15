@@ -19,7 +19,7 @@ import (
 	"sort"
 
 	configpb "istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/pkg/pool"
+	"istio.io/pkg/pool"
 )
 
 // AttributeDescriptorFinder finds attribute descriptors.
