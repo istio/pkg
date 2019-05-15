@@ -15,19 +15,23 @@
 package attribute_test
 
 import (
+	"reflect"
 	"testing"
 
-	"istio.io/istio/mixer/pkg/attribute"
+	"istio.io/pkg/attribute"
 )
 
-func TestListEqual(t *testing.T) {
-	a := attribute.NewList("attr")
-	a.Append("x")
-	b := attribute.NewListForTesting("attr", []interface{}{"x"})
+func TestStringMapEqual(t *testing.T) {
+	a := attribute.NewStringMap("attr")
+	a.Set("x", "y")
+	b := attribute.WrapStringMap(map[string]string{"x": "y"})
 	if !a.Equal(b) {
 		t.Errorf("%v.Equal(%v) => got false", a, b)
 	}
 	if !attribute.Equal(a, b) {
 		t.Errorf("Equal(%v, %v) => got false", a, b)
+	}
+	if !reflect.DeepEqual(map[string]string{"x": "y"}, b.Entries()) {
+		t.Errorf("Entries() => got %#v, want 'x': 'y'", b.Entries())
 	}
 }
