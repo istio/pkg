@@ -4,6 +4,8 @@ go 1.12
 
 replace github.com/golang/glog => github.com/istio/glog v0.0.0-20190424172949-d7cfb6fa2ccd
 
+replace github.com/spf13/viper => github.com/istio/viper v1.3.3-0.20190515210538-2789fed3109c
+
 require (
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
@@ -20,6 +22,7 @@ require (
 	github.com/prometheus/prom2json v1.1.0
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
+	github.com/spf13/viper v1.3.2
 	go.opencensus.io v0.20.1
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
