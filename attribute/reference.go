@@ -48,10 +48,10 @@ type ReferenceTracker interface {
 	// Reference records access of an attribute by name.
 	Reference(name string, condition Presence)
 
-	// ClearReferencedAttributes clears the list of referenced attributes being tracked by this bag
+	// Clear the list of referenced attributes being tracked by this bag
 	Clear()
 
-	// RestoreReferencedAttributes sets the list of referenced attributes being tracked by this bag
+	// Restore the list of referenced attributes being tracked by this bag
 	Restore(snap ReferencedAttributeSnapshot)
 
 	// Snapshot grabs a snapshot of the currently referenced attributes

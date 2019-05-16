@@ -30,10 +30,11 @@ type StringMap struct {
 }
 
 // NewStringMap instantiates a new string map.
-func NewStringMap(name string) StringMap {
+func NewStringMap(name string, entries map[string]string, owner Bag) StringMap {
 	return StringMap{
 		name:    name,
-		entries: make(map[string]string, 1),
+		entries: entries,
+		owner:   owner,
 	}
 }
 
@@ -78,7 +79,7 @@ func (s StringMap) copyValue() StringMap {
 	for k2, v2 := range s.entries {
 		c[k2] = v2
 	}
-	return StringMap{name: s.name, entries: c, owner: s.owner}
+	return NewStringMap(s.name, c, s.owner)
 }
 
 // String returns a string representation of the entries in the string map
