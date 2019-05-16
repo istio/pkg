@@ -51,6 +51,9 @@ type Bag interface {
 
 	// Done indicates the bag can be reclaimed.
 	Done()
+
+	// ReferenceTracker keeps track of bag accesses (optionally)
+	ReferenceTracker() ReferenceTracker
 }
 
 // Equal compares two attribute values.
