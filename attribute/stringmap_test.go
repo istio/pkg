@@ -22,7 +22,7 @@ import (
 )
 
 func TestStringMapEqual(t *testing.T) {
-	a := attribute.NewStringMap("attr")
+	a := attribute.NewStringMap("attr", make(map[string]string, 1), nil)
 	a.Set("x", "y")
 	b := attribute.WrapStringMap(map[string]string{"x": "y"})
 	if !a.Equal(b) {
