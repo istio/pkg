@@ -17,8 +17,6 @@ package attribute
 import (
 	"fmt"
 	"reflect"
-
-	mixerpb "istio.io/api/mixer/v1"
 )
 
 // StringMap wraps a map[string]string and optionally reference counts it
@@ -27,8 +25,8 @@ type StringMap struct {
 	name string
 	// entries in the stringmap
 	entries map[string]string
-	// protoBag that owns this stringmap
-	pb *ProtoBag
+	// bag that owns this stringmap
+	owner Bag
 }
 
 // NewStringMap instantiates a new string map.
@@ -54,14 +52,17 @@ func (s StringMap) Get(key string) (string, bool) {
 	str, found := s.entries[key]
 
 	// the string map may be detached from the owning bag
-	if s.pb != nil {
-		cond := mixerpb.ABSENCE
-		if found {
-			cond = mixerpb.EXACT
-		}
+	if s.owner != nil {
+		tracker := s.owner.ReferenceTracker()
+		if tracker != nil {
+			cond := Absence
+			if found {
+				cond = Exact
+			}
 
-		// TODO add REGEX condition
-		s.pb.trackMapReference(s.name, key, cond)
+			// TODO add REGEX condition
+			tracker.MapReference(s.name, key, cond)
+		}
 	}
 
 	return str, found
@@ -77,7 +78,7 @@ func (s StringMap) copyValue() StringMap {
 	for k2, v2 := range s.entries {
 		c[k2] = v2
 	}
-	return StringMap{name: s.name, entries: c, pb: s.pb}
+	return StringMap{name: s.name, entries: c, owner: s.owner}
 }
 
 // String returns a string representation of the entries in the string map
