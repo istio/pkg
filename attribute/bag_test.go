@@ -20,12 +20,9 @@ import (
 )
 
 var (
-	t9  = time.Date(2001, 1, 1, 1, 1, 1, 9, time.UTC)
-	t10 = time.Date(2001, 1, 1, 1, 1, 1, 10, time.UTC)
-	t42 = time.Date(2001, 1, 1, 1, 1, 1, 42, time.UTC)
+	t9 = time.Date(2001, 1, 1, 1, 1, 1, 9, time.UTC)
 
 	d1 = 42 * time.Second
-	d2 = 34 * time.Second
 )
 
 func TestMerge(t *testing.T) {
