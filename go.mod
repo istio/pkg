@@ -30,4 +30,5 @@ require (
 	google.golang.org/grpc v1.20.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
+	istio.io/api v0.0.0-20190515205759-982e5c3888c6
 )
