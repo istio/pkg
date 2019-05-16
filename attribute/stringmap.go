@@ -30,6 +30,7 @@ type StringMap struct {
 }
 
 // NewStringMap instantiates a new string map.
+// The stringmap takes ownership of the provided map.
 func NewStringMap(name string, entries map[string]string, owner Bag) StringMap {
 	return StringMap{
 		name:    name,
