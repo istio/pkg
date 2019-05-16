@@ -14,8 +14,8 @@
 
 package attribute
 
-// AttributeRef is a reference to an attribute.
-type AttributeRef struct {
+// Reference is a reference to an attribute.
+type Reference struct {
 	Name   string
 	MapKey string
 }
@@ -37,7 +37,7 @@ const (
 // once, the RestoreReferencedAttributes call is destructive.
 type ReferencedAttributeSnapshot struct {
 	// ReferenceAttrs is a collection of references to attributes
-	ReferencedAttrs map[AttributeRef]Presence
+	ReferencedAttrs map[Reference]Presence
 }
 
 // ReferenceTracker for an attribute bag

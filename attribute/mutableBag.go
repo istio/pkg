@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"istio.io/pkg/log"
 )
 
 // MutableBag is a generic mechanism to read and write a set of attributes.
@@ -41,8 +39,6 @@ var mutableBags = sync.Pool{
 		}
 	},
 }
-
-var scope = log.RegisterScope("attributes", "Attribute-related messages.", 0)
 
 // GetMutableBag returns an initialized bag.
 //
