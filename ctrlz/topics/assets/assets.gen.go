@@ -535,14 +535,14 @@ var _templatesMetricsHtml = []byte(`{{ define "content" }}
 {{ range . }}
     {{ if .Metrics }}
         <div class="card metric-card">
-            <div class="card-header metric-header" onclick="$('#{{.Name}}').collapse('toggle')" role="button" aria-expanded="false" aria-controls="{{.Name}}">
-                {{.Name}} [{{.Type}}]</a>
+            <div class="card-header metric-header" onclick="$('#{{.Name | normalize}}').collapse('toggle')" role="button" aria-expanded="false" aria-controls="{{.Name}}">
+                {{.Name}} - {{.Help}} [{{.Type}}]
             </div>
 
-            <div id="{{.Name}}" class="collapse">
+            <div id="{{.Name | normalize }}" class="collapse">
                 <div class="card-body metric-body">
                     <table class="metric-table">
-                        {{ if eq .Type "GAUGE" "COUNTER" "UNTYPED" }}
+                        {{ if eq .Type "GAUGE" "COUNTER" "UNTYPED" "LASTVALUE" "COUNT" }}
                             <thead>
                                 <tr>
                                     <th>Labels</th>
