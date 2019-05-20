@@ -68,24 +68,24 @@
 {{ template "last-refresh" .}}
 
 <script>
-    "use strict"
+    "use strict";
 
     function refreshScopes() {
-        var url = window.location.protocol + "//" + window.location.host + "/scopej/";
+        let url = window.location.protocol + "//" + window.location.host + "/scopej/";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var si = JSON.parse(this.responseText);
-                for (var i = 0; i < si.length; i++) {
-                    var info = si[i]
+            if (this.status === 200) { // request succeeded
+                let si = JSON.parse(this.responseText);
+                for (let i = 0; i < si.length; i++) {
+                    let info = si[i];
 
-                    var tr = document.getElementById(info.name);
+                    let tr = document.getElementById(info.name);
                     tr.querySelector("#outputLevel").innerText = info.output_level;
                     tr.querySelector("#stackTraceLevel").innerText = info.stack_trace_level;
                     tr.querySelector("#logCallers").checked = info.log_callers;
@@ -101,22 +101,22 @@
     }
 
     function selectOutputLevel(element, level) {
-        var scope = element.parentElement.parentElement.parentElement.parentElement.id;
+        let scope = element.parentElement.parentElement.parentElement.parentElement.id;
 
-        var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-        var ajax = new XMLHttpRequest();
+        let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var si = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let si = JSON.parse(this.responseText);
                 si.output_level = level;
 
-                var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-                var ajax = new XMLHttpRequest();
+                let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+                let ajax = new XMLHttpRequest();
                 ajax.onload = onload2;
                 ajax.onerror = onerror;
                 ajax.open("PUT", url, true);
@@ -134,22 +134,22 @@
     }
 
     function selectStackTraceLevel(element, level) {
-        var scope = element.parentElement.parentElement.parentElement.parentElement.id;
+        let scope = element.parentElement.parentElement.parentElement.parentElement.id;
 
-        var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-        var ajax = new XMLHttpRequest();
+        let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var si = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let si = JSON.parse(this.responseText);
                 si.stack_trace_level = level;
 
-                var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-                var ajax = new XMLHttpRequest();
+                let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+                let ajax = new XMLHttpRequest();
                 ajax.onload = onload2;
                 ajax.onerror = onerror;
                 ajax.open("PUT", url, true);
@@ -167,23 +167,23 @@
     }
 
     function toggleLogCallers(checkbox) {
-        var scope = checkbox.parentElement.parentElement.id;
-        var logCallers = checkbox.checked;
+        let scope = checkbox.parentElement.parentElement.id;
+        let logCallers = checkbox.checked;
 
-        var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-        var ajax = new XMLHttpRequest();
+        let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var si = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let si = JSON.parse(this.responseText);
                 si.log_callers = logCallers;
 
-                var url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
-                var ajax = new XMLHttpRequest();
+                let url = window.location.protocol + "//" + window.location.host + "/scopej/" + scope;
+                let ajax = new XMLHttpRequest();
                 ajax.onload = onload2;
                 ajax.onerror = onerror;
                 ajax.open("PUT", url, true);

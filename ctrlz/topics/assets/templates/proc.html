@@ -78,20 +78,20 @@
 {{ template "last-refresh" .}}
 
 <script>
-    "use strict"
+    "use strict";
 
     function refreshProcStats() {
-        var url = window.location.protocol + "//" + window.location.host + "/procj/";
+        let url = window.location.protocol + "//" + window.location.host + "/procj/";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var pi = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let pi = JSON.parse(this.responseText);
                 document.getElementById("Threads").innerText = pi.threads;
                 document.getElementById("Goroutines").innerText = pi.goroutines;
 

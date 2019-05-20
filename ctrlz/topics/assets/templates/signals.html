@@ -5,17 +5,17 @@
 </p>
 
 <br>
-<button class="btn btn-istio" onclick="sendSIGUSR1()">SIGUSR1 (Reload Config)</button>
+<button class="btn btn-istio" onclick="sendSIGUSR1()">SIGUSR1</button>
 
 {{ template "last-refresh" .}}
 
 <script>
-    "use strict"
+    "use strict";
 
     function sendSIGUSR1() {
-        var url = window.location.protocol + "//" + window.location.host + "/signalj/SIGUSR1";
+        let url = window.location.protocol + "//" + window.location.host + "/signalj/SIGUSR1";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("PUT", url, true);

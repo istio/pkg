@@ -38,7 +38,7 @@ func TestStartStopEnabled(t *testing.T) {
 	}
 }
 
-func TestConfigReloadNotify(t *testing.T) {
+func TestSignals(t *testing.T) {
 	/// Watch the config reload notifier
 	c := make(chan appsignals.Signal, 1)
 	appsignals.Watch(c)
