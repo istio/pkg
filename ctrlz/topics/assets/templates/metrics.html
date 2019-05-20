@@ -91,34 +91,34 @@
 {{ template "last-refresh" .}}
 
 <script>
-    "use strict"
+    "use strict";
 
     function refreshMetrics() {
-        var url = window.location.protocol + "//" + window.location.host + "/metricj/";
+        let url = window.location.protocol + "//" + window.location.host + "/metricj/";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var families = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let families = JSON.parse(this.responseText);
 
-                for (var i = 0; i < families.length; i++) {
-                    var name = families[i].name;
-                    var div = document.getElementById(name);
+                for (let i = 0; i < families.length; i++) {
+                    let name = families[i].name;
+                    let div = document.getElementById(name);
 
                     if (div) {
-                        var tbody = div.getElementsByTagName("TBODY")[0];
-                        for (var j = 0; j < tbody.children.length; j++) {
-                            var tr = tbody.children[j];
-                            var labels_td = tr.children[0];
+                        let tbody = div.getElementsByTagName("TBODY")[0];
+                        for (let j = 0; j < tbody.children.length; j++) {
+                            let tr = tbody.children[j];
+                            let labels_td = tr.children[0];
 
-                            var labels = "";
+                            let labels = "";
                             if (families[i].metrics[j].labels) {
-                                for (var key in families[i].metrics[j].labels) {
+                                for (let key in families[i].metrics[j].labels) {
                                     if (labels.length > 0) {
                                         labels = labels + "<br>";
                                     }
@@ -129,19 +129,18 @@
 
                             labels_td.innerHTML = labels;
 
-                            if (families[i].metrics[j].value != undefined) {
-                                var value_td = tr.children[1];
+                            if (families[i].metrics[j].value !== undefined) {
+                                let value_td = tr.children[1];
                                 value_td.innerText = families[i].metrics[j].value;
                             } else {
-                                var count_td = tr.children[1];
-                                var sum_td = tr.children[2];
+                                let count_td = tr.children[1];
+                                let sum_td = tr.children[2];
                                 count_td.innerText = families[i].metrics[j].count;
                                 sum_td.innerText = families[i].metrics[j].sum;
                             }
                         }
                     }
                 }
-
 
                 updateRefreshTime();
             }

@@ -113,7 +113,7 @@
 
     <script>
         // we do this so there's a useful date in the table, which avoids things shifting around during initial paint
-        var d = new Date().toLocaleString();
+        let d = new Date().toLocaleString();
         document.getElementById("LastGC").innerText = d;
     </script>
 
@@ -149,20 +149,20 @@
 {{ template "last-refresh" .}}
 
 <script>
-    "use strict"
+    "use strict";
 
     function refreshMemStats() {
-        var url = window.location.protocol + "//" + window.location.host + "/memj/";
+        let url = window.location.protocol + "//" + window.location.host + "/memj/";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("GET", url, true);
         ajax.send();
 
         function onload() {
-            if (this.status == 200) { // request succeeded
-                var ms = JSON.parse(this.responseText);
+            if (this.status === 200) { // request succeeded
+                let ms = JSON.parse(this.responseText);
                 document.getElementById("HeapInuse").innerText = ms.HeapInuse.toLocaleString() + " bytes";
                 document.getElementById("TotalAlloc").innerText = ms.TotalAlloc.toLocaleString() + " bytes";
                 document.getElementById("Sys").innerText = ms.Sys.toLocaleString() + " bytes";
@@ -182,14 +182,14 @@
                 document.getElementById("NumGC").innerText = ms.NumGC.toLocaleString() + " GC cycles";
                 document.getElementById("NumForcedGC").innerText = ms.NumForcedGC.toLocaleString() + " GC cycles";
 
-                var d = new Date(ms.LastGC / 1000000).toLocaleString();
+                let d = new Date(ms.LastGC / 1000000).toLocaleString();
                 document.getElementById("LastGC").innerText = d;
 
-                var frac = ms.GCCPUFraction;
+                let frac = ms.GCCPUFraction;
                 if (frac < 0) {
                     frac = 0.0;
                 }
-                var percent = (frac * 100).toFixed(2);
+                let percent = (frac * 100).toFixed(2);
                 document.getElementById("GCCPUFraction").innerText = percent + "%";
 
                 updateRefreshTime();
@@ -202,9 +202,9 @@
     }
 
     function forceCollection() {
-        var url = window.location.protocol + "//" + window.location.host + "/memj/forcecollection";
+        let url = window.location.protocol + "//" + window.location.host + "/memj/forcecollection";
 
-        var ajax = new XMLHttpRequest();
+        let ajax = new XMLHttpRequest();
         ajax.onload = onload;
         ajax.onerror = onerror;
         ajax.open("PUT", url, true);
