@@ -43,6 +43,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"istio.io/pkg/annotations"
+	"istio.io/pkg/collateral/metrics"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -75,6 +76,10 @@ type Control struct {
 	// EmitHTMLFragmentWithFrontMatter controls whether to produce HTML fragments with Jekyll/Hugo front matter.
 	EmitHTMLFragmentWithFrontMatter bool
 
+	// EmitMetricsHTMLFragment controls whether to produce HTML fragments describing the metrics exported by the
+	// process.
+	EmitMetricsHTMLFragment bool
+
 	// ManPageInfo provides extra information necessary when emitting man pages.
 	ManPageInfo doc.GenManHeader
 }
@@ -98,6 +103,12 @@ func EmitCollateral(root *cobra.Command, c *Control) error {
 	if c.EmitHTMLFragmentWithFrontMatter {
 		if err := genHTMLFragment(root, c.OutputDir+"/"+root.Name()+".html"); err != nil {
 			return fmt.Errorf("unable to output HTML fragment file: %v", err)
+		}
+	}
+
+	if c.EmitMetricsHTMLFragment {
+		if err := genMetricsHTML(root, c.OutputDir+"/"+root.Name()+"/metrics.html"); err != nil {
+			return fmt.Errorf("unable to output metrics HTML fragment file: %v", err)
 		}
 	}
 
@@ -339,6 +350,20 @@ func genHTMLFragment(cmd *cobra.Command, path string) error {
 		return err
 	}
 	_, err = g.buffer.WriteTo(f)
+	_ = f.Close()
+
+	return err
+}
+
+func genMetricsHTML(cmd *cobra.Command, path string) error {
+	e := metrics.NewOpenCensusHTMLGenerator()
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	_, err = f.WriteString(e.GenerateHTML())
+	_ = f.Sync()
 	_ = f.Close()
 
 	return err
