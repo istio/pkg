@@ -334,7 +334,7 @@ func genHTMLFragment(cmd *cobra.Command, path string) error {
 
 	g.genVars(cmd)
 	g.genAnnotations(cmd)
-	g.genMetrics(cmd)
+	g.genMetrics()
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -735,7 +735,7 @@ func (g *generator) genAnnotations(root *cobra.Command) {
 	g.emit("</table>")
 }
 
-func (g *generator) genMetrics(root *cobra.Command) {
+func (g *generator) genMetrics() {
 	g.emit(`<h2 id=\"metrics\">Exported Metrics</h2>
 <table class=\"metrics\">
 <thead>
