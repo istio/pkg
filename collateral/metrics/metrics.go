@@ -16,9 +16,9 @@
 // for a binary.
 package metrics
 
-// HTMLGenerator provides an interface for different metrics implementations
-// to deliver HTML presentations of the exported metrics for a binary.
-type HTMLGenerator interface {
-	// GenerateHTML produces a description of exported metrics for a binary in HTML
-	GenerateHTML() string
+// Exported contains the name, type, and description of an exported metric.
+type Exported struct {
+	Name        string
+	Type        string
+	Description string
 }

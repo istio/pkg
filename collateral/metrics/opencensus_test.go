@@ -15,6 +15,7 @@
 package metrics_test
 
 import (
+	"reflect"
 	"testing"
 
 	"go.opencensus.io/stats"
@@ -24,34 +25,16 @@ import (
 	"istio.io/pkg/collateral/metrics"
 )
 
-func TestGenerateHTML(t *testing.T) {
+func TestExportedMetrics(t *testing.T) {
 	registerViews()
-	e := metrics.NewOpenCensusHTMLGenerator()
-
-	if got := e.GenerateHTML(); got != expected {
-		t.Errorf("GenerateHTML() = %v, want %v", got, expected)
+	r := metrics.NewOpenCensusRegistry()
+	if got := r.ExportedMetrics(); !reflect.DeepEqual(got, want) {
+		t.Errorf("ExportedMetrics() = %v, want %v", got, want)
 	}
 }
 
 // stolen shamelessly from mixer pkgs in istio/istio for testing purposes
 var (
-	expected = `<h2 id=\"metrics\">Exported Metrics</h2>
-<table class=\"metrics\">
-<thead>
-<tr><th>Name</th><th>Type</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td>mixer_config_adapter_info_configs_total</td><td>LastValue</td><td>The number of known adapters in the current config.</td></tr>
-<tr><td>mixer_config_attributes_total</td><td>LastValue</td><td>The number of known attributes in the current config.</td></tr>
-<tr><td>mixer_config_handler_configs_total</td><td>LastValue</td><td>The number of known handlers in the current config.</td></tr>
-<tr><td>mixer_config_instance_config_errors_total</td><td>LastValue</td><td>The number of errors encountered during processing of the instance configuration.</td></tr>
-<tr><td>mixer_config_instance_configs_total</td><td>LastValue</td><td>The number of known instances in the current config.</td></tr>
-<tr><td>mixer_config_rule_config_errors_total</td><td>LastValue</td><td>The number of errors encountered during processing of the rule configuration.</td></tr>
-<tr><td>mixer_config_rule_configs_total</td><td>LastValue</td><td>The number of known rules in the current config.</td></tr>
-</tbody>
-</table>
-`
-
 	// AttributesTotal is a measure of the number of known attributes.
 	AttributesTotal = stats.Int64(
 		"mixer/config/attributes_total",
@@ -93,6 +76,16 @@ var (
 		"mixer/config/adapter_info_configs_total",
 		"The number of known adapters in the current config.",
 		stats.UnitDimensionless)
+
+	want = []metrics.Exported{
+		{"mixer_config_adapter_info_configs_total", "LastValue", "The number of known adapters in the current config."},
+		{"mixer_config_attributes_total", "LastValue", "The number of known attributes in the current config."},
+		{"mixer_config_handler_configs_total", "LastValue", "The number of known handlers in the current config."},
+		{"mixer_config_instance_config_errors_total", "LastValue", "The number of errors encountered during processing of the instance configuration."},
+		{"mixer_config_instance_configs_total", "LastValue", "The number of known instances in the current config."},
+		{"mixer_config_rule_config_errors_total", "LastValue", "The number of errors encountered during processing of the rule configuration."},
+		{"mixer_config_rule_configs_total", "LastValue", "The number of known rules in the current config."},
+	}
 )
 
 func newView(measure stats.Measure, keys []tag.Key, aggregation *view.Aggregation) *view.View {

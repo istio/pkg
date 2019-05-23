@@ -76,10 +76,6 @@ type Control struct {
 	// EmitHTMLFragmentWithFrontMatter controls whether to produce HTML fragments with Jekyll/Hugo front matter.
 	EmitHTMLFragmentWithFrontMatter bool
 
-	// EmitMetricsHTMLFragment controls whether to produce HTML fragments describing the metrics exported by the
-	// process.
-	EmitMetricsHTMLFragment bool
-
 	// ManPageInfo provides extra information necessary when emitting man pages.
 	ManPageInfo doc.GenManHeader
 }
@@ -103,12 +99,6 @@ func EmitCollateral(root *cobra.Command, c *Control) error {
 	if c.EmitHTMLFragmentWithFrontMatter {
 		if err := genHTMLFragment(root, c.OutputDir+"/"+root.Name()+".html"); err != nil {
 			return fmt.Errorf("unable to output HTML fragment file: %v", err)
-		}
-	}
-
-	if c.EmitMetricsHTMLFragment {
-		if err := genMetricsHTML(root, c.OutputDir+"/"+root.Name()+"/metrics.html"); err != nil {
-			return fmt.Errorf("unable to output metrics HTML fragment file: %v", err)
 		}
 	}
 
@@ -344,26 +334,13 @@ func genHTMLFragment(cmd *cobra.Command, path string) error {
 
 	g.genVars(cmd)
 	g.genAnnotations(cmd)
+	g.genMetrics(cmd)
 
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	_, err = g.buffer.WriteTo(f)
-	_ = f.Close()
-
-	return err
-}
-
-func genMetricsHTML(cmd *cobra.Command, path string) error {
-	e := metrics.NewOpenCensusHTMLGenerator()
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(e.GenerateHTML())
-	_ = f.Sync()
 	_ = f.Close()
 
 	return err
@@ -756,4 +733,23 @@ func (g *generator) genAnnotations(root *cobra.Command) {
 
 	g.emit("</tbody>")
 	g.emit("</table>")
+}
+
+func (g *generator) genMetrics(root *cobra.Command) {
+	g.emit(`<h2 id=\"metrics\">Exported Metrics</h2>
+<table class=\"metrics\">
+<thead>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+`)
+
+	r := metrics.NewOpenCensusRegistry()
+	for _, metric := range r.ExportedMetrics() {
+		g.emit("<tr><td>", metric.Name, "</td><td>", metric.Type, "</td><td>", metric.Description, "</td></tr>")
+	}
+
+	g.emit(`</tbody>
+</table>
+`)
 }

@@ -17,95 +17,63 @@ package metrics
 import (
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opencensus.io/stats/view"
 )
 
-const (
-	tableHeader = `<h2 id=\"metrics\">Exported Metrics</h2>
-<table class=\"metrics\">
-<thead>
-<tr><th>Name</th><th>Type</th><th>Description</th></tr>
-</thead>
-<tbody>
-`
-	tableFooter = `</tbody>
-</table>
-`
-)
-
-// openCensusHTMLGenerator implements the metrics.HTMLGenerator interface.
-// It should only be used to generate collateral for processes offline.
-// It is not suitable for production usage.
-type openCensusHTMLGenerator struct {
-	nameDescMap map[string]string
-	nameTypeMap map[string]string
+// OpenCensusRegistry should only be used to collected exported metrics for
+// the offline generation of collateral. It is not suitable for production usage.
+type OpenCensusRegistry struct {
+	sync.RWMutex
+	metrics map[string]Exported
 }
 
-// NewOpenCensusHTMLGenerator builds a new HTMLGenerator based on OpenCensus
-// metrics export. As part of the setup, it configures the OpenCensus mechanisms
-// for rapid reporting (1ms) and sleeps for double that period (2ms) to ensure
-// an export happens before generation.
-func NewOpenCensusHTMLGenerator() HTMLGenerator {
+// NewOpenCensusRegistry collects a list of exported metrics. As part of the setup,
+// it configures the OpenCensus mechanisms for rapid reporting (1ms) and sleeps for
+// double that period (2ms) to ensure an export happens before generation.
+func NewOpenCensusRegistry() *OpenCensusRegistry {
 	// note: only use this for collateral generation
 	// this reporting period is NOT suitable for all exporters
 	view.SetReportingPeriod(1 * time.Millisecond)
 
-	e := &openCensusHTMLGenerator{
-		nameDescMap: make(map[string]string),
-		nameTypeMap: make(map[string]string),
+	r := &OpenCensusRegistry{
+		metrics: make(map[string]Exported),
 	}
-	view.RegisterExporter(e)
+	view.RegisterExporter(r)
 
 	time.Sleep(2 * time.Millisecond) // allow export to happen
-	return e
+
+	return r
 }
 
 // ExportView implements view.Exporter
-func (e *openCensusHTMLGenerator) ExportView(d *view.Data) {
-	e.nameDescMap[d.View.Name] = d.View.Description
-	e.nameTypeMap[d.View.Name] = d.View.Aggregation.Type.String()
+func (r *OpenCensusRegistry) ExportView(d *view.Data) {
+	name := promName(d.View.Name)
+	r.Lock()
+	if _, ok := r.metrics[name]; !ok {
+		r.metrics[name] = Exported{name, d.View.Aggregation.Type.String(), d.View.Description}
+	}
+	r.Unlock()
 }
 
-// GenerateHTML implements metrics.HTMLGenerator.
-// It emits a HTML string with all of the OpenCensus exported metrics
-// listed in a table by name, type, and description.
-func (e *openCensusHTMLGenerator) GenerateHTML() string {
-	var sb strings.Builder
-
-	sb.WriteString(tableHeader)
-
+func (r *OpenCensusRegistry) ExportedMetrics() []Exported {
+	r.RLock()
 	names := []string{}
-	for key := range e.nameDescMap {
+	for key := range r.metrics {
 		names = append(names, key)
 	}
+	r.RUnlock()
 
 	sort.Strings(names)
 
+	tmp := make([]Exported, 0, len(names))
 	for _, n := range names {
-
-		var d, t string
-		if desc, ok := e.nameDescMap[n]; !ok {
-			d = "N/A"
-		} else {
-			d = desc
-		}
-
-		if kind, ok := e.nameTypeMap[n]; !ok {
-			t = view.Sum().Type.String()
-		} else {
-			t = kind
-		}
-
-		sb.WriteString("<tr><td>" + promName(n) + "</td>")
-		sb.WriteString("<td>" + t + "</td>")
-		sb.WriteString("<td>" + d + "</td></tr>\n")
+		tmp = append(tmp, r.metrics[n])
 	}
 
-	sb.WriteString(tableFooter)
-
-	return sb.String()
+	return tmp
 }
 
 var charReplacer = strings.NewReplacer("/", "_", ".", "_", " ", "_", "-", "")

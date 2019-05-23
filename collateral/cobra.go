@@ -40,7 +40,6 @@ func CobraCommand(root *cobra.Command, hdr *doc.GenManHeader) *cobra.Command {
 				c.EmitManPages = true
 				c.EmitMarkdown = true
 				c.EmitHTMLFragmentWithFrontMatter = true
-				c.EmitMetricsHTMLFragment = true
 				c.ManPageInfo = *hdr
 			}
 
@@ -55,7 +54,6 @@ func CobraCommand(root *cobra.Command, hdr *doc.GenManHeader) *cobra.Command {
 	cmd.Flags().BoolVarP(&c.EmitBashCompletion, "bash", "", c.EmitBashCompletion, "Produce bash completion files")
 	cmd.Flags().BoolVarP(&c.EmitZshCompletion, "zsh", "", c.EmitZshCompletion, "Produce zsh completion files")
 	cmd.Flags().BoolVarP(&c.EmitYAML, "yaml", "", c.EmitYAML, "Produce YAML documentation files")
-	cmd.Flags().BoolVarP(&c.EmitMetricsHTMLFragment, "metrics_html", "", c.EmitMetricsHTMLFragment, "Produce metrics HTML documentation file")
 	cmd.Flags().BoolVarP(&c.EmitHTMLFragmentWithFrontMatter, "html_fragment_with_front_matter",
 		"", c.EmitHTMLFragmentWithFrontMatter, "Produce an HTML documentation file with Hugo/Jekyll-compatible front matter.")
 
