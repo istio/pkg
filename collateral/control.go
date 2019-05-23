@@ -739,17 +739,15 @@ func (g *generator) genMetrics() {
 	g.emit(`<h2 id=\"metrics\">Exported Metrics</h2>
 <table class=\"metrics\">
 <thead>
-<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><th>Metric Name</th><th>Type</th><th>Description</th></tr>
 </thead>
-<tbody>
-`)
+<tbody>`)
 
 	r := metrics.NewOpenCensusRegistry()
 	for _, metric := range r.ExportedMetrics() {
-		g.emit("<tr><td>", metric.Name, "</td><td>", metric.Type, "</td><td>", metric.Description, "</td></tr>")
+		g.emit("<tr><td><code>", metric.Name, "</code></td><td><code>", metric.Type, "</code></td><td>", metric.Description, "</td></tr>")
 	}
 
 	g.emit(`</tbody>
-</table>
-`)
+</table>`)
 }
