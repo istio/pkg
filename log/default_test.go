@@ -21,11 +21,7 @@ import (
 )
 
 func testOptions() *Options {
-	o := DefaultOptions()
-	o.testonlyExit = func() {
-		panic("os.Exit would have been called")
-	}
-	return o
+	return DefaultOptions()
 }
 
 func TestDefault(t *testing.T) {
@@ -181,13 +177,16 @@ func TestDefault(t *testing.T) {
 			lines, err := captureStdout(func() {
 				o := testOptions()
 				o.JSONEncoding = c.json
-				o.testonlyExit = func() {
-					exitCalled = true
-				}
 
 				if err := Configure(o); err != nil {
 					t.Errorf("Got err '%v', expecting success", err)
 				}
+
+				pt := funcs.Load().(patchTable)
+				pt.exitProcess = func(_ int) {
+					exitCalled = true
+				}
+				funcs.Store(pt)
 
 				defaultScope.SetOutputLevel(DebugLevel)
 				defaultScope.SetStackTraceLevel(c.stackLevel)
@@ -237,8 +236,13 @@ func TestEnabled(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			o := testOptions()
 			o.SetOutputLevel(DefaultScopeName, c.level)
-			o.testonlyExit = func() {}
+
 			_ = Configure(o)
+
+			pt := funcs.Load().(patchTable)
+			pt.exitProcess = func(_ int) {
+			}
+			funcs.Store(pt)
 
 			if c.debugEnabled != DebugEnabled() {
 				t.Errorf("Got %v, expecting %v", DebugEnabled(), c.debugEnabled)

@@ -180,13 +180,16 @@ func TestBasicScopes(t *testing.T) {
 			lines, err := captureStdout(func() {
 				o := testOptions()
 				o.JSONEncoding = c.json
-				o.testonlyExit = func() {
-					exitCalled = true
-				}
 
 				if err := Configure(o); err != nil {
 					t.Errorf("Got err '%v', expecting success", err)
 				}
+
+				pt := funcs.Load().(patchTable)
+				pt.exitProcess = func(_ int) {
+					exitCalled = true
+				}
+				funcs.Store(pt)
 
 				s.SetOutputLevel(DebugLevel)
 				s.SetStackTraceLevel(c.stackLevel)
@@ -297,17 +300,34 @@ func TestFind(t *testing.T) {
 }
 
 func TestBadNames(t *testing.T) {
-	if s := RegisterScope("a:b", "", 0); s != nil {
-		t.Error("Expecting to get nil")
+	badNames := []string{
+		"a:b",
+		"a,b",
+		"a.b",
+
+		":ab",
+		",ab",
+		".ab",
+
+		"ab:",
+		"ab,",
+		"ab.",
 	}
 
-	if s := RegisterScope("a,b", "", 0); s != nil {
-		t.Error("Expecting to get nil")
+	for _, name := range badNames {
+		tryBadName(t, name)
 	}
+}
 
-	if s := RegisterScope("a.b", "", 0); s != nil {
-		t.Error("Expecting to get nil")
-	}
+func tryBadName(t *testing.T, name string) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Errorf("Expecting to panic when using bad scope name %s, but didn't", name)
+	}()
+
+	_ = RegisterScope(name, "A poorly named scope", 0)
 }
 
 func TestBadWriter(t *testing.T) {
@@ -316,9 +336,11 @@ func TestBadWriter(t *testing.T) {
 		t.Errorf("Got err '%v', expecting success", err)
 	}
 
-	writeFn.Store(func(zapcore.Entry, []zapcore.Field) error {
+	pt := funcs.Load().(patchTable)
+	pt.write = func(zapcore.Entry, []zapcore.Field) error {
 		return errors.New("bad")
-	})
+	}
+	funcs.Store(pt)
 
 	// for now, we just make sure this doesn't crash. To be totally correct, we'd need to capture stderr and
 	// inspect it, but it's just not worth it
