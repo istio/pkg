@@ -91,7 +91,38 @@ func TestTimestampProperMicros(t *testing.T) {
 	}
 }
 
+func TestOverrides(t *testing.T) {
+	resetGlobals()
+	s := RegisterScope("TestOverrides", "For testing", 0)
+
+	o := DefaultOptions()
+	o.outputLevels = "default:debug,all:info"
+	if err := Configure(o); err != nil {
+		t.Errorf("Expecting success, got %v", err)
+	} else if s.GetOutputLevel() != InfoLevel {
+		t.Errorf("Expecting InfoLevel, got %v", s.GetOutputLevel())
+	}
+
+	o = DefaultOptions()
+	o.stackTraceLevels = "default:debug,all:info"
+	if err := Configure(o); err != nil {
+		t.Errorf("Expecting success, got %v", err)
+	} else if s.GetStackTraceLevel() != InfoLevel {
+		t.Errorf("Expecting InfoLevel, got %v", s.GetStackTraceLevel())
+	}
+
+	o = DefaultOptions()
+	o.logCallers = "all"
+	if err := Configure(o); err != nil {
+		t.Errorf("Expecting success, got %v", err)
+	} else if !s.GetLogCallers() {
+		t.Error("Expecting true, got false")
+	}
+}
+
 func TestOddballs(t *testing.T) {
+	resetGlobals()
+
 	o := DefaultOptions()
 	_ = Configure(o)
 
@@ -265,6 +296,8 @@ func TestRotateMaxBackups(t *testing.T) {
 }
 
 func TestGlogV(t *testing.T) {
+	resetGlobals()
+
 	o := DefaultOptions()
 	_ = Configure(o)
 
@@ -422,4 +455,10 @@ func captureStdout(f func()) ([]string, error) {
 	}
 
 	return strings.Split(string(content), "\n"), nil
+}
+
+func resetGlobals() {
+	scopes = make(map[string]*Scope, 1)
+	defaultScope = RegisterScope("default", "Default", 0)
+	exitProcessFn.Store(os.Exit)
 }

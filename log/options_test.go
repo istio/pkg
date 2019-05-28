@@ -24,6 +24,8 @@ import (
 )
 
 func TestOpts(t *testing.T) {
+	resetGlobals()
+
 	cases := []struct {
 		cmdLine string
 		result  Options
@@ -297,6 +299,8 @@ func TestOpts(t *testing.T) {
 }
 
 func TestSetLevel(t *testing.T) {
+	resetGlobals()
+
 	_ = RegisterScope("TestSetLevel", "", 0)
 
 	cases := []struct {
@@ -328,6 +332,8 @@ func TestSetLevel(t *testing.T) {
 
 		{"default:none", "pizza", ErrorLevel},
 		{"default:none,TestSetLevel:debug", "pizza", ErrorLevel},
+
+		{"default:none,TestSetLevel:debug,all:debug", "all", DebugLevel},
 	}
 
 	for i, c := range cases {
@@ -355,6 +361,8 @@ func TestSetLevel(t *testing.T) {
 }
 
 func TestGetLevel(t *testing.T) {
+	resetGlobals()
+
 	cases := []struct {
 		levels        string
 		scope         string
@@ -419,6 +427,7 @@ func TestGetLevel(t *testing.T) {
 }
 
 func TestLogCallers(t *testing.T) {
+	resetGlobals()
 	o := DefaultOptions()
 
 	o.SetLogCallers("s1", true)
