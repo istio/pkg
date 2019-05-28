@@ -194,65 +194,74 @@ func formatDate(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(string(buf))
 }
 
-func updateScopes(options *Options, core zapcore.Core, errSink zapcore.WriteSyncer) error {
-	// init the global I/O funcs
-	writeFn.Store(func(ent zapcore.Entry, fields []zapcore.Field) error {
-		err := core.Write(ent, fields)
-		if ent.Level == zapcore.FatalLevel {
-			if options.testonlyExit == nil {
-				os.Exit(1)
-			}
-			options.testonlyExit()
-		}
-		return err
-	})
-	syncFn.Store(core.Sync)
-	errorSink.Store(errSink)
-
+func updateScopes(options *Options) error {
 	// snapshot what's there
 	allScopes := Scopes()
 
-	// update the output levels of all scopes
-	levels := strings.Split(options.outputLevels, ",")
-	for _, sl := range levels {
-		s, l, err := convertScopedLevel(sl)
-		if err != nil {
-			return err
-		}
-
-		if scope, ok := allScopes[s]; ok {
-			scope.SetOutputLevel(l)
-		} else {
-			return fmt.Errorf("unknown scope '%s' specified", s)
-		}
+	// update the output levels of all listed scopes
+	if err := processLevels(allScopes, options.outputLevels, func(s *Scope, l Level) { s.SetOutputLevel(l) }); err != nil {
+		return err
 	}
 
-	// update the stack tracing levels of all scopes
-	levels = strings.Split(options.stackTraceLevels, ",")
-	for _, sl := range levels {
-		s, l, err := convertScopedLevel(sl)
-		if err != nil {
-			return err
-		}
-
-		if scope, ok := allScopes[s]; ok {
-			scope.SetStackTraceLevel(l)
-		} else {
-			return fmt.Errorf("unknown scope '%s' specified", s)
-		}
+	// update the stack tracing levels of all listed scopes
+	if err := processLevels(allScopes, options.stackTraceLevels, func(s *Scope, l Level) { s.SetStackTraceLevel(l) }); err != nil {
+		return err
 	}
 
-	// update the caller location setting of all scopes
+	// update the caller location setting of all listed scopes
 	sc := strings.Split(options.logCallers, ",")
+	overridePresent := false
 	for _, s := range sc {
 		if s == "" {
 			continue
+		} else if s == OverrideScopeName {
+			overridePresent = true
+			break
 		}
 
 		if scope, ok := allScopes[s]; ok {
 			scope.SetLogCallers(true)
 		} else {
 			return fmt.Errorf("unknown scope '%s' specified", s)
+		}
+	}
+
+	if overridePresent {
+		for _, scope := range allScopes {
+			scope.SetLogCallers(true)
+		}
+	}
+
+	return nil
+}
+
+// processLevels breaks down an argument string into a set of scope & levels and then
+// tries to apply the result to the scopes. It supports the use of a global override.
+func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, Level)) error {
+	overridePresent := false
+	overrideLevel := NoneLevel
+
+	levels := strings.Split(arg, ",")
+	for _, sl := range levels {
+		s, l, err := convertScopedLevel(sl)
+		if err != nil {
+			return err
+		}
+
+		if scope, ok := allScopes[s]; ok {
+			setter(scope, l)
+		} else if s == OverrideScopeName {
+			overridePresent = true
+			overrideLevel = l
+		} else {
+			return fmt.Errorf("unknown scope '%s' specified", s)
+		}
+	}
+
+	if overridePresent {
+		// override replaces everything
+		for _, scope := range allScopes {
+			setter(scope, overrideLevel)
 		}
 	}
 
@@ -270,9 +279,21 @@ func Configure(options *Options) error {
 		return err
 	}
 
-	if err = updateScopes(options, core, errSink); err != nil {
+	if err = updateScopes(options); err != nil {
 		return err
 	}
+
+	// init the global I/O funcs
+	writeFn.Store(func(ent zapcore.Entry, fields []zapcore.Field) error {
+		err := core.Write(ent, fields)
+		if ent.Level == zapcore.FatalLevel {
+			exitProcess(1)
+		}
+		return err
+	})
+	syncFn.Store(core.Sync)
+	errorSink.Store(errSink)
+	exitProcessFn.Store(os.Exit)
 
 	opts := []zap.Option{
 		zap.ErrorOutput(errSink),
@@ -316,4 +337,14 @@ func Sync() error {
 	}
 
 	return err
+}
+
+// reset by the Configure method
+var exitProcessFn atomic.Value
+
+// exitProcess calls the installed process exit function
+func exitProcess(code int) {
+	if f := exitProcessFn.Load().(func(int)); f != nil {
+		f(code)
+	}
 }

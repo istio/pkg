@@ -54,7 +54,7 @@ var errorSink atomic.Value
 // Scope names cannot include colons, commas, or periods.
 func RegisterScope(name string, description string, callerSkip int) *Scope {
 	if strings.ContainsAny(name, ":,.") {
-		return nil
+		panic(fmt.Sprintf("scope name %s is invalid, it cannot contain colons, commas, or periods", name))
 	}
 
 	lock.Lock()
