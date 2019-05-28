@@ -44,10 +44,6 @@ type Scope struct {
 var scopes = make(map[string]*Scope)
 var lock = sync.RWMutex{}
 
-// set by the Configure method
-var writeFn atomic.Value
-var errorSink atomic.Value
-
 // RegisterScope registers a new logging scope. If the same name is used multiple times
 // for a single process, the same Scope struct is returned.
 //
@@ -281,12 +277,11 @@ func (s *Scope) emit(level zapcore.Level, dumpStack bool, msg string, fields []z
 		e.Stack = zap.Stack("").String
 	}
 
-	if w := writeFn.Load().(func(zapcore.Entry, []zapcore.Field) error); w != nil {
-		if err := w(e, fields); err != nil {
-			if es := errorSink.Load().(zapcore.WriteSyncer); es != nil {
-				fmt.Fprintf(es, "%v log write error: %v\n", time.Now(), err)
-				_ = es.Sync()
-			}
+	pt := funcs.Load().(patchTable)
+	if pt.write != nil {
+		if err := pt.write(e, fields); err != nil {
+			_, _ = fmt.Fprintf(pt.errorSink, "%v log write error: %v\n", time.Now(), err)
+			_ = pt.errorSink.Sync()
 		}
 	}
 }

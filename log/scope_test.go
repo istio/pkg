@@ -185,9 +185,11 @@ func TestBasicScopes(t *testing.T) {
 					t.Errorf("Got err '%v', expecting success", err)
 				}
 
-				exitProcessFn.Store(func(_ int) {
+				pt := funcs.Load().(patchTable)
+				pt.exitProcess = func(_ int) {
 					exitCalled = true
-				})
+				}
+				funcs.Store(pt)
 
 				s.SetOutputLevel(DebugLevel)
 				s.SetStackTraceLevel(c.stackLevel)
@@ -334,9 +336,11 @@ func TestBadWriter(t *testing.T) {
 		t.Errorf("Got err '%v', expecting success", err)
 	}
 
-	writeFn.Store(func(zapcore.Entry, []zapcore.Field) error {
+	pt := funcs.Load().(patchTable)
+	pt.write = func(zapcore.Entry, []zapcore.Field) error {
 		return errors.New("bad")
-	})
+	}
+	funcs.Store(pt)
 
 	// for now, we just make sure this doesn't crash. To be totally correct, we'd need to capture stderr and
 	// inspect it, but it's just not worth it

@@ -77,6 +77,17 @@ var levelToZap = map[Level]zapcore.Level{
 	NoneLevel:  none,
 }
 
+// functions that can be replaced in a test setting
+type patchTable struct {
+	write       func(ent zapcore.Entry, fields []zapcore.Field) error
+	sync        func() error
+	exitProcess func(code int)
+	errorSink   zapcore.WriteSyncer
+}
+
+// function table that can be replaced by tests
+var funcs = &atomic.Value{}
+
 func init() {
 	// use our defaults for starters so that logging works even before everything is fully configured
 	_ = Configure(DefaultOptions())
@@ -210,13 +221,18 @@ func updateScopes(options *Options) error {
 
 	// update the caller location setting of all listed scopes
 	sc := strings.Split(options.logCallers, ",")
-	overridePresent := false
 	for _, s := range sc {
 		if s == "" {
 			continue
-		} else if s == OverrideScopeName {
-			overridePresent = true
-			break
+		}
+
+		if s == OverrideScopeName {
+			// ignore everything else and just apply the override value
+			for _, scope := range allScopes {
+				scope.SetLogCallers(true)
+			}
+
+			return nil
 		}
 
 		if scope, ok := allScopes[s]; ok {
@@ -226,21 +242,12 @@ func updateScopes(options *Options) error {
 		}
 	}
 
-	if overridePresent {
-		for _, scope := range allScopes {
-			scope.SetLogCallers(true)
-		}
-	}
-
 	return nil
 }
 
 // processLevels breaks down an argument string into a set of scope & levels and then
 // tries to apply the result to the scopes. It supports the use of a global override.
 func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, Level)) error {
-	overridePresent := false
-	overrideLevel := NoneLevel
-
 	levels := strings.Split(arg, ",")
 	for _, sl := range levels {
 		s, l, err := convertScopedLevel(sl)
@@ -251,17 +258,13 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 		if scope, ok := allScopes[s]; ok {
 			setter(scope, l)
 		} else if s == OverrideScopeName {
-			overridePresent = true
-			overrideLevel = l
+			// override replaces everything
+			for _, scope := range allScopes {
+				setter(scope, l)
+			}
+			return nil
 		} else {
 			return fmt.Errorf("unknown scope '%s' specified", s)
-		}
-	}
-
-	if overridePresent {
-		// override replaces everything
-		for _, scope := range allScopes {
-			setter(scope, overrideLevel)
 		}
 	}
 
@@ -283,17 +286,20 @@ func Configure(options *Options) error {
 		return err
 	}
 
-	// init the global I/O funcs
-	writeFn.Store(func(ent zapcore.Entry, fields []zapcore.Field) error {
-		err := core.Write(ent, fields)
-		if ent.Level == zapcore.FatalLevel {
-			exitProcess(1)
-		}
-		return err
-	})
-	syncFn.Store(core.Sync)
-	errorSink.Store(errSink)
-	exitProcessFn.Store(os.Exit)
+	pt := patchTable{
+		write: func(ent zapcore.Entry, fields []zapcore.Field) error {
+			err := core.Write(ent, fields)
+			if ent.Level == zapcore.FatalLevel {
+				funcs.Load().(patchTable).exitProcess(1)
+			}
+
+			return err
+		},
+		sync:        core.Sync,
+		exitProcess: os.Exit,
+		errorSink:   errSink,
+	}
+	funcs.Store(pt)
 
 	opts := []zap.Option{
 		zap.ErrorOutput(errSink),
@@ -325,26 +331,8 @@ func Configure(options *Options) error {
 	return nil
 }
 
-// reset by the Configure method
-var syncFn atomic.Value
-
 // Sync flushes any buffered log entries.
 // Processes should normally take care to call Sync before exiting.
 func Sync() error {
-	var err error
-	if s := syncFn.Load().(func() error); s != nil {
-		err = s()
-	}
-
-	return err
-}
-
-// reset by the Configure method
-var exitProcessFn atomic.Value
-
-// exitProcess calls the installed process exit function
-func exitProcess(code int) {
-	if f := exitProcessFn.Load().(func(int)); f != nil {
-		f(code)
-	}
+	return funcs.Load().(patchTable).sync()
 }

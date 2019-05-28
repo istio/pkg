@@ -460,5 +460,4 @@ func captureStdout(f func()) ([]string, error) {
 func resetGlobals() {
 	scopes = make(map[string]*Scope, 1)
 	defaultScope = RegisterScope("default", "Default", 0)
-	exitProcessFn.Store(os.Exit)
 }

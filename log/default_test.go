@@ -182,9 +182,11 @@ func TestDefault(t *testing.T) {
 					t.Errorf("Got err '%v', expecting success", err)
 				}
 
-				exitProcessFn.Store(func(_ int) {
+				pt := funcs.Load().(patchTable)
+				pt.exitProcess = func(_ int) {
 					exitCalled = true
-				})
+				}
+				funcs.Store(pt)
 
 				defaultScope.SetOutputLevel(DebugLevel)
 				defaultScope.SetStackTraceLevel(c.stackLevel)
@@ -237,8 +239,10 @@ func TestEnabled(t *testing.T) {
 
 			_ = Configure(o)
 
-			exitProcessFn.Store(func(_ int) {
-			})
+			pt := funcs.Load().(patchTable)
+			pt.exitProcess = func(_ int) {
+			}
+			funcs.Store(pt)
 
 			if c.debugEnabled != DebugEnabled() {
 				t.Errorf("Got %v, expecting %v", DebugEnabled(), c.debugEnabled)
