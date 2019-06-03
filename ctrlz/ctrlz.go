@@ -112,7 +112,7 @@ func getTopics() []topic {
 }
 
 func normalize(input string) string {
-	return strings.ReplaceAll(input, "/", "-")
+	return strings.Replace(input, "/", "-", -1)
 }
 
 // RegisterTopic registers a new Control-Z topic for the current process.
