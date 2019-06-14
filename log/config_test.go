@@ -268,31 +268,36 @@ func TestRotateMaxBackups(t *testing.T) {
 		t.Fatalf("Unable to configure logger: %v", err)
 	}
 
-	// construct a line string contains 128 characters
+	// construct a log string that contains 128 characters
 	line := ""
 	for i := 0; i < 8; i++ {
 		line += "0123456789ABCDEF" // 16 characters
 	}
 
-	// make sure that all log outputs much higher than 2M
+	// make sure that all log outputs is much larger than 2M
 	for i := 0; i < 4*1024; i++ {
 		for j := 0; j < 8; j++ {
 			glog.Info(line)
 		}
 	}
 
-	// TODO: find other graceful way to prevent flake
-	// lumberjack.Logger rotate in a separate goroutine, could not know when rotation done.
-	time.Sleep(500 * time.Millisecond)
+	// log rotation happens asynchronously and there's no way to synchronize with it,
+	// so we poll
+	for i := 0; i < 100009; i++ {
+		rd, err := ioutil.ReadDir(dir)
+		if err != nil {
+			t.Fatalf("Unable to read dir: %v", err)
+		}
 
-	rd, err := ioutil.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("Unable to read dir: %v", err)
-	}
+		if len(rd) == o.RotationMaxBackups+1 {
+			// perfect, we're done
+			return
+		}
 
-	if len(rd) > o.RotationMaxBackups+1 {
-		t.Errorf("Expecting at most %d backup logs, got %d", o.RotationMaxBackups, len(rd)-1)
+		// try again in a bit
+		time.Sleep(10 * time.Millisecond)
 	}
+	t.Errorf("Expecting at most %d backup logs", o.RotationMaxBackups)
 }
 
 func TestGlogV(t *testing.T) {
