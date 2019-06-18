@@ -109,7 +109,7 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&short, "short", "s", false, "Use --short=false to generate JSON")
+	cmd.Flags().BoolVarP(&short, "short", "s", false, "Use --short=false to generate full version information")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "One of 'yaml' or 'json'.")
 	if options.GetRemoteVersion != nil {
 		cmd.Flags().BoolVar(&remote, "remote", false, "Use --remote=false to suppress control plane check")
