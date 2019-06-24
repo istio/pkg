@@ -75,6 +75,9 @@ func (e *blockState) Clear() {
 func (e *blockState) Read() *Block {
 	e.ephemeralMu.Lock()
 	defer e.ephemeralMu.Unlock()
+
+	e.initEphemeralState()
+
 	return e.ephemeral.Clone()
 }
 
