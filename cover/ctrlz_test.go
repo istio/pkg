@@ -65,14 +65,14 @@ func TestTopic_Activate(t *testing.T) {
 
 	go func() { _ = http.Serve(l, ctx.htmlRouter) }()
 
-	baseUrl := "http://" + l.Addr().String()
+	baseURL := "http://" + l.Addr().String()
 
-	resp := getOrFail(t, baseUrl)
+	resp := getOrFail(t, baseURL)
 	if resp != "" {
 		t.Fatalf("foo")
 	}
 
-	resp = getOrFail(t, baseUrl+"/download")
+	resp = getOrFail(t, baseURL+"/download")
 	expected := `mode: atomic
 some_bizzare_file:20.22,21.0 30 10
 some_bizzare_file:23.25,24.0 31 11
@@ -100,12 +100,12 @@ some_bizzare_file:47.49,48.0 39 19`
 
 	// clear and download again
 	baseJSONUrl := "http://" + lj.Addr().String()
-	resp = postOrFail(t, baseJSONUrl+"/clear")
+	_ = postOrFail(t, baseJSONUrl+"/clear")
 
 	baseJSONUrl = "http://" + lj.Addr().String()
-	resp = postOrFail(t, baseJSONUrl+"/snapshot")
+	_ = postOrFail(t, baseJSONUrl+"/snapshot")
 
-	resp = getOrFail(t, baseUrl+"/download")
+	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
 some_bizzare_file:20.22,21.0 30 0
 some_bizzare_file:23.25,24.0 31 0
@@ -129,9 +129,9 @@ some_bizzare_file:47.49,48.0 39 0`
 
 	// snapshot and download again
 	baseJSONUrl = "http://" + lj.Addr().String()
-	resp = postOrFail(t, baseJSONUrl+"/snapshot")
+	_ = postOrFail(t, baseJSONUrl+"/snapshot")
 
-	resp = getOrFail(t, baseUrl+"/download")
+	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
 some_bizzare_file:20.22,21.0 30 255
 some_bizzare_file:23.25,24.0 31 255
