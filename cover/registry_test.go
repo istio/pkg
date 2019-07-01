@@ -133,7 +133,7 @@ type testCovVar struct {
 	stmt  []uint16
 }
 
-func newTestCovVar(length int) *testCovVar {
+func newTestCovVar(length int) *testCovVar { // nolint:unparam
 	return &testCovVar{
 		count: make([]uint32, length),
 		pos:   make([]uint32, length*3),
