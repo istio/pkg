@@ -23,13 +23,13 @@ var registry = &Registry{
 	blocks: make(map[string]*blockState),
 }
 
-// Registry is a registry registry.
+// Registry for code coverage blocks
 type Registry struct {
 	mu     sync.RWMutex
 	blocks map[string]*blockState
 }
 
-// GetRegistry returns the singleton registry registry.
+// GetRegistry returns the singleton code coverage block registry.
 func GetRegistry() *Registry {
 	return registry
 }

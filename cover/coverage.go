@@ -22,7 +22,7 @@ import (
 
 // Coverage data
 type Coverage struct {
-	Blocks []*Block `json:"Blocks"`
+	Blocks []*Block `json:"blocks"`
 }
 
 // WriteProfile generates output in the form of cover profile output file and writes to the given writer.

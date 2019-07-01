@@ -16,10 +16,10 @@ package cover
 
 // Block is code coverage snapshot for a particular file block.
 type Block struct {
-	Name    string   `json:"Name"`
-	Count   []uint32 `json:"Count"`
-	Pos     []uint32 `json:"Pos"`
-	NumStmt []uint16 `json:"NumStmt"`
+	Name    string   `json:"name"`
+	Count   []uint32 `json:"count"`
+	Pos     []uint32 `json:"pos"`
+	NumStmt []uint16 `json:"num_stmt"`
 }
 
 // Clone the snapshot
