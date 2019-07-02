@@ -189,9 +189,7 @@ type testExporter struct {
 }
 
 func (t *testExporter) ExportView(d *view.Data) {
-	for _, r := range d.Rows {
-		t.rows[d.View.Name] = append(t.rows[d.View.Name], r)
-	}
+	t.rows[d.View.Name] = append(t.rows[d.View.Name], d.Rows...)
 }
 
 func findTagWithValue(key, value string, tags []tag.Tag) bool {
