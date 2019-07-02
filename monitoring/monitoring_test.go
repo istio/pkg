@@ -17,6 +17,7 @@ package monitoring_test
 import (
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -66,12 +67,12 @@ func TestSum(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond)
 
+	exp.Lock()
 	if len(exp.rows[testSum.Name()]) < 2 {
 		// we should have two values goofySum (which is a dimensioned testSum) and
 		// testSum.
 		t.Error("no values recorded for sum, want 2.")
 	}
-
 	for _, r := range exp.rows[testSum.Name()] {
 		if findTagWithValue("kind", "goofy", r.Tags) {
 			if sd, ok := r.Data.(*view.SumData); ok {
@@ -89,6 +90,7 @@ func TestSum(t *testing.T) {
 			t.Errorf("unknown row in results: %v", r)
 		}
 	}
+	exp.Unlock()
 }
 
 func TestGauge(t *testing.T) {
@@ -101,11 +103,11 @@ func TestGauge(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond)
 
+	exp.Lock()
 	// only last value should be kept
 	if len(exp.rows[testGauge.Name()]) < 1 {
 		t.Error("no values recorded for gauge, want 1.")
 	}
-
 	for _, r := range exp.rows[testGauge.Name()] {
 		if lvd, ok := r.Data.(*view.LastValueData); ok {
 			if got, want := lvd.Value, 77.0; got != want {
@@ -113,6 +115,7 @@ func TestGauge(t *testing.T) {
 			}
 		}
 	}
+	exp.Unlock()
 }
 
 func TestDistribution(t *testing.T) {
@@ -128,6 +131,7 @@ func TestDistribution(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond)
 
+	exp.Lock()
 	if len(exp.rows[testDistribution.Name()]) < 2 {
 		t.Error("no values recorded for distribution, want 2.")
 	}
@@ -149,6 +153,7 @@ func TestDistribution(t *testing.T) {
 			t.Error("expected distributions not found.")
 		}
 	}
+	exp.Unlock()
 }
 
 func TestMustCreateLabel(t *testing.T) {
@@ -185,11 +190,15 @@ func (r registerFail) Register() error {
 }
 
 type testExporter struct {
+	sync.Mutex
+
 	rows map[string][]*view.Row
 }
 
 func (t *testExporter) ExportView(d *view.Data) {
+	t.Lock()
 	t.rows[d.View.Name] = append(t.rows[d.View.Name], d.Rows...)
+	t.Unlock()
 }
 
 func findTagWithValue(key, value string, tags []tag.Tag) bool {
