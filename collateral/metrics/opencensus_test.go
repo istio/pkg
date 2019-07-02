@@ -18,64 +18,59 @@ import (
 	"reflect"
 	"testing"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
-
 	"istio.io/pkg/collateral/metrics"
+	"istio.io/pkg/monitoring"
 )
 
 func TestExportedMetrics(t *testing.T) {
-	registerViews()
 	r := metrics.NewOpenCensusRegistry()
 	if got := r.ExportedMetrics(); !reflect.DeepEqual(got, want) {
 		t.Errorf("ExportedMetrics() = %v, want %v", got, want)
 	}
 }
 
-// stolen shamelessly from mixer pkgs in istio/istio for testing purposes
 var (
 	// AttributesTotal is a measure of the number of known attributes.
-	AttributesTotal = stats.Int64(
+	AttributesTotal = monitoring.NewGauge(
 		"mixer/config/attributes_total",
 		"The number of known attributes in the current config.",
-		stats.UnitDimensionless)
+	)
 
 	// HandlersTotal is a measure of the number of known handlers.
-	HandlersTotal = stats.Int64(
+	HandlersTotal = monitoring.NewGauge(
 		"mixer/config/handler_configs_total",
 		"The number of known handlers in the current config.",
-		stats.UnitDimensionless)
+	)
 
 	// InstancesTotal is a measure of the number of known instances.
-	InstancesTotal = stats.Int64(
+	InstancesTotal = monitoring.NewGauge(
 		"mixer/config/instance_configs_total",
 		"The number of known instances in the current config.",
-		stats.UnitDimensionless)
+	)
 
 	// InstanceErrs is a measure of the number of errors for processing instance config.
-	InstanceErrs = stats.Int64(
+	InstanceErrs = monitoring.NewGauge(
 		"mixer/config/instance_config_errors_total",
 		"The number of errors encountered during processing of the instance configuration.",
-		stats.UnitDimensionless)
+	)
 
 	// RulesTotal is a measure of the number of known rules.
-	RulesTotal = stats.Int64(
+	RulesTotal = monitoring.NewGauge(
 		"mixer/config/rule_configs_total",
 		"The number of known rules in the current config.",
-		stats.UnitDimensionless)
+	)
 
 	// RuleErrs is a measure of the number of errors for processing rules config.
-	RuleErrs = stats.Int64(
+	RuleErrs = monitoring.NewGauge(
 		"mixer/config/rule_config_errors_total",
 		"The number of errors encountered during processing of the rule configuration.",
-		stats.UnitDimensionless)
+	)
 
 	// AdapterInfosTotal is a measure of the number of known adapters.
-	AdapterInfosTotal = stats.Int64(
+	AdapterInfosTotal = monitoring.NewGauge(
 		"mixer/config/adapter_info_configs_total",
 		"The number of known adapters in the current config.",
-		stats.UnitDimensionless)
+	)
 
 	want = []metrics.Exported{
 		{"mixer_config_adapter_info_configs_total", "LastValue", "The number of known adapters in the current config."},
@@ -88,27 +83,15 @@ var (
 	}
 )
 
-func newView(measure stats.Measure, keys []tag.Key, aggregation *view.Aggregation) *view.View {
-	return &view.View{
-		Name:        measure.Name(),
-		Description: measure.Description(),
-		Measure:     measure,
-		TagKeys:     keys,
-		Aggregation: aggregation,
-	}
-}
+func init() {
+	monitoring.MustRegister(
+		AttributesTotal,
+		HandlersTotal,
+		InstancesTotal,
+		InstanceErrs,
+		RulesTotal,
+		RuleErrs,
+		AdapterInfosTotal,
+	)
 
-func registerViews() {
-	views := []*view.View{
-		// config views
-		newView(AttributesTotal, []tag.Key{}, view.LastValue()),
-		newView(HandlersTotal, []tag.Key{}, view.LastValue()),
-		newView(InstancesTotal, []tag.Key{}, view.LastValue()),
-		newView(InstanceErrs, []tag.Key{}, view.LastValue()),
-		newView(RulesTotal, []tag.Key{}, view.LastValue()),
-		newView(RuleErrs, []tag.Key{}, view.LastValue()),
-		newView(AdapterInfosTotal, []tag.Key{}, view.LastValue()),
-	}
-
-	view.Register(views...)
 }
