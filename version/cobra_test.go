@@ -28,7 +28,8 @@ import (
 
 func TestOpts(t *testing.T) {
 	ordinaryCmd := CobraCommand()
-	remoteCmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: getRemoteInfo})
+	remoteCmd := CobraCommandWithOptions(
+		CobraOptions{GetRemoteVersion: mockRemoteMesh(&meshInfoMultiVersion)})
 
 	cases := []struct {
 		args       string
@@ -105,14 +106,22 @@ func TestOpts(t *testing.T) {
 	}
 }
 
-var meshInfo = MeshInfo{
-	{"Pilot", BuildInfo{"1.0.0", "gitSHA123", "user1", "host1", "go1.10", "hub.docker.com", "Clean", "tag"}},
-	{"Injector", BuildInfo{"1.0.1", "gitSHAabc", "user2", "host2", "go1.10.1", "hub.docker.com", "Modified", "tag"}},
-	{"Citadel", BuildInfo{"1.2", "gitSHA321", "user3", "host3", "go1.11.0", "hub.docker.com", "Clean", "tag"}},
+var meshInfoSingleVersion = MeshInfo{
+	{"Pilot", BuildInfo{"1.2.0", "gitSHA123", "user1", "host1", "go1.10", "hub.docker.com", "Clean", "tag"}},
+	{"Injector", BuildInfo{"1.2.0", "gitSHAabc", "user2", "host2", "go1.10.1", "hub.docker.com", "Modified", "tag"}},
+	{"Citadel", BuildInfo{"1.2.0", "gitSHA321", "user3", "host3", "go1.11.0", "hub.docker.com", "Clean", "tag"}},
 }
 
-func getRemoteInfo() (*MeshInfo, error) {
-	return &meshInfo, nil
+var meshInfoMultiVersion = MeshInfo{
+	{"Pilot", BuildInfo{"1.0.0", "gitSHA123", "user1", "host1", "go1.10", "hub.docker.com", "Clean", "1.0.0"}},
+	{"Injector", BuildInfo{"1.0.1", "gitSHAabc", "user2", "host2", "go1.10.1", "hub.docker.com", "Modified", "1.0.1"}},
+	{"Citadel", BuildInfo{"1.2", "gitSHA321", "user3", "host3", "go1.11.0", "hub.docker.com", "Clean", "1.2"}},
+}
+
+func mockRemoteMesh(meshInfo *MeshInfo) GetRemoteVersionFunc {
+	return func() (*MeshInfo, error) {
+		return meshInfo, nil
+	}
 }
 
 type outputKind int
@@ -124,19 +133,19 @@ const (
 	yamlOutputMock
 )
 
-func printMeshVersion(kind outputKind) string {
+func printMeshVersion(meshInfo *MeshInfo, kind outputKind) string {
 	switch kind {
 	case yamlOutputMock:
-		ver := &Version{MeshVersion: &meshInfo}
+		ver := &Version{MeshVersion: meshInfo}
 		res, _ := yaml.Marshal(ver)
 		return string(res)
 	case jsonOutputMock:
-		res, _ := json.MarshalIndent(&meshInfo, "", "  ")
+		res, _ := json.MarshalIndent(meshInfo, "", "  ")
 		return string(res)
 	}
 
 	res := ""
-	for _, info := range meshInfo {
+	for _, info := range *meshInfo {
 		switch kind {
 		case rawOutputMock:
 			res += fmt.Sprintf("%s version: %#v\n", info.Component, info.Info)
@@ -150,6 +159,7 @@ func printMeshVersion(kind outputKind) string {
 func TestVersion(t *testing.T) {
 	cases := []struct {
 		args           []string
+		remoteMesh     *MeshInfo
 		expectFail     bool
 		expectedOutput string         // Expected constant output
 		expectedRegexp *regexp.Regexp // Expected regexp output
@@ -193,18 +203,21 @@ func TestVersion(t *testing.T) {
 		},
 
 		{ // case 4 remote, normal output
-			args: strings.Split("version --remote=true --short=false --output=", " "),
+			args:       strings.Split("version --remote=true --short=false --output=", " "),
+			remoteMesh: &meshInfoMultiVersion,
 			expectedRegexp: regexp.MustCompile("client version: version.BuildInfo{Version:\"unknown\", GitRevision:\"unknown\", " +
 				"User:\"unknown\", Host:\"unknown\", GolangVersion:\"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\", " +
 				"DockerHub:\"unknown\", BuildStatus:\"unknown\", GitTag:\"unknown\"}\n" +
-				printMeshVersion(rawOutputMock)),
+				printMeshVersion(&meshInfoMultiVersion, rawOutputMock)),
 		},
 		{ // case 5 remote, short output
 			args:           strings.Split("version --short=true --remote=true --output=", " "),
-			expectedOutput: "client version: unknown\n" + printMeshVersion(shortOutputMock),
+			remoteMesh:     &meshInfoMultiVersion,
+			expectedOutput: "client version: unknown\n" + printMeshVersion(&meshInfoMultiVersion, shortOutputMock),
 		},
 		{ // case 6 remote, yaml output
-			args: strings.Split("version --remote=true -o yaml", " "),
+			args:       strings.Split("version --remote=true -o yaml", " "),
+			remoteMesh: &meshInfoMultiVersion,
 			expectedRegexp: regexp.MustCompile("clientVersion:\n" +
 				"  golang_version: go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\n" +
 				"  host: unknown\n" +
@@ -213,10 +226,11 @@ func TestVersion(t *testing.T) {
 				"  status: unknown\n" +
 				"  tag: unknown\n" +
 				"  user: unknown\n" +
-				"  version: unknown\n" + printMeshVersion(yamlOutputMock)),
+				"  version: unknown\n" + printMeshVersion(&meshInfoMultiVersion, yamlOutputMock)),
 		},
 		{ // case 7 remote, json output
-			args: strings.Split("version --remote=true -o json", " "),
+			args:       strings.Split("version --remote=true -o json", " "),
+			remoteMesh: &meshInfoMultiVersion,
 			expectedRegexp: regexp.MustCompile("{\n" +
 				"  \"clientVersion\": {\n" +
 				"    \"version\": \"unknown\",\n" +
@@ -228,7 +242,7 @@ func TestVersion(t *testing.T) {
 				"    \"status\": \"unknown\",\n" +
 				"    \"tag\": \"unknown\"\n" +
 				"  },\n" +
-				printMeshVersion(jsonOutputMock)),
+				printMeshVersion(&meshInfoMultiVersion, jsonOutputMock)),
 		},
 
 		{ // case 8 bogus arg
@@ -242,11 +256,18 @@ func TestVersion(t *testing.T) {
 			expectedRegexp: regexp.MustCompile("Error: --output must be 'yaml' or 'json'\n"),
 			expectFail:     true,
 		},
+		{ // case 10 remote, coalesced version output
+			args:       strings.Split("version --short=true --remote=true --output=", " "),
+			remoteMesh: &meshInfoSingleVersion,
+			expectedOutput: `client version: unknown
+control plane version: 1.2.0
+`,
+		},
 	}
 
 	for i, v := range cases {
 		t.Run(fmt.Sprintf("case %d %s", i, strings.Join(v.args, " ")), func(t *testing.T) {
-			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: getRemoteInfo})
+			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh)})
 			var out bytes.Buffer
 			cmd.SetOutput(&out)
 			cmd.SetArgs(v.args)
