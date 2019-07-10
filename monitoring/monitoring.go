@@ -146,7 +146,7 @@ func createOptions(opts ...Options) *options {
 func newFloat64Metric(name, description string, aggregation *view.Aggregation, opts ...Options) *float64Metric {
 	o := createOptions(opts...)
 	measure := stats.Float64(name, description, string(o.unit))
-	tagKeys := make([]tag.Key, len(o.labels))
+	tagKeys := make([]tag.Key, 0, len(o.labels))
 	for _, l := range o.labels {
 		tagKeys = append(tagKeys, tag.Key(l))
 	}
