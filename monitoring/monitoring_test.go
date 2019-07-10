@@ -181,6 +181,23 @@ func TestMustRegister(t *testing.T) {
 	monitoring.MustRegister(&registerFail{})
 }
 
+func TestViewExport(t *testing.T) {
+	exp := &testExporter{rows: make(map[string][]*view.Row)}
+	view.RegisterExporter(exp)
+	view.SetReportingPeriod(1 * time.Millisecond)
+
+	testSum.With(name.Value("foo"), kind.Value("bar")).Increment()
+	goofySum.With(name.Value("baz")).Record(45)
+
+	time.Sleep(2 * time.Millisecond)
+
+	exp.Lock()
+	if exp.invalidTags {
+		t.Error("view registration includes invalid tag keys")
+	}
+	exp.Unlock()
+}
+
 type registerFail struct {
 	monitoring.Metric
 }
@@ -192,11 +209,17 @@ func (r registerFail) Register() error {
 type testExporter struct {
 	sync.Mutex
 
-	rows map[string][]*view.Row
+	rows        map[string][]*view.Row
+	invalidTags bool
 }
 
 func (t *testExporter) ExportView(d *view.Data) {
 	t.Lock()
+	for _, tk := range d.View.TagKeys {
+		if len(tk.Name()) < 1 {
+			t.invalidTags = true
+		}
+	}
 	t.rows[d.View.Name] = append(t.rows[d.View.Name], d.Rows...)
 	t.Unlock()
 }
