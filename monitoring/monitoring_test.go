@@ -64,6 +64,7 @@ func TestSum(t *testing.T) {
 
 	testSum.With(name.Value("foo"), kind.Value("bar")).Increment()
 	goofySum.With(name.Value("baz")).Record(45)
+	goofySum.With(name.Value("baz")).Decrement()
 
 	time.Sleep(2 * time.Millisecond)
 
@@ -76,7 +77,7 @@ func TestSum(t *testing.T) {
 	for _, r := range exp.rows[testSum.Name()] {
 		if findTagWithValue("kind", "goofy", r.Tags) {
 			if sd, ok := r.Data.(*view.SumData); ok {
-				if got, want := sd.Value, 45.0; got != want {
+				if got, want := sd.Value, 44.0; got != want {
 					t.Errorf("bad value for %q: %f, want %f", goofySum.Name(), got, want)
 				}
 			}
