@@ -10,6 +10,7 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0
+	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.7.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -30,5 +31,5 @@ require (
 	google.golang.org/grpc v1.20.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
-	istio.io/api v0.0.0-20190515205759-982e5c3888c6
+	istio.io/api v0.0.0-20190716182821-d90184ef5a47
 )
