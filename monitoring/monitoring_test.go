@@ -109,13 +109,15 @@ func TestGauge(t *testing.T) {
 	if len(exp.rows[testGauge.Name()]) < 1 {
 		t.Error("no values recorded for gauge, want 1.")
 	}
-	for _, r := range exp.rows[testGauge.Name()] {
-		if lvd, ok := r.Data.(*view.LastValueData); ok {
-			if got, want := lvd.Value, 77.0; got != want {
-				t.Errorf("bad value for %q: %f, want %f", testGauge.Name(), got, want)
-			}
-		}
+
+	lvd, err := testGauge.CurrentValue()
+	if err != nil {
+		t.Errorf("test failed: %v", err.Error())
 	}
+	if got, want := lvd, 77.0; got != want {
+		t.Errorf("bad value for %q: %f, want %f", testGauge.Name(), got, want)
+	}
+
 	exp.Unlock()
 }
 

@@ -38,6 +38,9 @@ type (
 		// this is equivalent to making an observation of value -1.
 		Decrement()
 
+		// Return current value of a non-dimensional metric. Only support Sum and LastValue type.
+		CurrentValue() (float64, error)
+
 		// Name returns the name value of a Metric.
 		Name() string
 
@@ -169,6 +172,24 @@ func (f *float64Metric) Increment() {
 
 func (f *float64Metric) Decrement() {
 	f.Record(-1)
+}
+
+func (f *float64Metric) CurrentValue() (float64, error) {
+	rows, err := view.RetrieveData(f.view.Name)
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve data for metric %s: %v", f.Name(), err.Error())
+	}
+	// For non-dimensional Sum or LastValue, rows should only has length of 1.
+	if len(rows) != 1 {
+		return 0, fmt.Errorf("the number of non-dimensional data for Sum or LastValue type should be 1, found %d", len(rows))
+	}
+	switch f.view.Aggregation.Type {
+	case view.LastValue().Type:
+		return rows[0].Data.(*view.LastValueData).Value, nil
+	case view.Sum().Type:
+		return rows[0].Data.(*view.SumData).Value, nil
+	}
+	return 0, fmt.Errorf("metric %s is not of type Sum or LastValue", f.Name())
 }
 
 func (f *float64Metric) Name() string {
