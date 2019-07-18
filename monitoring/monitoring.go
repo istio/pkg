@@ -179,7 +179,7 @@ func (f *float64Metric) CurrentValue() (float64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to retrieve data for metric %s: %v", f.Name(), err.Error())
 	}
-	// For non-dimensional Sum or LastValue, rows should only has length of 1.
+	// For non-dimensional Sum or LastValue, rows should have length of 1.
 	if len(rows) != 1 {
 		return 0, fmt.Errorf("the number of non-dimensional data for Sum or LastValue type should be 1, found %d", len(rows))
 	}
