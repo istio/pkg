@@ -7,4 +7,9 @@
 
 # Common Istio Packages
 
-Common packages leveraged by other repos.
+Common utility packages leveraged by other repos.
+
+Packages in this repo are intended to expose fairly light-weight low-level abstractions.
+In that vein, the repo in general maintains a fairly small number of external dependencies.
+
+Of particular interest, packages in this repo shouldn't pull in Kubernetes dependencies.
