@@ -38,7 +38,7 @@ type (
 		// this is equivalent to making an observation of value -1.
 		Decrement()
 
-		// Return current value of a non-dimensional metric. Only support Sum and LastValue type.
+		// Return the current value of a non-dimensional metric. Only support Sum and LastValue type.
 		CurrentValue() (float64, error)
 
 		// Name returns the name value of a Metric.
