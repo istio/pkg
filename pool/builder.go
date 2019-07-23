@@ -12,25 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pool provides access to a process-global pool of buffers, a pool of string builders, a pool of goroutines, and
+// Package pool provides access to a mixer-global pool of buffers, a pool of goroutines, and
 // a string interning table.
 package pool
 
 import (
-	"bytes"
+	"strings"
 	"sync"
 )
 
-var bufferPool = sync.Pool{New: func() interface{} { return new(bytes.Buffer) }}
+var builderPool = sync.Pool{New: func() interface{} { return new(strings.Builder) }}
 
-// GetBuffer returns a buffer from the buffer pool.
-func GetBuffer() *bytes.Buffer {
-	return bufferPool.Get().(*bytes.Buffer)
+// GetBuilder returns a builder from the builder pool.
+func GetBuilder() *strings.Builder {
+	return builderPool.Get().(*strings.Builder)
 }
 
-// PutBuffer returns a buffer to the buffer pool. You shouldn't reference this buffer
+// PutBuilder returns a builder to the builder pool. You shouldn't reference this builder
 // after it has been returned to the pool, otherwise bad things will happen.
-func PutBuffer(b *bytes.Buffer) {
-	b.Reset()
-	bufferPool.Put(b)
+func PutBuilder(sb *strings.Builder) {
+	sb.Reset()
+	builderPool.Put(sb)
 }

@@ -12,25 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pool provides access to a process-global pool of buffers, a pool of string builders, a pool of goroutines, and
-// a string interning table.
 package pool
 
 import (
-	"bytes"
-	"sync"
+	"testing"
 )
 
-var bufferPool = sync.Pool{New: func() interface{} { return new(bytes.Buffer) }}
+func TestBuilder(t *testing.T) {
+	b1 := GetBuilder()
+	b2 := GetBuilder()
+	b3 := GetBuilder()
 
-// GetBuffer returns a buffer from the buffer pool.
-func GetBuffer() *bytes.Buffer {
-	return bufferPool.Get().(*bytes.Buffer)
-}
+	if b1 == nil || b2 == nil || b3 == nil {
+		t.Errorf("One of the builders is nil: %v %v %v", b1, b2, b3)
+	}
 
-// PutBuffer returns a buffer to the buffer pool. You shouldn't reference this buffer
-// after it has been returned to the pool, otherwise bad things will happen.
-func PutBuffer(b *bytes.Buffer) {
-	b.Reset()
-	bufferPool.Put(b)
+	if b1 == b2 || b1 == b3 || b2 == b3 {
+		t.Errorf("Some of the builders are equivalent: %v %v %v", b1, b2, b3)
+	}
+
+	PutBuilder(b1)
+	PutBuilder(b2)
+	PutBuilder(b3)
 }
