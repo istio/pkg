@@ -1,7 +1,7 @@
 [![codecov.io](https://codecov.io/gh/istio/pkg/branch/master/graph/badge.svg)](https://codecov.io/gh/istio/pkg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/istio/pkg)](https://goreportcard.com/report/github.com/istio/pkg)
-[![GoDoc](https://godoc.org/istio.io/pkg?status.svg)](https://godoc.org/istio.io/pkg)
 [![GolangCI](https://golangci.com/badges/github.com/istio/pkg.svg)](https://golangci.com/r/github.com/istio/pkg)
+[![GoDoc](https://godoc.org/istio.io/pkg?status.svg)](https://godoc.org/istio.io/pkg)
 
 # Common Istio Packages
 
