@@ -29,7 +29,7 @@ func TestExportedMetrics(t *testing.T) {
 	err := retry(
 		func() error {
 			if got := r.ExportedMetrics(); !reflect.DeepEqual(got, want) {
-				return fmt.Errorf("ExportedMetrics() = %v, want %v", got, want)
+				return fmt.Errorf("got %v, want %v", got, want)
 			}
 			return nil
 		},

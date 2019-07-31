@@ -74,7 +74,7 @@ func TestSum(t *testing.T) {
 			if len(exp.rows[testSum.Name()]) < 2 {
 				// we should have two values goofySum (which is a dimensioned testSum) and
 				// testSum.
-				return errors.New("no values recorded for sum, want 2.")
+				return errors.New("no values recorded for sum, want 2")
 			}
 
 			// only check the final values to ensure that the sum has been properly calculated
@@ -93,18 +93,14 @@ func TestSum(t *testing.T) {
 					return fmt.Errorf("unknown row in results: %v", r)
 				}
 			}
-
 			if got, want := goofySumVal, 44.0; got != want {
 				return fmt.Errorf("bad value for %q: %f, want %f", goofySum.Name(), got, want)
 			}
 			if got, want := testSumVal, 1.0; got != want {
 				return fmt.Errorf("bad value for %q: %f, want %f", testSum.Name(), got, want)
 			}
-
 			return nil
 		},
-		1*time.Second,
-		10*time.Millisecond,
 	)
 
 	if err != nil {
@@ -126,7 +122,7 @@ func TestGauge(t *testing.T) {
 			defer exp.Unlock()
 
 			if len(exp.rows[testGauge.Name()]) < 1 {
-				return errors.New("no values recorded for gauge, want 1.")
+				return errors.New("no values recorded for gauge, want 1")
 			}
 
 			// we only want to verify that the last value was exported
@@ -141,8 +137,6 @@ func TestGauge(t *testing.T) {
 			}
 			return nil
 		},
-		1*time.Second,
-		10*time.Millisecond,
 	)
 
 	if err != nil {
@@ -166,7 +160,7 @@ func TestDistribution(t *testing.T) {
 			exp.Lock()
 			defer exp.Unlock()
 			if len(exp.rows[testDistribution.Name()]) < 2 {
-				return errors.New("no values recorded for distribution, want 2.")
+				return errors.New("no values recorded for distribution, want 2")
 			}
 
 			// regardless of how the observations get batched and exported, we expect to see
@@ -188,7 +182,7 @@ func TestDistribution(t *testing.T) {
 						}
 					}
 				} else {
-					return errors.New("expected distributions not found.")
+					return errors.New("expected distributions not found")
 				}
 			}
 
@@ -202,8 +196,6 @@ func TestDistribution(t *testing.T) {
 
 			return nil
 		},
-		1*time.Second,
-		10*time.Millisecond,
 	)
 
 	if err != nil {
@@ -253,8 +245,6 @@ func TestViewExport(t *testing.T) {
 			}
 			return nil
 		},
-		1*time.Second,
-		10*time.Millisecond,
 	)
 
 	if err != nil {
@@ -300,10 +290,10 @@ func findTagWithValue(key, value string, tags []tag.Tag) bool {
 
 // because OC uses goroutines to async export, validating proper export
 // can introduce timing problems. this helper just trys validation over
-// and over until the supplied method either succeeds or the timeout is hit.
-func retry(fn func() error, timeout, delay time.Duration) error {
+// and over until the supplied method either succeeds or it times out.
+func retry(fn func() error) error {
 	var lasterr error
-	to := time.After(timeout)
+	to := time.After(1 * time.Second)
 	for {
 		select {
 		case <-to:
@@ -315,6 +305,6 @@ func retry(fn func() error, timeout, delay time.Duration) error {
 		} else {
 			return nil
 		}
-		<-time.After(delay)
+		<-time.After(10 * time.Millisecond)
 	}
 }
