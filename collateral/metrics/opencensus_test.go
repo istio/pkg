@@ -15,8 +15,10 @@
 package metrics_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"istio.io/pkg/collateral/metrics"
 	"istio.io/pkg/monitoring"
@@ -24,9 +26,21 @@ import (
 
 func TestExportedMetrics(t *testing.T) {
 	r := metrics.NewOpenCensusRegistry()
-	if got := r.ExportedMetrics(); !reflect.DeepEqual(got, want) {
-		t.Errorf("ExportedMetrics() = %v, want %v", got, want)
+	err := retry(
+		func() error {
+			if got := r.ExportedMetrics(); !reflect.DeepEqual(got, want) {
+				return fmt.Errorf("got %v, want %v", got, want)
+			}
+			return nil
+		},
+		1*time.Second,
+		10*time.Millisecond,
+	)
+
+	if err != nil {
+		t.Errorf("failure exporting metrics: %v", err)
 	}
+
 }
 
 var (
@@ -94,4 +108,25 @@ func init() {
 		AdapterInfosTotal,
 	)
 
+}
+
+// because OC uses goroutines to async export, validating proper export
+// can introduce timing problems. this helper just trys validation over
+// and over until the supplied method either succeeds or the timeout is hit.
+func retry(fn func() error, timeout, delay time.Duration) error {
+	var lasterr error
+	to := time.After(timeout)
+	for {
+		select {
+		case <-to:
+			return fmt.Errorf("timeout while waiting (last error: %v)", lasterr)
+		default:
+		}
+		if err := fn(); err != nil {
+			lasterr = err
+		} else {
+			return nil
+		}
+		<-time.After(delay)
+	}
 }

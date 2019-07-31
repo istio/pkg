@@ -16,6 +16,7 @@ package monitoring_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -66,32 +67,45 @@ func TestSum(t *testing.T) {
 	goofySum.With(name.Value("baz")).Record(45)
 	goofySum.With(name.Value("baz")).Decrement()
 
-	time.Sleep(2 * time.Millisecond)
+	err := retry(
+		func() error {
+			exp.Lock()
+			defer exp.Unlock()
+			if len(exp.rows[testSum.Name()]) < 2 {
+				// we should have two values goofySum (which is a dimensioned testSum) and
+				// testSum.
+				return errors.New("no values recorded for sum, want 2")
+			}
 
-	exp.Lock()
-	if len(exp.rows[testSum.Name()]) < 2 {
-		// we should have two values goofySum (which is a dimensioned testSum) and
-		// testSum.
-		t.Error("no values recorded for sum, want 2.")
-	}
-	for _, r := range exp.rows[testSum.Name()] {
-		if findTagWithValue("kind", "goofy", r.Tags) {
-			if sd, ok := r.Data.(*view.SumData); ok {
-				if got, want := sd.Value, 44.0; got != want {
-					t.Errorf("bad value for %q: %f, want %f", goofySum.Name(), got, want)
+			// only check the final values to ensure that the sum has been properly calculated
+			goofySumVal := float64(0)
+			testSumVal := float64(0)
+			for _, r := range exp.rows[testSum.Name()] {
+				if findTagWithValue("kind", "goofy", r.Tags) {
+					if sd, ok := r.Data.(*view.SumData); ok {
+						goofySumVal = sd.Value
+					}
+				} else if findTagWithValue("kind", "bar", r.Tags) {
+					if sd, ok := r.Data.(*view.SumData); ok {
+						testSumVal = sd.Value
+					}
+				} else {
+					return fmt.Errorf("unknown row in results: %v", r)
 				}
 			}
-		} else if findTagWithValue("kind", "bar", r.Tags) {
-			if sd, ok := r.Data.(*view.SumData); ok {
-				if got, want := sd.Value, 1.0; got != want {
-					t.Errorf("bad value for %q: %f, want %f", testSum.Name(), got, want)
-				}
+			if got, want := goofySumVal, 44.0; got != want {
+				return fmt.Errorf("bad value for %q: %f, want %f", goofySum.Name(), got, want)
 			}
-		} else {
-			t.Errorf("unknown row in results: %v", r)
-		}
+			if got, want := testSumVal, 1.0; got != want {
+				return fmt.Errorf("bad value for %q: %f, want %f", testSum.Name(), got, want)
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Errorf("failure recording sum values: %v", err)
 	}
-	exp.Unlock()
 }
 
 func TestGauge(t *testing.T) {
@@ -102,21 +116,32 @@ func TestGauge(t *testing.T) {
 	testGauge.Record(42)
 	testGauge.Record(77)
 
-	time.Sleep(2 * time.Millisecond)
+	err := retry(
+		func() error {
+			exp.Lock()
+			defer exp.Unlock()
 
-	exp.Lock()
-	// only last value should be kept
-	if len(exp.rows[testGauge.Name()]) < 1 {
-		t.Error("no values recorded for gauge, want 1.")
-	}
-	for _, r := range exp.rows[testGauge.Name()] {
-		if lvd, ok := r.Data.(*view.LastValueData); ok {
-			if got, want := lvd.Value, 77.0; got != want {
-				t.Errorf("bad value for %q: %f, want %f", testGauge.Name(), got, want)
+			if len(exp.rows[testGauge.Name()]) < 1 {
+				return errors.New("no values recorded for gauge, want 1")
 			}
-		}
+
+			// we only want to verify that the last value was exported
+			found := false
+			for _, r := range exp.rows[testGauge.Name()] {
+				if lvd, ok := r.Data.(*view.LastValueData); ok {
+					found = lvd.Value == 77.0
+				}
+			}
+			if !found {
+				return fmt.Errorf("expected value for gauge %q not found; expected 77.0", testGauge.Name())
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Errorf("failure recording gauge values: %v", err)
 	}
-	exp.Unlock()
 }
 
 func TestDistribution(t *testing.T) {
@@ -130,31 +155,52 @@ func TestDistribution(t *testing.T) {
 	testDistribution.With(name.Value("foo")).Record(6.8)
 	testDistribution.With(name.Value("foo")).Record(10.2)
 
-	time.Sleep(2 * time.Millisecond)
+	err := retry(
+		func() error {
+			exp.Lock()
+			defer exp.Unlock()
+			if len(exp.rows[testDistribution.Name()]) < 2 {
+				return errors.New("no values recorded for distribution, want 2")
+			}
 
-	exp.Lock()
-	if len(exp.rows[testDistribution.Name()]) < 2 {
-		t.Error("no values recorded for distribution, want 2.")
-	}
-
-	for _, r := range exp.rows[testDistribution.Name()] {
-		if findTagWithValue("name", "fun", r.Tags) {
-			if dd, ok := r.Data.(*view.DistributionData); ok {
-				if got, want := dd.Count, int64(1); got != want {
-					t.Errorf("bad count for %q: %d, want %d", testDistribution.Name(), got, want)
+			// regardless of how the observations get batched and exported, we expect to see
+			// 1 total value recorded and exported for the fun distribution and 3 for the
+			// test distribution
+			maxFunCount := int64(0)
+			maxTestCount := int64(0)
+			for _, r := range exp.rows[testDistribution.Name()] {
+				if findTagWithValue("name", "fun", r.Tags) {
+					if dd, ok := r.Data.(*view.DistributionData); ok {
+						if dd.Count > maxFunCount {
+							maxFunCount = dd.Count
+						}
+					}
+				} else if findTagWithValue("name", "foo", r.Tags) {
+					if dd, ok := r.Data.(*view.DistributionData); ok {
+						if dd.Count > maxTestCount {
+							maxTestCount = dd.Count
+						}
+					}
+				} else {
+					return errors.New("expected distributions not found")
 				}
 			}
-		} else if findTagWithValue("name", "foo", r.Tags) {
-			if dd, ok := r.Data.(*view.DistributionData); ok {
-				if got, want := dd.Count, int64(3); got != want {
-					t.Errorf("bad count for %q: %d, want %d", testDistribution.Name(), got, want)
-				}
+
+			if got, want := maxFunCount, int64(1); got != want {
+				return fmt.Errorf("bad count for %q: %d, want %d", testDistribution.Name(), got, want)
 			}
-		} else {
-			t.Error("expected distributions not found.")
-		}
+
+			if got, want := maxTestCount, int64(3); got != want {
+				return fmt.Errorf("bad count for %q: %d, want %d", testDistribution.Name(), got, want)
+			}
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Errorf("failure recording distribution values: %v", err)
 	}
-	exp.Unlock()
 }
 
 func TestMustCreateLabel(t *testing.T) {
@@ -190,13 +236,21 @@ func TestViewExport(t *testing.T) {
 	testSum.With(name.Value("foo"), kind.Value("bar")).Increment()
 	goofySum.With(name.Value("baz")).Record(45)
 
-	time.Sleep(2 * time.Millisecond)
+	err := retry(
+		func() error {
+			exp.Lock()
+			defer exp.Unlock()
+			if exp.invalidTags {
+				return errors.New("view registration includes invalid tag keys")
+			}
+			return nil
+		},
+	)
 
-	exp.Lock()
-	if exp.invalidTags {
-		t.Error("view registration includes invalid tag keys")
+	if err != nil {
+		t.Errorf("failure with view export: %v", err)
 	}
-	exp.Unlock()
+
 }
 
 type registerFail struct {
@@ -232,4 +286,25 @@ func findTagWithValue(key, value string, tags []tag.Tag) bool {
 		}
 	}
 	return false
+}
+
+// because OC uses goroutines to async export, validating proper export
+// can introduce timing problems. this helper just trys validation over
+// and over until the supplied method either succeeds or it times out.
+func retry(fn func() error) error {
+	var lasterr error
+	to := time.After(1 * time.Second)
+	for {
+		select {
+		case <-to:
+			return fmt.Errorf("timeout while waiting (last error: %v)", lasterr)
+		default:
+		}
+		if err := fn(); err != nil {
+			lasterr = err
+		} else {
+			return nil
+		}
+		<-time.After(10 * time.Millisecond)
+	}
 }
