@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// AddConfigFlag appends a persistent flag for retrieving Viper config, as well as an initializer
+// for reading that file
 func AddConfigFlag(rootCmd *cobra.Command, viper *viper.Viper) {
 	var cfgFile string
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Config file containing args")
@@ -45,7 +47,6 @@ func AddConfigFlag(rootCmd *cobra.Command, viper *viper.Viper) {
 // ProcessViperConfig retrieves Viper values for each Cobra Val Flag
 func ProcessViperConfig(cmd *cobra.Command, viper *viper.Viper) {
 	viper.SetTypeByDefaultValue(true)
-	fmt.Println("processing viper config")
 	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
 		if reflect.TypeOf(viper.Get(f.Name)).Kind() == reflect.Slice {
 			// Viper cannot convert slices to strings, so this is our workaround.
@@ -54,5 +55,4 @@ func ProcessViperConfig(cmd *cobra.Command, viper *viper.Viper) {
 			_ = f.Value.Set(viper.GetString(f.Name))
 		}
 	})
-	fmt.Println(viper.GetString("mixerIdentity"))
 }
