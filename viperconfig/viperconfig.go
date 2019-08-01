@@ -47,7 +47,7 @@ func AddConfigFlag(rootCmd *cobra.Command, viper *viper.Viper) {
 // ProcessViperConfig retrieves Viper values for each Cobra Val Flag
 func ProcessViperConfig(cmd *cobra.Command, viper *viper.Viper) {
 	viper.SetTypeByDefaultValue(true)
-	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		if reflect.TypeOf(viper.Get(f.Name)).Kind() == reflect.Slice {
 			// Viper cannot convert slices to strings, so this is our workaround.
 			_ = f.Value.Set(strings.Join(viper.GetStringSlice(f.Name), ","))
@@ -55,4 +55,35 @@ func ProcessViperConfig(cmd *cobra.Command, viper *viper.Viper) {
 			_ = f.Value.Set(viper.GetString(f.Name))
 		}
 	})
+}
+
+// ViperizeRootCmd takes a root command, and ensures that all flags of all sub commands
+// are bound to viper, with one master config flag accepting a config file.
+// At runtime, it will then assign all cobra variables to have their viper values.
+func ViperizeRootCmd(cmd *cobra.Command, viper *viper.Viper) {
+	AddConfigFlag(cmd, viper)
+	subCommandPreRun(cmd, viper)
+}
+
+func subCommandPreRun(cmd *cobra.Command, viper *viper.Viper) {
+	original := cmd.PreRun
+	cmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if original != nil {
+			original(cmd, args)
+		}
+		flags := cmd.Flags()
+		pflags := cmd.PersistentFlags()
+		fmt.Println(pflags)
+		viper.BindPFlags(flags)
+		ProcessViperConfig(cmd, viper)
+	}
+
+	for _, c := range cmd.Commands() {
+		subCommandPreRun(c, viper)
+	}
+}
+
+//ViperizeRootCmdDefault calls ViperizeRootCmd using viper.GetViper()
+func ViperizeRootCmdDefault(cmd *cobra.Command) {
+	ViperizeRootCmd(cmd, viper.GetViper())
 }
