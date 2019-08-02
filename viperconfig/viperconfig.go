@@ -71,10 +71,7 @@ func subCommandPreRun(cmd *cobra.Command, viper *viper.Viper) {
 		if original != nil {
 			original(cmd, args)
 		}
-		flags := cmd.Flags()
-		pflags := cmd.PersistentFlags()
-		fmt.Println(pflags)
-		viper.BindPFlags(flags)
+		_ = viper.BindPFlags(cmd.Flags())
 		ProcessViperConfig(cmd, viper)
 	}
 

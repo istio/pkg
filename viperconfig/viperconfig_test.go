@@ -30,10 +30,13 @@ func TestViperConfig(t *testing.T) {
 		ProcessViperConfig(c, v)
 		assert.Equal(t, foo, "expected")
 		hasRun = true
-	}}
+	},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			v.BindPFlags(cmd.Flags())
+		}}
 	AddConfigFlag(&c, v)
 	c.PersistentFlags().StringVar(&foo, "foo", "notempty", "foo is a fake flag")
-	v.BindPFlags(c.PersistentFlags())
+
 	c.SetArgs([]string{"--config", "testconfig.yaml"})
 	c.Execute()
 	if !hasRun {
