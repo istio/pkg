@@ -44,6 +44,22 @@ func TestViperConfig(t *testing.T) {
 	}
 }
 
+func TestDuplicate(t *testing.T) {
+	t.Skip("Flag duplication is a known bug, and shouldn't cause a failure yet.")
+	var foo []string
+	hasRunRoot := false
+	c := cobra.Command{Run: func(c *cobra.Command, args []string) {
+		assert.Equal(t, foo, []string{"first", "second"})
+		hasRunRoot = true
+	}}
+	c.PersistentFlags().StringSliceVar(&foo, "foo", []string{"notempty"}, "foo is a fake flag")
+	ViperizeRootCmdDefault(&c)
+	// run root and check
+	c.SetArgs([]string{"--foo", "first", "--foo", "second"})
+	c.Execute()
+	assert.True(t, hasRunRoot, "root command never ran")
+}
+
 func TestViperize(t *testing.T) {
 	var foo string
 	var bar string
