@@ -1,3 +1,5 @@
+export ARTIFACTS ?= "/tmp"
+
 gen:
 	@go generate ./...
 
@@ -13,7 +15,7 @@ test:
 	@go test -race ./...
 
 test_with_coverage:
-	@go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-	@curl -s https://codecov.io/bash | bash -s -- -c -F aFlag -f coverage.txt
+	@go test -race -coverprofile=${ARTIFACTS}/coverage.cov -covermode=atomic ./...
+	@curl -s https://codecov.io/bash | bash -s -- -c -F aFlag -f ${ARTIFACTS}/coverage.cov
 
 include Makefile.common.mk
