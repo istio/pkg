@@ -27,15 +27,15 @@ func TestViperConfig(t *testing.T) {
 	var foo string
 	hasRun := false
 	c := cobra.Command{Run: func(c *cobra.Command, args []string) {
-		ProcessViperConfig(c, v)
-		assert.Equal(t, foo, "expected")
+		assert.Equal(t, foo, "somethingelse")
 		hasRun = true
 	},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			v.BindPFlags(cmd.Flags())
-		}}
-	AddConfigFlag(&c, v)
+		},
+	}
 	c.PersistentFlags().StringVar(&foo, "foo", "notempty", "foo is a fake flag")
+	ViperizeRootCmdDefault(&c)
 
 	c.SetArgs([]string{"--config", "testconfig.yaml"})
 	c.Execute()
@@ -45,17 +45,22 @@ func TestViperConfig(t *testing.T) {
 }
 
 func TestDuplicate(t *testing.T) {
-	t.Skip("Flag duplication is a known bug, and shouldn't cause a failure yet.")
-	var foo []string
+	var configv []string
+	var cmdLine []string
+	var defaultv []string
 	hasRunRoot := false
 	c := cobra.Command{Run: func(c *cobra.Command, args []string) {
-		assert.Equal(t, foo, []string{"first", "second"})
+		assert.Equal(t, configv, []string{"third", "fourth"})
+		assert.Equal(t, cmdLine, []string{"first", "second"})
+		assert.Equal(t, defaultv, []string{"notempty"})
 		hasRunRoot = true
 	}}
-	c.PersistentFlags().StringSliceVar(&foo, "foo", []string{"notempty"}, "foo is a fake flag")
+	c.PersistentFlags().StringSliceVar(&configv, "configv", []string{"notempty"}, "configv is a fake flag")
+	c.PersistentFlags().StringSliceVar(&cmdLine, "cmdLine", []string{"notempty"}, "cmdLine is a fake flag")
+	c.PersistentFlags().StringSliceVar(&defaultv, "defaultv", []string{"notempty"}, "defaultv is a fake flag")
 	ViperizeRootCmdDefault(&c)
 	// run root and check
-	c.SetArgs([]string{"--foo", "first", "--foo", "second"})
+	c.SetArgs([]string{"--config", "./testlistconfig.yaml", "--cmdLine", "first", "--cmdLine", "second"})
 	c.Execute()
 	assert.True(t, hasRunRoot, "root command never ran")
 }
@@ -67,7 +72,7 @@ func TestViperize(t *testing.T) {
 	hasRunPre := false
 	hasRunSub := false
 	c := cobra.Command{Run: func(c *cobra.Command, args []string) {
-		assert.Equal(t, foo, "expected")
+		assert.Equal(t, foo, "somethingelse")
 		hasRunRoot = true
 	}, PreRun: func(c *cobra.Command, args []string) {
 		hasRunPre = true
