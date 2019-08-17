@@ -12,23 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export ARTIFACTS ?= "/tmp"
-
-gen:
-	@go generate ./...
-
-lint:
-	@scripts/check_license.sh
-	@golangci-lint run -j 8 -v ./...
-
-fmt:
-	@goimports -w -local "istio.io" $(shell find . -type f -name '*.go' ! -name '*.gen.go' ! -name '*.pb.go' )
-
-test:
-	@go test -race ./...
-
-test_with_coverage:
-	@go test -race -coverprofile=${ARTIFACTS}/coverage.cov -covermode=atomic ./...
-	@curl -s https://codecov.io/bash | bash -s -- -c -F aFlag -f ${ARTIFACTS}/coverage.cov
-
-include Makefile.common.mk
+# this repo is on the container plan by default
+BUILD_WITH_CONTAINER ?= 1
