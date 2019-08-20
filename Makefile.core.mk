@@ -17,12 +17,9 @@ export ARTIFACTS ?= "/tmp"
 gen:
 	@go generate ./...
 
-lint:
-	@scripts/check_license.sh
-	@golangci-lint run -j 8 -v ./...
+lint: lint-go lint-copyright-banner lint-scripts
 
-fmt:
-	@goimports -w -local "istio.io" $(shell find . -type f -name '*.go' ! -name '*.gen.go' ! -name '*.pb.go' )
+fmt: format-go
 
 test:
 	@go test -race ./...
