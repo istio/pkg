@@ -16,6 +16,7 @@ package filewatcher
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -62,8 +63,10 @@ type worker struct {
 type fileTracker struct {
 	events chan fsnotify.Event
 	errors chan error
+	closed bool
+
 	// md5 sum to indicate if a file has been updated.
-	md5Sum string
+	md5Sum []byte
 }
 
 // NewWatcher return with a FileWatcher instance that implemented with fsnotify.
@@ -110,7 +113,7 @@ func (w *fsNotifyWatcher) Add(path string) error {
 		return err
 	}
 
-	var md5Sum string
+	var md5Sum []byte
 
 	if _, err = os.Stat(cleanedPath); err == nil {
 		md5Sum, err = getMd5Sum(cleanedPath)
@@ -144,23 +147,38 @@ func (w *fsNotifyWatcher) Add(path string) error {
 					return
 				}
 
+				w.mu.RLock()
 				for path, tracker := range wk.watchedFiles {
 					newSum, _ := getMd5Sum(path)
-					if newSum != "" && newSum != tracker.md5Sum {
+					if len(newSum) != 0 && !bytes.Equal(newSum, tracker.md5Sum) {
 						tracker.md5Sum = newSum
-						tracker.events <- event
+						if !tracker.closed {
+							select {
+							case tracker.events <- event:
+							default:
+							}
+						}
 						break
 					}
 				}
+				w.mu.RUnlock()
+
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					// 'Errors' channel is closed. Construct an error for it.
 					// We'll only close worker errors channel in "Remove" for consistency.
 					err = errors.New("channel closed")
 				}
+				w.mu.RLock()
 				for _, tracker := range wk.watchedFiles {
-					tracker.errors <- err
+					if !tracker.closed {
+						select {
+						case tracker.errors <- err:
+						default:
+						}
+					}
 				}
+				w.mu.RUnlock()
 				return
 			}
 		}
@@ -191,6 +209,7 @@ func (w *fsNotifyWatcher) remove(path string) error {
 	}
 
 	delete(worker.watchedFiles, cleanedPath)
+	tracker.closed = true
 	close(tracker.events)
 	close(tracker.errors)
 	if len(worker.watchedFiles) == 0 {
@@ -256,10 +275,10 @@ func (w *fsNotifyWatcher) Errors(path string) chan error {
 }
 
 // getMd5Sum is a helper func to calculate md5 sum.
-func getMd5Sum(file string) (string, error) {
+func getMd5Sum(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
@@ -268,10 +287,10 @@ func getMd5Sum(file string) (string, error) {
 
 	_, err = io.Copy(h, r)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return h.Sum(nil), nil
 }
 
 // formatPath return with the path after Clean,

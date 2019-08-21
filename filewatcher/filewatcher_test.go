@@ -17,31 +17,51 @@ package filewatcher
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
 
-func newWatchFile(t *testing.T) (string, func()) {
-	g := NewGomegaWithT(t)
+var rootTmpDir string
 
-	watchDir, err := ioutil.TempDir("", "")
-	g.Expect(err).NotTo(HaveOccurred())
+func init() {
+	var err error
+	if rootTmpDir, err = ioutil.TempDir("", "filewatcher_test"); err != nil {
+		panic(err)
+	}
+}
+
+func newWatchFileImpl() (string, func(), error) {
+	watchDir, err := ioutil.TempDir(rootTmpDir, "")
+	if err != nil {
+		return "", nil, err
+	}
 
 	watchFile := path.Join(watchDir, "test.conf")
 	err = ioutil.WriteFile(watchFile, []byte("foo: bar\n"), 0640)
-	g.Expect(err).NotTo(HaveOccurred())
-
+	if err != nil {
+		_ = os.RemoveAll(watchDir)
+		return "", nil, err
+	}
 	cleanup := func() {
-		os.RemoveAll(watchDir)
+		_ = os.RemoveAll(watchDir)
 	}
 
-	return watchFile, cleanup
+	return watchFile, cleanup, nil
+}
+
+func newWatchFile(t *testing.T) (string, func()) {
+	g := NewGomegaWithT(t)
+	name, cleanup, err := newWatchFileImpl()
+	g.Expect(err).NotTo(HaveOccurred())
+	return name, cleanup
 }
 
 func newWatchFileThatDoesNotExist(t *testing.T) (string, func()) {
@@ -115,6 +135,16 @@ func newSymlinkedWatchFile(t *testing.T) (string, string, func()) {
 	os.Symlink(path.Join(watchDir, "data", "test.conf"), watchFile)
 	fmt.Printf("Watch file location: %s\n", path.Join(watchDir, "test.conf"))
 	return watchDir, watchFile, cleanup
+}
+
+func changeFileContents(file string) {
+	l := rand.Int31n(4 * 1024)
+	b := make([]byte, l)
+	for i := 0; i < int(l); i++ {
+		b[i] = byte(rand.Int31n(255))
+	}
+
+	_ = ioutil.WriteFile(file, b, 777)
 }
 
 func TestWatchFile(t *testing.T) {
@@ -259,4 +289,137 @@ func TestWatcherLifecycle(t *testing.T) {
 	g.Expect(events2).To(BeNil())
 	errors2 = w.Errors(watchFile2)
 	g.Expect(errors2).To(BeNil())
+}
+
+type churnFile struct {
+	file        string
+	cleanupFile func()
+	eventDoneCh chan struct{}
+}
+
+func (c *churnFile) active() bool {
+	return c.cleanupFile != nil
+}
+
+func (c *churnFile) create(w FileWatcher) error {
+	if c.active() {
+		panic("File is currently active")
+	}
+	f, cl, err := newWatchFileImpl()
+	if err != nil {
+		return err
+	}
+
+	if err = w.Add(f); err != nil {
+		cl()
+		return err
+	}
+
+	events := w.Events(f)
+	errors := w.Errors(f)
+	eventDoneCh := make(chan struct{})
+
+	c.eventDoneCh = eventDoneCh
+	c.file = f
+	c.cleanupFile = cl
+
+	go func() {
+		// sporadically read events
+		for {
+			<-time.After(time.Millisecond * time.Duration(rand.Int31n(5)))
+			select {
+			case _ = <-eventDoneCh:
+				return
+			case _ = <-events: // read and discard events
+			case _ = <-errors:
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (c *churnFile) modify() {
+	if !c.active() {
+		panic("file is not active")
+	}
+	changeFileContents(c.file)
+}
+
+func (c *churnFile) remove(w FileWatcher) error {
+	if !c.active() {
+		panic("file is not active")
+	}
+	close(c.eventDoneCh)
+	err := w.Remove(c.file)
+	c.cleanupFile()
+
+	c.file = ""
+	c.cleanupFile = nil
+	c.eventDoneCh = nil
+
+	return err
+}
+
+func TestChurn(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	duration := time.Second * 1
+	workers := 2
+	filesPerWorker := 10
+
+	w := NewWatcher()
+	defer func() { _ = w.Close() }()
+
+	done := make(chan struct{})
+	go func() {
+		<-time.After(duration)
+		close(done)
+	}()
+
+	// create a bunch of workers and perform add/modify operations
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			files := make([]*churnFile, filesPerWorker)
+			for j := 0; j < filesPerWorker; j++ {
+				files[j] = &churnFile{}
+			}
+
+			defer func() {
+				for _, e := range files {
+					if e.active() {
+						_ = e.remove(w)
+					}
+				}
+			}()
+
+			for exit := false; !exit; _, exit = <-done {
+
+				f := files[rand.Int31n(int32(filesPerWorker))]
+				switch rand.Int31n(2) {
+				case 0: // modify or create
+					if f.active() {
+						f.modify()
+						break
+					}
+					fallthrough
+
+				case 1: // create or delete
+					if f.active() {
+						err := f.remove(w)
+						g.Expect(err).To(BeNil())
+					} else {
+						err := f.create(w)
+						g.Expect(err).To(BeNil())
+					}
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }
