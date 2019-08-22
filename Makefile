@@ -30,7 +30,7 @@ RUN =
 # figure out all the tools you need in your environment to make that work.
 export BUILD_WITH_CONTAINER ?= 0
 ifeq ($(BUILD_WITH_CONTAINER),1)
-IMG = gcr.io/istio-testing/build-tools:2019-08-19T19-54-11
+IMG = gcr.io/istio-testing/build-tools:2019-08-21T08-35-40
 UID = $(shell id -u)
 PWD = $(shell pwd)
 GOBIN_SOURCE ?= $(GOPATH)/bin
