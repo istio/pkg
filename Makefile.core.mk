@@ -28,4 +28,4 @@ test_with_coverage:
 	@go test -race -coverprofile=${ARTIFACTS}/coverage.cov -covermode=atomic ./...
 	@curl -s https://codecov.io/bash | bash -s -- -c -F aFlag -f ${ARTIFACTS}/coverage.cov
 
-include Makefile.common.mk
+include common/Makefile.common.mk
