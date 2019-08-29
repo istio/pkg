@@ -26,9 +26,6 @@ import (
 var (
 	buildVersion     = "unknown"
 	buildGitRevision = "unknown"
-	buildUser        = "unknown"
-	buildHost        = "unknown"
-	buildDockerHub   = "unknown"
 	buildStatus      = "unknown"
 	buildTag         = "unknown"
 )
@@ -37,10 +34,7 @@ var (
 type BuildInfo struct {
 	Version       string `json:"version"`
 	GitRevision   string `json:"revision"`
-	User          string `json:"user"`
-	Host          string `json:"host"`
 	GolangVersion string `json:"golang_version"`
-	DockerHub     string `json:"hub"`
 	BuildStatus   string `json:"status"`
 	GitTag        string `json:"tag"`
 }
@@ -75,10 +69,6 @@ func NewBuildInfoFromOldString(oldOutput string) (BuildInfo, error) {
 				res.Version = value
 			case "GitRevision":
 				res.GitRevision = value
-			case "User":
-				res.User = value
-			case "Hub":
-				res.DockerHub = value
 			case "GolangVersion":
 				res.GolangVersion = value
 			case "BuildStatus":
@@ -86,7 +76,8 @@ func NewBuildInfoFromOldString(oldOutput string) (BuildInfo, error) {
 			case "GitTag":
 				res.GitTag = value
 			default:
-				return BuildInfo{}, fmt.Errorf("invalid BuildInfo input, field '%s' is not valid", fields[0])
+				// Skip unknown fields, as older versions may report other fields
+				continue
 			}
 		}
 	}
@@ -104,13 +95,10 @@ var (
 // This looks like:
 //
 // ```
-// user@host-<docker hub>-<version>-<git revision>-<build status>
+// u<version>-<git revision>-<build status>
 // ```
 func (b BuildInfo) String() string {
-	return fmt.Sprintf("%v@%v-%v-%v-%v-%v",
-		b.User,
-		b.Host,
-		b.DockerHub,
+	return fmt.Sprintf("%v-%v-%v",
 		b.Version,
 		b.GitRevision,
 		b.BuildStatus)
@@ -127,10 +115,7 @@ func init() {
 	Info = BuildInfo{
 		Version:       buildVersion,
 		GitRevision:   buildGitRevision,
-		User:          buildUser,
-		Host:          buildHost,
 		GolangVersion: runtime.Version(),
-		DockerHub:     buildDockerHub,
 		BuildStatus:   buildStatus,
 		GitTag:        buildTag,
 	}
