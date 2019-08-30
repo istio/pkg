@@ -31,7 +31,23 @@ func TestNewBuildInfoFromOldString(t *testing.T) {
 			"Correct input 1",
 			`Version: 1.0.0
 GitRevision: 3a136c90ec5e308f236e0d7ebb5c4c5e405217f4
+GolangVersion: go1.10.1
+BuildStatus: Clean
+GitTag: tag
+`,
+			false,
+			BuildInfo{Version: "1.0.0",
+				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
+				GolangVersion: "go1.10.1",
+				BuildStatus:   "Clean",
+				GitTag:        "tag"},
+		},
+		{
+			"Legacy input 1",
+			`Version: 1.0.0
+GitRevision: 3a136c90ec5e308f236e0d7ebb5c4c5e405217f4
 User: root@71a9470ea93c
+Host: foo
 Hub: docker.io/istio
 GolangVersion: go1.10.1
 BuildStatus: Clean
@@ -40,8 +56,6 @@ GitTag: tag
 			false,
 			BuildInfo{Version: "1.0.0",
 				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
-				User:          "root@71a9470ea93c",
-				DockerHub:     "docker.io/istio",
 				GolangVersion: "go1.10.1",
 				BuildStatus:   "Clean",
 				GitTag:        "tag"},
@@ -55,7 +69,7 @@ GitTag: tag
 		{
 			"Invalid input 2",
 			"Xuxa:Xuxo",
-			true,
+			false,
 			BuildInfo{},
 		},
 	}
@@ -78,8 +92,8 @@ GitTag: tag
 }
 
 func TestBuildInfo(t *testing.T) {
-	versionedString := fmt.Sprintf(`version.BuildInfo{Version:"unknown", GitRevision:"unknown", User:"unknown", `+
-		`Host:"unknown", GolangVersion:"%s", DockerHub:"unknown", BuildStatus:"unknown", GitTag:"unknown"}`,
+	versionedString := fmt.Sprintf(`version.BuildInfo{Version:"unknown", GitRevision:"unknown", `+
+		`GolangVersion:"%s", BuildStatus:"unknown", GitTag:"unknown"}`,
 		runtime.Version())
 
 	cases := []struct {
@@ -91,17 +105,14 @@ func TestBuildInfo(t *testing.T) {
 		{"all specified", BuildInfo{
 			Version:       "VER",
 			GitRevision:   "GITREV",
-			Host:          "HOST",
 			GolangVersion: "GOLANGVER",
-			DockerHub:     "DH",
-			User:          "USER",
 			BuildStatus:   "STATUS",
 			GitTag:        "TAG"},
-			"USER@HOST-DH-VER-GITREV-STATUS",
-			`version.BuildInfo{Version:"VER", GitRevision:"GITREV", User:"USER", Host:"HOST", GolangVersion:"GOLANGVER", DockerHub:"DH", ` +
+			"VER-GITREV-STATUS",
+			`version.BuildInfo{Version:"VER", GitRevision:"GITREV", GolangVersion:"GOLANGVER", ` +
 				`BuildStatus:"STATUS", GitTag:"TAG"}`},
 
-		{"init", Info, "unknown@unknown-unknown-unknown-unknown-unknown", versionedString}}
+		{"init", Info, "unknown-unknown-unknown", versionedString}}
 
 	for _, v := range cases {
 		t.Run(v.name, func(t *testing.T) {
