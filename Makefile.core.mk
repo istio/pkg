@@ -17,7 +17,7 @@ export ARTIFACTS ?= "/tmp"
 gen:
 	@go generate ./...
 
-lint: lint-go lint-copyright-banner lint-scripts lint-yaml
+lint: lint-all
 
 fmt: format-go
 
