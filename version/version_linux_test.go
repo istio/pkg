@@ -32,10 +32,7 @@ func TestRecordComponentBuildTag(t *testing.T) {
 		{"record", BuildInfo{
 			Version:       "VER",
 			GitRevision:   "GITREV",
-			Host:          "HOST",
 			GolangVersion: "GOLANGVER",
-			DockerHub:     "DH",
-			User:          "USER",
 			BuildStatus:   "STATUS",
 			GitTag:        "1.0.5-test"},
 			"1.0.5-test",
@@ -67,10 +64,7 @@ func TestRecordComponentBuildTagError(t *testing.T) {
 	bi := BuildInfo{
 		Version:       "VER",
 		GitRevision:   "GITREV",
-		Host:          "HOST",
 		GolangVersion: "GOLANGVER",
-		DockerHub:     "DH",
-		User:          "USER",
 		BuildStatus:   "STATUS",
 		GitTag:        "TAG",
 	}

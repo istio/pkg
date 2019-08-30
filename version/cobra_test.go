@@ -107,15 +107,15 @@ func TestOpts(t *testing.T) {
 }
 
 var meshInfoSingleVersion = MeshInfo{
-	{"Pilot", BuildInfo{"1.2.0", "gitSHA123", "user1", "host1", "go1.10", "hub.docker.com", "Clean", "tag"}},
-	{"Injector", BuildInfo{"1.2.0", "gitSHAabc", "user2", "host2", "go1.10.1", "hub.docker.com", "Modified", "tag"}},
-	{"Citadel", BuildInfo{"1.2.0", "gitSHA321", "user3", "host3", "go1.11.0", "hub.docker.com", "Clean", "tag"}},
+	{"Pilot", BuildInfo{"1.2.0", "gitSHA123", "go1.10", "Clean", "tag"}},
+	{"Injector", BuildInfo{"1.2.0", "gitSHAabc", "go1.10.1", "Modified", "tag"}},
+	{"Citadel", BuildInfo{"1.2.0", "gitSHA321", "go1.11.0", "Clean", "tag"}},
 }
 
 var meshInfoMultiVersion = MeshInfo{
-	{"Pilot", BuildInfo{"1.0.0", "gitSHA123", "user1", "host1", "go1.10", "hub.docker.com", "Clean", "1.0.0"}},
-	{"Injector", BuildInfo{"1.0.1", "gitSHAabc", "user2", "host2", "go1.10.1", "hub.docker.com", "Modified", "1.0.1"}},
-	{"Citadel", BuildInfo{"1.2", "gitSHA321", "user3", "host3", "go1.11.0", "hub.docker.com", "Clean", "1.2"}},
+	{"Pilot", BuildInfo{"1.0.0", "gitSHA123", "go1.10", "Clean", "1.0.0"}},
+	{"Injector", BuildInfo{"1.0.1", "gitSHAabc", "go1.10.1", "Modified", "1.0.1"}},
+	{"Citadel", BuildInfo{"1.2", "gitSHA321", "go1.11.0", "Clean", "1.2"}},
 }
 
 func mockRemoteMesh(meshInfo *MeshInfo) GetRemoteVersionFunc {
@@ -167,8 +167,8 @@ func TestVersion(t *testing.T) {
 		{ // case 0 client-side only, normal output
 			args: strings.Split("version --remote=false --short=false", " "),
 			expectedRegexp: regexp.MustCompile("version.BuildInfo{Version:\"unknown\", GitRevision:\"unknown\", " +
-				"User:\"unknown\", Host:\"unknown\", GolangVersion:\"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\", " +
-				"DockerHub:\"unknown\", BuildStatus:\"unknown\", GitTag:\"unknown\"}"),
+				"GolangVersion:\"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\", " +
+				"BuildStatus:\"unknown\", GitTag:\"unknown\"}"),
 		},
 		{ // case 1 client-side only, short output
 			args:           strings.Split("version -s --remote=false", " "),
@@ -178,12 +178,9 @@ func TestVersion(t *testing.T) {
 			args: strings.Split("version --remote=false -o yaml", " "),
 			expectedRegexp: regexp.MustCompile("clientVersion:\n" +
 				"  golang_version: go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\n" +
-				"  host: unknown\n" +
-				"  hub: unknown\n" +
 				"  revision: unknown\n" +
 				"  status: unknown\n" +
 				"  tag: unknown\n" +
-				"  user: unknown\n" +
 				"  version: unknown\n\n"),
 		},
 		{ // case 3 client-side only, json output
@@ -192,10 +189,7 @@ func TestVersion(t *testing.T) {
 				"  \"clientVersion\": {\n" +
 				"    \"version\": \"unknown\",\n" +
 				"    \"revision\": \"unknown\",\n" +
-				"    \"user\": \"unknown\",\n" +
-				"    \"host\": \"unknown\",\n" +
 				"    \"golang_version\": \"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\",\n" +
-				"    \"hub\": \"unknown\",\n" +
 				"    \"status\": \"unknown\",\n" +
 				"    \"tag\": \"unknown\"\n" +
 				"  }\n" +
@@ -206,8 +200,8 @@ func TestVersion(t *testing.T) {
 			args:       strings.Split("version --remote=true --short=false --output=", " "),
 			remoteMesh: &meshInfoMultiVersion,
 			expectedRegexp: regexp.MustCompile("client version: version.BuildInfo{Version:\"unknown\", GitRevision:\"unknown\", " +
-				"User:\"unknown\", Host:\"unknown\", GolangVersion:\"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\", " +
-				"DockerHub:\"unknown\", BuildStatus:\"unknown\", GitTag:\"unknown\"}\n" +
+				"GolangVersion:\"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\", " +
+				"BuildStatus:\"unknown\", GitTag:\"unknown\"}\n" +
 				printMeshVersion(&meshInfoMultiVersion, rawOutputMock)),
 		},
 		{ // case 5 remote, short output
@@ -220,12 +214,9 @@ func TestVersion(t *testing.T) {
 			remoteMesh: &meshInfoMultiVersion,
 			expectedRegexp: regexp.MustCompile("clientVersion:\n" +
 				"  golang_version: go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\n" +
-				"  host: unknown\n" +
-				"  hub: unknown\n" +
 				"  revision: unknown\n" +
 				"  status: unknown\n" +
 				"  tag: unknown\n" +
-				"  user: unknown\n" +
 				"  version: unknown\n" + printMeshVersion(&meshInfoMultiVersion, yamlOutputMock)),
 		},
 		{ // case 7 remote, json output
@@ -235,10 +226,7 @@ func TestVersion(t *testing.T) {
 				"  \"clientVersion\": {\n" +
 				"    \"version\": \"unknown\",\n" +
 				"    \"revision\": \"unknown\",\n" +
-				"    \"user\": \"unknown\",\n" +
-				"    \"host\": \"unknown\",\n" +
 				"    \"golang_version\": \"go1.([0-9+?(\\.)?]+)(rc[0-9]?)?\",\n" +
-				"    \"hub\": \"unknown\",\n" +
 				"    \"status\": \"unknown\",\n" +
 				"    \"tag\": \"unknown\"\n" +
 				"  },\n" +
