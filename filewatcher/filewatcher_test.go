@@ -362,11 +362,9 @@ func (c *churnFile) remove(w FileWatcher) error {
 }
 
 func TestChurn(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	duration := time.Second * 1
-	workers := 2
-	filesPerWorker := 10
+	duration := time.Second * 5
+	workers := 5
+	filesPerWorker := 100
 
 	w := NewWatcher()
 	defer func() { _ = w.Close() }()
@@ -397,24 +395,27 @@ func TestChurn(t *testing.T) {
 				}
 			}()
 
-			for exit := false; !exit; _, exit = <-done {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
 
 				f := files[rand.Int31n(int32(filesPerWorker))]
 				switch rand.Int31n(2) {
 				case 0: // modify or create
 					if f.active() {
 						f.modify()
-						break
+					} else {
+						_ = f.create(w)
 					}
-					fallthrough
 
 				case 1: // create or delete
 					if f.active() {
-						err := f.remove(w)
-						g.Expect(err).To(BeNil())
+						_ = f.remove(w)
 					} else {
-						err := f.create(w)
-						g.Expect(err).To(BeNil())
+						_ = f.create(w)
 					}
 				}
 			}
