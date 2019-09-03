@@ -144,7 +144,7 @@ func changeFileContents(file string) {
 		b[i] = byte(rand.Int31n(255))
 	}
 
-	_ = ioutil.WriteFile(file, b, 777)
+	_ = ioutil.WriteFile(file, b, 0777)
 }
 
 func TestWatchFile(t *testing.T) {
@@ -328,10 +328,10 @@ func (c *churnFile) create(w FileWatcher) error {
 		for {
 			<-time.After(time.Millisecond * time.Duration(rand.Int31n(5)))
 			select {
-			case _ = <-eventDoneCh:
+			case <-eventDoneCh:
 				return
-			case _ = <-events: // read and discard events
-			case _ = <-errors:
+			case <-events: // read and discard events
+			case <-errors:
 			}
 		}
 	}()
