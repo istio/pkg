@@ -22,7 +22,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// NewFileWatcherFunc returns a functions which creates a new file
+// NewFileWatcherFunc returns a function which creates a new file
 // watcher. This may be used to provide test hooks for using the
 // FakeWatcher implementation below.
 type NewFileWatcherFunc func() FileWatcher

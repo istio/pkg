@@ -15,6 +15,7 @@
 package filewatcher
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/fsnotify/fsnotify"
 	. "github.com/onsi/gomega"
 )
 
@@ -220,8 +222,6 @@ func TestWatcherLifecycle(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	err = w.Add(watchFile2)
 	g.Expect(err).NotTo(HaveOccurred())
-	err = w.Add(watchFile2)
-	g.Expect(err).To(HaveOccurred())
 
 	// Validate events and errors channel are fulfilled.
 	events1 := w.Events(watchFile1)
@@ -237,8 +237,6 @@ func TestWatcherLifecycle(t *testing.T) {
 	// Validate Remove behavior
 	err = w.Remove(watchFile1)
 	g.Expect(err).NotTo(HaveOccurred())
-	err = w.Remove(watchFile1)
-	g.Expect(err).To(HaveOccurred())
 	events1 = w.Events(watchFile1)
 	g.Expect(events1).To(BeNil())
 	errors1 = w.Errors(watchFile1)
@@ -248,6 +246,7 @@ func TestWatcherLifecycle(t *testing.T) {
 	errors2 = w.Errors(watchFile2)
 	g.Expect(errors2).NotTo(BeNil())
 
+	fmt.Printf("2\n")
 	// Validate Close behavior
 	err = w.Close()
 	g.Expect(err).NotTo(HaveOccurred())
@@ -259,4 +258,123 @@ func TestWatcherLifecycle(t *testing.T) {
 	g.Expect(events2).To(BeNil())
 	errors2 = w.Errors(watchFile2)
 	g.Expect(errors2).To(BeNil())
+}
+
+func TestErrors(t *testing.T) {
+	w := NewWatcher()
+
+	if ch := w.Errors("XYZ"); ch != nil {
+		t.Error("Expected no channel")
+	}
+
+	if ch := w.Events("XYZ"); ch != nil {
+		t.Error("Expected no channel")
+	}
+
+	name, _ := newWatchFile(t)
+	_ = w.Add(name)
+	_ = w.Remove(name)
+
+	if ch := w.Errors("XYZ"); ch != nil {
+		t.Error("Expected no channel")
+	}
+
+	if ch := w.Events(name); ch != nil {
+		t.Error("Expected no channel")
+	}
+
+	_ = w.Close()
+
+	if err := w.Add(name); err == nil {
+		t.Error("Expecting error")
+	}
+
+	if err := w.Remove(name); err == nil {
+		t.Error("Expecting error")
+	}
+
+	if ch := w.Errors(name); ch != nil {
+		t.Error("Expecting nil")
+	}
+
+	if ch := w.Events(name); ch != nil {
+		t.Error("Expecting nil")
+	}
+}
+
+func TestBadWatcher(t *testing.T) {
+	old := funcs.newWatcher
+	funcs.newWatcher = func() (*fsnotify.Watcher, error) {
+		return nil, errors.New("FOOBAR")
+	}
+
+	w := NewWatcher()
+	name, _ := newWatchFile(t)
+	if err := w.Add(name); err == nil {
+		t.Errorf("Expecting error, got nil")
+	}
+	if err := w.Close(); err != nil {
+		t.Errorf("Expecting nil, got %v", err)
+	}
+
+	funcs.newWatcher = old
+}
+
+func TestBadAddWatcher(t *testing.T) {
+	old := funcs.addWatcherPath
+	funcs.addWatcherPath = func(*fsnotify.Watcher, string) error {
+		return errors.New("FOOBAR")
+	}
+
+	w := NewWatcher()
+	name, _ := newWatchFile(t)
+	if err := w.Add(name); err == nil {
+		t.Errorf("Expecting error, got nil")
+	}
+	if err := w.Close(); err != nil {
+		t.Errorf("Expecting nil, got %v", err)
+	}
+
+	funcs.addWatcherPath = old
+}
+
+func TestDuplicateAdd(t *testing.T) {
+	count := 0
+
+	old := funcs.panic
+	funcs.panic = func(string) {
+		count++
+	}
+
+	w := NewWatcher()
+	name, _ := newWatchFile(t)
+	_ = w.Add(name)
+	_ = w.Add(name)
+	_ = w.Close()
+
+	if count != 1 {
+		t.Errorf("Expecting 1 panic, got %d", count)
+	}
+
+	funcs.panic = old
+}
+
+func TestBogusRemove(t *testing.T) {
+	count := 0
+
+	old := funcs.panic
+	funcs.panic = func(string) {
+		count++
+	}
+
+	w := NewWatcher()
+	name, _ := newWatchFile(t)
+	_ = w.Remove(name)
+	_ = w.Close()
+
+	if count != 1 {
+		t.Errorf("Expecting 1 panic, got %d", count)
+	}
+
+	funcs.panic = old
 }
