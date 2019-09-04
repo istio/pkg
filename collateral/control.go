@@ -75,6 +75,9 @@ type Control struct {
 
 	// ManPageInfo provides extra information necessary when emitting man pages.
 	ManPageInfo doc.GenManHeader
+
+	// Predicates to use to filter environment variables and metrics. If not set, all items will be selected.
+	Predicates Predicates
 }
 
 // EmitCollateral produces a set of collateral files for a CLI command. You can
@@ -94,7 +97,7 @@ func EmitCollateral(root *cobra.Command, c *Control) error {
 	}
 
 	if c.EmitHTMLFragmentWithFrontMatter {
-		if err := genHTMLFragment(root, c.OutputDir+"/"+root.Name()+".html"); err != nil {
+		if err := genHTMLFragment(root, c.OutputDir+"/"+root.Name()+".html", c.Predicates); err != nil {
 			return fmt.Errorf("unable to output HTML fragment file: %v", err)
 		}
 	}
@@ -254,13 +257,13 @@ _complete istio 2>/dev/null
 		if err != nil {
 			return fmt.Errorf("unable to create zsh completion file: %v", err)
 		}
-		defer outFile.Close()
+		defer func() { _ = outFile.Close() }()
 
 		// Concatenate the head, initialization, generated bash, and tail to the file
 		if _, err = outFile.Write([]byte(zshInitialization)); err != nil {
 			return fmt.Errorf("unable to output zsh initialization: %v", err)
 		}
-		if err := root.GenBashCompletion(outFile); err != nil {
+		if err = root.GenBashCompletion(outFile); err != nil {
 			return fmt.Errorf("unable to output zsh completion file: %v", err)
 		}
 		if _, err = outFile.Write([]byte(zshTail)); err != nil {
@@ -294,7 +297,7 @@ func findCommands(commands map[string]*cobra.Command, cmd *cobra.Command) {
 
 const help = "help"
 
-func genHTMLFragment(cmd *cobra.Command, path string) error {
+func genHTMLFragment(cmd *cobra.Command, path string, p Predicates) error {
 	commands := make(map[string]*cobra.Command)
 	findCommands(commands, cmd)
 
@@ -329,8 +332,8 @@ func genHTMLFragment(cmd *cobra.Command, path string) error {
 		_ = g.genConfigFile(viper.GetViper(), commands[n].Flags())
 	}
 
-	g.genVars(cmd)
-	g.genMetrics()
+	g.genVars(cmd, p.SelectEnv)
+	g.genMetrics(p.SelectMetric)
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -619,12 +622,19 @@ func normalizeID(id string) string {
 	return strings.Replace(id, ".", "-", -1)
 }
 
-func (g *generator) genVars(root *cobra.Command) {
+func (g *generator) genVars(root *cobra.Command, selectFn SelectEnvFn) {
+	if selectFn == nil {
+		selectFn = DefaultSelectEnvFn
+	}
+
 	envVars := env.VarDescriptions()
 
 	count := 0
 	for _, v := range envVars {
 		if v.Hidden {
+			continue
+		}
+		if !selectFn(v) {
 			continue
 		}
 		count++
@@ -651,6 +661,9 @@ func (g *generator) genVars(root *cobra.Command) {
 
 	for _, v := range envVars {
 		if v.Hidden {
+			continue
+		}
+		if !selectFn(v) {
 			continue
 		}
 
@@ -683,7 +696,11 @@ func (g *generator) genVars(root *cobra.Command) {
 	g.emit("</table>")
 }
 
-func (g *generator) genMetrics() {
+func (g *generator) genMetrics(selectFn SelectMetricFn) {
+	if selectFn == nil {
+		selectFn = DefaultSelectMetricFn
+	}
+
 	g.emit(`<h2 id="metrics">Exported metrics</h2>
 <table class="metrics">
 <thead>
@@ -693,6 +710,9 @@ func (g *generator) genMetrics() {
 
 	r := metrics.NewOpenCensusRegistry()
 	for _, metric := range r.ExportedMetrics() {
+		if !selectFn(metric) {
+			continue
+		}
 		g.emit("<tr><td><code>", metric.Name, "</code></td><td><code>", metric.Type, "</code></td><td>", metric.Description, "</td></tr>")
 	}
 
