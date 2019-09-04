@@ -22,9 +22,18 @@ import (
 // CobraCommand returns a Cobra command used to output a tool's collateral files (markdown docs, bash completion & man pages)
 // The root argument must be the root command for the tool.
 func CobraCommand(root *cobra.Command, hdr *doc.GenManHeader) *cobra.Command {
+	return CobraCommandWithFilter(root, hdr, Predicates{})
+}
+
+// CobraCommandWithFilter returns a Cobra command used to output a tool's collateral files (markdown docs, bash
+// completion & man pages). It allows passing in a set of predicates to filter out and remove items selectively.
+// The root argument must be the root command for the tool.
+func CobraCommandWithFilter(root *cobra.Command, hdr *doc.GenManHeader, p Predicates) *cobra.Command {
 	c := Control{
-		OutputDir: ".",
+		OutputDir:  ".",
+		Predicates: p,
 	}
+
 	var all bool
 
 	cmd := &cobra.Command{
