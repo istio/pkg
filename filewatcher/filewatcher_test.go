@@ -359,38 +359,30 @@ func TestBadAddWatcher(t *testing.T) {
 }
 
 func TestDuplicateAdd(t *testing.T) {
-	count := 0
-
 	w := NewWatcher()
-	w.(*fileWatcher).funcs.panic = func(string) {
-		count++
-	}
 
 	name, _ := newWatchFile(t)
-	_ = w.Add(name)
-	_ = w.Add(name)
-	_ = w.Close()
 
-	if count != 1 {
-		t.Errorf("Expecting 1 panic, got %d", count)
+	if err := w.Add(name); err != nil {
+		t.Errorf("Expecting nil, got %v", err)
 	}
+
+	if err := w.Add(name); err == nil {
+		t.Errorf("Expecting error, got nil")
+	}
+
+	_ = w.Close()
 }
 
 func TestBogusRemove(t *testing.T) {
-	count := 0
-
 	w := NewWatcher()
-	w.(*fileWatcher).funcs.panic = func(string) {
-		count++
-	}
 
 	name, _ := newWatchFile(t)
-	_ = w.Remove(name)
-	_ = w.Close()
-
-	if count != 1 {
-		t.Errorf("Expecting 1 panic, got %d", count)
+	if err := w.Remove(name); err == nil {
+		t.Errorf("Expecting error, got nil")
 	}
+
+	_ = w.Close()
 }
 
 type churnFile struct {
