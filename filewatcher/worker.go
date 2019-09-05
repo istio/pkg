@@ -52,6 +52,8 @@ type worker struct {
 
 	// synchronize with worker activity
 	barrierCh chan bool
+
+	funcs *patchTable
 }
 
 type fileTracker struct {
@@ -62,7 +64,7 @@ type fileTracker struct {
 	md5Sum []byte
 }
 
-func newWorker(path string) (*worker, error) {
+func newWorker(path string, funcs *patchTable) (*worker, error) {
 	dirWatcher, err := funcs.newWatcher()
 	if err != nil {
 		return nil, err
@@ -80,11 +82,24 @@ func newWorker(path string) (*worker, error) {
 		removePathCh: make(chan string),
 		terminateCh:  make(chan bool),
 		barrierCh:    make(chan bool),
+		funcs:        funcs,
 	}
 
-	go wk.loop()
+	go wk.listen()
 
 	return wk, nil
+}
+
+func (wk *worker) listen() {
+	wk.loop()
+
+	_ = wk.dirWatcher.Close()
+
+	// clean up
+	for _, ft := range wk.watchedFiles {
+		close(ft.errors)
+		close(ft.events)
+	}
 }
 
 func (wk *worker) loop() {
@@ -95,62 +110,92 @@ func (wk *worker) loop() {
 				sum := getMd5Sum(path)
 				if !bytes.Equal(sum, ft.md5Sum) {
 					ft.md5Sum = sum
-					ft.events <- event
+
+					select {
+					case ft.events <- event:
+						// nothing to do
+
+					case path := <-wk.addPathCh:
+						wk.registerPath(path)
+
+					case path := <-wk.removePathCh:
+						wk.unregisterPath(path)
+
+					case <-wk.terminateCh:
+						return
+
+					case <-wk.barrierCh:
+						// nothing to do
+					}
 				}
 			}
 
 		case err := <-wk.dirWatcher.Errors:
 			for _, ft := range wk.watchedFiles {
-				ft.errors <- err
+				select {
+				case ft.errors <- err:
+
+				case path := <-wk.addPathCh:
+					wk.registerPath(path)
+
+				case path := <-wk.removePathCh:
+					wk.unregisterPath(path)
+
+				case <-wk.terminateCh:
+					return
+
+				case <-wk.barrierCh:
+					// nothing to do
+				}
 			}
 
 		case path := <-wk.addPathCh:
-			ft := wk.watchedFiles[path]
-			if ft != nil {
-				funcs.panic(fmt.Sprintf("can't watch the %s path multiple times", path))
-				break
-			}
-
-			ft = &fileTracker{
-				events: make(chan fsnotify.Event),
-				errors: make(chan error),
-				md5Sum: getMd5Sum(path),
-			}
-
-			wk.mu.Lock()
-			wk.watchedFiles[path] = ft
-			wk.mu.Unlock()
+			wk.registerPath(path)
 
 		case path := <-wk.removePathCh:
-			ft := wk.watchedFiles[path]
-			if ft == nil {
-				funcs.panic(fmt.Sprintf("can't stop watching the %s path as it wasn't being watched", path))
-				break
-			}
-
-			wk.mu.Lock()
-			delete(wk.watchedFiles, path)
-			wk.mu.Unlock()
-			close(ft.errors)
-			close(ft.events)
+			wk.unregisterPath(path)
 
 		case <-wk.terminateCh:
-			for _, ft := range wk.watchedFiles {
-				close(ft.errors)
-				close(ft.events)
-			}
-
-			_ = wk.dirWatcher.Close()
-			close(wk.addPathCh)
-			close(wk.removePathCh)
-			close(wk.terminateCh)
-			close(wk.barrierCh)
 			return
 
 		case <-wk.barrierCh:
 			// nothing to do
 		}
 	}
+}
+
+// called from within the goroutine
+func (wk *worker) registerPath(path string) {
+	ft := wk.watchedFiles[path]
+	if ft != nil {
+		wk.funcs.panic(fmt.Sprintf("can't watch the %s path multiple times", path))
+		return
+	}
+
+	ft = &fileTracker{
+		events: make(chan fsnotify.Event),
+		errors: make(chan error),
+		md5Sum: getMd5Sum(path),
+	}
+
+	wk.mu.Lock()
+	wk.watchedFiles[path] = ft
+	wk.mu.Unlock()
+}
+
+// called from within the goroutine
+func (wk *worker) unregisterPath(path string) {
+	ft := wk.watchedFiles[path]
+	if ft == nil {
+		wk.funcs.panic(fmt.Sprintf("can't stop watching the %s path as it wasn't being watched", path))
+		return
+	}
+
+	wk.mu.Lock()
+	delete(wk.watchedFiles, path)
+	wk.mu.Unlock()
+	close(ft.errors)
+	close(ft.events)
 }
 
 func (wk *worker) terminate() {
@@ -166,14 +211,7 @@ func (wk *worker) removePath(path string) {
 }
 
 func (wk *worker) eventChannel(path string) chan fsnotify.Event {
-	// Ensure any previous add/remove has completed
-	//
-	// Since we're using blocking channels, the caller blocks when adding or removing a path
-	// until the worker goroutine has woken up and started processing the path. Poking this
-	// barrier will block until the worker can get around to reading the message from the channel,
-	// which indirectly ensures that a previous addPath/removePath has already completed and so the
-	// event and error channels have been created
-	wk.barrierCh <- true
+	wk.sync()
 
 	wk.mu.RLock()
 	defer wk.mu.RUnlock()
@@ -186,14 +224,7 @@ func (wk *worker) eventChannel(path string) chan fsnotify.Event {
 }
 
 func (wk *worker) errorChannel(path string) chan error {
-	// Ensure any previous add/remove has completed
-	//
-	// Since we're using blocking channels, the caller blocks when adding or removing a path
-	// until the worker goroutine has woken up and started processing the path. Poking this
-	// barrier will block until the worker can get around to reading the message from the channel,
-	// which indirectly ensures that a previous addPath/removePath has already completed and so the
-	// event and error channels have been created
-	wk.barrierCh <- true
+	wk.sync()
 
 	wk.mu.RLock()
 	defer wk.mu.RUnlock()
@@ -203,6 +234,17 @@ func (wk *worker) errorChannel(path string) chan error {
 	}
 
 	return nil
+}
+
+func (wk *worker) sync() {
+	// Ensure any previous add/remove has completed
+	//
+	// Since we're using blocking channels, the caller blocks when adding or removing a path
+	// until the worker goroutine has woken up and started processing the path. Poking this
+	// barrier will block until the worker can get around to reading the message from the channel,
+	// which indirectly ensures that a previous addPath/removePath has already completed and so the
+	// event and error channels have been created
+	wk.barrierCh <- true
 }
 
 // gets the MD5 of the given file, or nil if there's a problem

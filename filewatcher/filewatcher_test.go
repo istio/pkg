@@ -18,32 +18,52 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	. "github.com/onsi/gomega"
 )
 
-func newWatchFile(t *testing.T) (string, func()) {
-	g := NewGomegaWithT(t)
+var rootTmpDir string
 
-	watchDir, err := ioutil.TempDir("", "")
-	g.Expect(err).NotTo(HaveOccurred())
+func init() {
+	var err error
+	if rootTmpDir, err = ioutil.TempDir("", "filewatcher_test"); err != nil {
+		panic(err)
+	}
+}
+
+func newWatchFileImpl() (string, func(), error) {
+	watchDir, err := ioutil.TempDir(rootTmpDir, "")
+	if err != nil {
+		return "", nil, err
+	}
 
 	watchFile := path.Join(watchDir, "test.conf")
 	err = ioutil.WriteFile(watchFile, []byte("foo: bar\n"), 0640)
-	g.Expect(err).NotTo(HaveOccurred())
-
+	if err != nil {
+		_ = os.RemoveAll(watchDir)
+		return "", nil, err
+	}
 	cleanup := func() {
-		os.RemoveAll(watchDir)
+		_ = os.RemoveAll(watchDir)
 	}
 
-	return watchFile, cleanup
+	return watchFile, cleanup, nil
+}
+
+func newWatchFile(t *testing.T) (string, func()) {
+	g := NewGomegaWithT(t)
+	name, cleanup, err := newWatchFileImpl()
+	g.Expect(err).NotTo(HaveOccurred())
+	return name, cleanup
 }
 
 func newWatchFileThatDoesNotExist(t *testing.T) (string, func()) {
@@ -144,6 +164,8 @@ func TestWatchFile(t *testing.T) {
 		err = ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
+
+		_ = w.Close()
 	})
 
 	t.Run("link to real file changed (for k8s configmap/secret path)", func(t *testing.T) {
@@ -182,6 +204,8 @@ func TestWatchFile(t *testing.T) {
 
 		// Wait its event to be received.
 		wg.Wait()
+
+		_ = w.Close()
 	})
 
 	t.Run("file added later", func(t *testing.T) {
@@ -206,6 +230,8 @@ func TestWatchFile(t *testing.T) {
 		err := ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
+
+		_ = w.Close()
 	})
 }
 
@@ -303,12 +329,11 @@ func TestErrors(t *testing.T) {
 }
 
 func TestBadWatcher(t *testing.T) {
-	old := funcs.newWatcher
-	funcs.newWatcher = func() (*fsnotify.Watcher, error) {
+	w := NewWatcher()
+	w.(*fileWatcher).funcs.newWatcher = func() (*fsnotify.Watcher, error) {
 		return nil, errors.New("FOOBAR")
 	}
 
-	w := NewWatcher()
 	name, _ := newWatchFile(t)
 	if err := w.Add(name); err == nil {
 		t.Errorf("Expecting error, got nil")
@@ -316,17 +341,14 @@ func TestBadWatcher(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Errorf("Expecting nil, got %v", err)
 	}
-
-	funcs.newWatcher = old
 }
 
 func TestBadAddWatcher(t *testing.T) {
-	old := funcs.addWatcherPath
-	funcs.addWatcherPath = func(*fsnotify.Watcher, string) error {
+	w := NewWatcher()
+	w.(*fileWatcher).funcs.addWatcherPath = func(*fsnotify.Watcher, string) error {
 		return errors.New("FOOBAR")
 	}
 
-	w := NewWatcher()
 	name, _ := newWatchFile(t)
 	if err := w.Add(name); err == nil {
 		t.Errorf("Expecting error, got nil")
@@ -334,19 +356,16 @@ func TestBadAddWatcher(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Errorf("Expecting nil, got %v", err)
 	}
-
-	funcs.addWatcherPath = old
 }
 
 func TestDuplicateAdd(t *testing.T) {
 	count := 0
 
-	old := funcs.panic
-	funcs.panic = func(string) {
+	w := NewWatcher()
+	w.(*fileWatcher).funcs.panic = func(string) {
 		count++
 	}
 
-	w := NewWatcher()
 	name, _ := newWatchFile(t)
 	_ = w.Add(name)
 	_ = w.Add(name)
@@ -355,19 +374,16 @@ func TestDuplicateAdd(t *testing.T) {
 	if count != 1 {
 		t.Errorf("Expecting 1 panic, got %d", count)
 	}
-
-	funcs.panic = old
 }
 
 func TestBogusRemove(t *testing.T) {
 	count := 0
 
-	old := funcs.panic
-	funcs.panic = func(string) {
+	w := NewWatcher()
+	w.(*fileWatcher).funcs.panic = func(string) {
 		count++
 	}
 
-	w := NewWatcher()
 	name, _ := newWatchFile(t)
 	_ = w.Remove(name)
 	_ = w.Close()
@@ -375,6 +391,153 @@ func TestBogusRemove(t *testing.T) {
 	if count != 1 {
 		t.Errorf("Expecting 1 panic, got %d", count)
 	}
+}
 
-	funcs.panic = old
+type churnFile struct {
+	file        string
+	cleanupFile func()
+	eventDoneCh chan struct{}
+}
+
+func (c *churnFile) active() bool {
+	return c.cleanupFile != nil
+}
+
+func (c *churnFile) create(w FileWatcher) error {
+	if c.active() {
+		panic("File is currently active")
+	}
+	f, cl, err := newWatchFileImpl()
+	if err != nil {
+		return err
+	}
+
+	if err = w.Add(f); err != nil {
+		cl()
+		return err
+	}
+
+	events := w.Events(f)
+	errors := w.Errors(f)
+	eventDoneCh := make(chan struct{})
+
+	c.eventDoneCh = eventDoneCh
+	c.file = f
+	c.cleanupFile = cl
+
+	go func() {
+		// sporadically read events
+		for {
+			<-time.After(time.Millisecond * time.Duration(rand.Int31n(5)))
+			select {
+			case <-eventDoneCh:
+				return
+			case <-events: // read and discard events
+			case <-errors:
+			}
+		}
+	}()
+
+	return nil
+}
+
+func changeFileContents(file string) {
+	l := rand.Int31n(4 * 1024)
+	b := make([]byte, l)
+	for i := 0; i < int(l); i++ {
+		b[i] = byte(rand.Int31n(255))
+	}
+
+	_ = ioutil.WriteFile(file, b, 0777)
+}
+
+func (c *churnFile) modify() {
+	if !c.active() {
+		panic("file is not active")
+	}
+	changeFileContents(c.file)
+}
+
+func (c *churnFile) remove(w FileWatcher) error {
+	if !c.active() {
+		panic("file is not active")
+	}
+	close(c.eventDoneCh)
+	err := w.Remove(c.file)
+	c.cleanupFile()
+
+	c.file = ""
+	c.cleanupFile = nil
+	c.eventDoneCh = nil
+
+	return err
+}
+
+func TestChurn(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	duration := time.Second * 5
+	workers := 5
+	filesPerWorker := 15
+
+	w := NewWatcher()
+	defer func() { _ = w.Close() }()
+
+	done := make(chan struct{})
+	go func() {
+		<-time.After(duration)
+		close(done)
+	}()
+
+	// create a bunch of workers and perform add/modify operations
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			files := make([]*churnFile, filesPerWorker)
+			for j := 0; j < filesPerWorker; j++ {
+				files[j] = &churnFile{}
+			}
+
+			defer func() {
+				for _, e := range files {
+					if e.active() {
+						_ = e.remove(w)
+					}
+				}
+			}()
+
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+
+				f := files[rand.Int31n(int32(filesPerWorker))]
+				switch rand.Int31n(2) {
+				case 0: // modify or create
+					if f.active() {
+						f.modify()
+					} else {
+						err := f.create(w)
+						g.Expect(err).To(BeNil())
+					}
+
+				case 1: // create or delete
+					if f.active() {
+						err := f.remove(w)
+						g.Expect(err).To(BeNil())
+					} else {
+						err := f.create(w)
+						g.Expect(err).To(BeNil())
+					}
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }

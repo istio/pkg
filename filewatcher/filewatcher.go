@@ -44,6 +44,8 @@ type fileWatcher struct {
 	// The watcher maintain a map of workers,
 	// keyed by watched dir (parent dir of watched files).
 	workers map[string]*workerState
+
+	funcs *patchTable
 }
 
 type workerState struct {
@@ -58,21 +60,21 @@ type patchTable struct {
 	panic          func(string)
 }
 
-// function table that can be replaced by tests
-var funcs = &patchTable{
-	newWatcher: fsnotify.NewWatcher,
-	addWatcherPath: func(watcher *fsnotify.Watcher, path string) error {
-		return watcher.Add(path)
-	},
-	panic: func(msg string) {
-		panic(msg)
-	},
-}
-
 // NewWatcher return with a FileWatcher instance that implemented with fsnotify.
 func NewWatcher() FileWatcher {
 	return &fileWatcher{
 		workers: map[string]*workerState{},
+
+		// replaceable functions for tests
+		funcs: &patchTable{
+			newWatcher: fsnotify.NewWatcher,
+			addWatcherPath: func(watcher *fsnotify.Watcher, path string) error {
+				return watcher.Add(path)
+			},
+			panic: func(msg string) {
+				panic(msg)
+			},
+		},
 	}
 }
 
@@ -162,7 +164,7 @@ func (fw *fileWatcher) getWorker(path string) (*workerState, string, string, err
 
 	ws, workerExists := fw.workers[parentPath]
 	if !workerExists {
-		wk, err := newWorker(parentPath)
+		wk, err := newWorker(parentPath, fw.funcs)
 		if err != nil {
 			return nil, "", "", err
 		}
