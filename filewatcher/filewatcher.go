@@ -57,7 +57,6 @@ type workerState struct {
 type patchTable struct {
 	newWatcher     func() (*fsnotify.Watcher, error)
 	addWatcherPath func(*fsnotify.Watcher, string) error
-	panic          func(string)
 }
 
 // NewWatcher return with a FileWatcher instance that implemented with fsnotify.
@@ -70,9 +69,6 @@ func NewWatcher() FileWatcher {
 			newWatcher: fsnotify.NewWatcher,
 			addWatcherPath: func(watcher *fsnotify.Watcher, path string) error {
 				return watcher.Add(path)
-			},
-			panic: func(msg string) {
-				panic(msg)
 			},
 		},
 	}
@@ -101,10 +97,11 @@ func (fw *fileWatcher) Add(path string) error {
 		return err
 	}
 
-	ws.worker.addPath(cleanedPath)
-	ws.count++
+	if err = ws.worker.addPath(cleanedPath); err == nil {
+		ws.count++
+	}
 
-	return nil
+	return err
 }
 
 // Stop watching a path
@@ -117,15 +114,15 @@ func (fw *fileWatcher) Remove(path string) error {
 		return err
 	}
 
-	ws.worker.removePath(cleanedPath)
-
-	ws.count--
-	if ws.count == 0 {
-		ws.worker.terminate()
-		delete(fw.workers, parentPath)
+	if err = ws.worker.removePath(cleanedPath); err == nil {
+		ws.count--
+		if ws.count == 0 {
+			ws.worker.terminate()
+			delete(fw.workers, parentPath)
+		}
 	}
 
-	return nil
+	return err
 }
 
 // Events returns an event notification channel for a path
