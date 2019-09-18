@@ -16,8 +16,9 @@ package viperconfig
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
+
+	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -81,4 +82,3 @@ func subCommandPreRun(cmd *cobra.Command, viper *viper.Viper) {
 func ViperizeRootCmdDefault(cmd *cobra.Command) {
 	ViperizeRootCmd(cmd, viper.GetViper())
 }
-
