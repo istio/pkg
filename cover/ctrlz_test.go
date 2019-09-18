@@ -51,7 +51,7 @@ func TestTopic_Activate(t *testing.T) {
 
 	// Check each call path
 	cv := newTestCovVar(10)
-	r.Register(10, "some_bizzare_file", cv.readPos, cv.readStmt, cv.readCount, cv.clearCount)
+	r.Register(10, "some_bizarre_file", cv.readPos, cv.readStmt, cv.readCount, cv.clearCount)
 
 	cv.initSampleData()
 
@@ -74,16 +74,16 @@ func TestTopic_Activate(t *testing.T) {
 
 	resp = getOrFail(t, baseURL+"/download")
 	expected := `mode: atomic
-some_bizzare_file:20.22,21.0 30 10
-some_bizzare_file:23.25,24.0 31 11
-some_bizzare_file:26.28,27.0 32 12
-some_bizzare_file:29.31,30.0 33 13
-some_bizzare_file:32.34,33.0 34 14
-some_bizzare_file:35.37,36.0 35 15
-some_bizzare_file:38.40,39.0 36 16
-some_bizzare_file:41.43,42.0 37 17
-some_bizzare_file:44.46,45.0 38 18
-some_bizzare_file:47.49,48.0 39 19`
+some_bizarre_file:20.22,21.0 30 10
+some_bizarre_file:23.25,24.0 31 11
+some_bizarre_file:26.28,27.0 32 12
+some_bizarre_file:29.31,30.0 33 13
+some_bizarre_file:32.34,33.0 34 14
+some_bizarre_file:35.37,36.0 35 15
+some_bizarre_file:38.40,39.0 36 16
+some_bizarre_file:41.43,42.0 37 17
+some_bizarre_file:44.46,45.0 38 18
+some_bizarre_file:47.49,48.0 39 19`
 
 	if strings.TrimSpace(resp) != strings.TrimSpace(expected) {
 		t.Fatalf("Unexpected response:  %v", resp)
@@ -107,16 +107,16 @@ some_bizzare_file:47.49,48.0 39 19`
 
 	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
-some_bizzare_file:20.22,21.0 30 0
-some_bizzare_file:23.25,24.0 31 0
-some_bizzare_file:26.28,27.0 32 0
-some_bizzare_file:29.31,30.0 33 0
-some_bizzare_file:32.34,33.0 34 0
-some_bizzare_file:35.37,36.0 35 0
-some_bizzare_file:38.40,39.0 36 0
-some_bizzare_file:41.43,42.0 37 0
-some_bizzare_file:44.46,45.0 38 0
-some_bizzare_file:47.49,48.0 39 0`
+some_bizarre_file:20.22,21.0 30 0
+some_bizarre_file:23.25,24.0 31 0
+some_bizarre_file:26.28,27.0 32 0
+some_bizarre_file:29.31,30.0 33 0
+some_bizarre_file:32.34,33.0 34 0
+some_bizarre_file:35.37,36.0 35 0
+some_bizarre_file:38.40,39.0 36 0
+some_bizarre_file:41.43,42.0 37 0
+some_bizarre_file:44.46,45.0 38 0
+some_bizarre_file:47.49,48.0 39 0`
 
 	if strings.TrimSpace(resp) != strings.TrimSpace(expected) {
 		t.Fatalf("Unexpected response:  %v", resp)
@@ -133,16 +133,16 @@ some_bizzare_file:47.49,48.0 39 0`
 
 	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
-some_bizzare_file:20.22,21.0 30 255
-some_bizzare_file:23.25,24.0 31 255
-some_bizzare_file:26.28,27.0 32 255
-some_bizzare_file:29.31,30.0 33 255
-some_bizzare_file:32.34,33.0 34 0
-some_bizzare_file:35.37,36.0 35 0
-some_bizzare_file:38.40,39.0 36 0
-some_bizzare_file:41.43,42.0 37 0
-some_bizzare_file:44.46,45.0 38 0
-some_bizzare_file:47.49,48.0 39 0`
+some_bizarre_file:20.22,21.0 30 255
+some_bizarre_file:23.25,24.0 31 255
+some_bizarre_file:26.28,27.0 32 255
+some_bizarre_file:29.31,30.0 33 255
+some_bizarre_file:32.34,33.0 34 0
+some_bizarre_file:35.37,36.0 35 0
+some_bizarre_file:38.40,39.0 36 0
+some_bizarre_file:41.43,42.0 37 0
+some_bizarre_file:44.46,45.0 38 0
+some_bizarre_file:47.49,48.0 39 0`
 
 	if strings.TrimSpace(resp) != strings.TrimSpace(expected) {
 		t.Fatalf("Unexpected response:  %v", resp)
