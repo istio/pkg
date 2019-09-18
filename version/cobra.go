@@ -97,12 +97,12 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 					}
 				}
 			case "yaml":
-				if marshalled, err := yaml.Marshal(&version); err == nil {
-					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(marshalled))
+				if marshaled, err := yaml.Marshal(&version); err == nil {
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(marshaled))
 				}
 			case "json":
-				if marshalled, err := json.MarshalIndent(&version, "", "  "); err == nil {
-					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(marshalled))
+				if marshaled, err := json.MarshalIndent(&version, "", "  "); err == nil {
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(marshaled))
 				}
 			}
 
