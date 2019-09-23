@@ -17,8 +17,6 @@ package viperconfig
 import (
 	"fmt"
 	"os"
-	"reflect"
-	"strings"
 
 	"github.com/spf13/viper"
 
@@ -47,11 +45,10 @@ func AddConfigFlag(rootCmd *cobra.Command, viper *viper.Viper) {
 // ProcessViperConfig retrieves Viper values for each Cobra Val Flag
 func ProcessViperConfig(cmd *cobra.Command, viper *viper.Viper) {
 	viper.SetTypeByDefaultValue(true)
+
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		k := reflect.TypeOf(viper.Get(f.Name)).Kind()
-		if k == reflect.Slice || k == reflect.Array {
-			// Viper cannot convert slices to strings, so this is our workaround.
-			_ = f.Value.Set(strings.Join(viper.GetStringSlice(f.Name), ","))
+		if val, ok := f.Value.(pflag.SliceValue); ok {
+			_ = val.Replace(viper.GetStringSlice(f.Name))
 		} else {
 			_ = f.Value.Set(viper.GetString(f.Name))
 		}
