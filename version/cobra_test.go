@@ -29,7 +29,7 @@ import (
 func TestOpts(t *testing.T) {
 	ordinaryCmd := CobraCommand()
 	remoteCmd := CobraCommandWithOptions(
-		CobraOptions{GetRemoteVersion: mockRemoteMesh(&meshInfoMultiVersion)})
+		CobraOptions{GetRemoteVersion: mockRemoteMesh(&meshInfoMultiVersion, nil)})
 
 	cases := []struct {
 		args       string
@@ -118,9 +118,9 @@ var meshInfoMultiVersion = MeshInfo{
 	{"Citadel", BuildInfo{"1.2", "gitSHA321", "go1.11.0", "Clean", "1.2"}},
 }
 
-func mockRemoteMesh(meshInfo *MeshInfo) GetRemoteVersionFunc {
-	return func() (*MeshInfo, error) {
-		return meshInfo, nil
+func mockRemoteMesh(meshInfo *MeshInfo, proxyInfo *[]ProxyInfo) GetRemoteVersionFunc {
+	return func() (*MeshInfo, *[]ProxyInfo, error) {
+		return meshInfo, proxyInfo, nil
 	}
 }
 
@@ -255,7 +255,7 @@ control plane version: 1.2.0
 
 	for i, v := range cases {
 		t.Run(fmt.Sprintf("case %d %s", i, strings.Join(v.args, " ")), func(t *testing.T) {
-			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh)})
+			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh, nil)})
 			var out bytes.Buffer
 			cmd.SetOutput(&out)
 			cmd.SetArgs(v.args)
