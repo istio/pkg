@@ -33,7 +33,8 @@ type Version struct {
 
 // GetRemoteVersionFunc is the function protoype to be passed to CobraOptions so that it is
 // called when invoking `cmd version`
-type GetRemoteVersionFunc func() (*MeshInfo, *[]ProxyInfo, error)
+type GetRemoteVersionFunc func() (*MeshInfo, error)
+type GetProxyVersionFunc func() (*[]ProxyInfo, error)
 
 // CobraOptions holds options to be passed to `CobraCommandWithOptions`
 type CobraOptions struct {
@@ -41,6 +42,7 @@ type CobraOptions struct {
 	// Istio components. Optional. If not set, the 'version' subcommand will not attempt
 	// to connect to a remote side, and CLI flags such as '--remote' will be hidden.
 	GetRemoteVersion GetRemoteVersionFunc
+	GetProxyVersions GetProxyVersionFunc
 }
 
 // CobraCommand returns a command used to print version information.
@@ -71,8 +73,11 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 			version.ClientVersion = &Info
 
 			if options.GetRemoteVersion != nil && remote {
-				remoteVersion, version.DataPlaneVersion, serverErr = options.GetRemoteVersion()
+				remoteVersion, serverErr = options.GetRemoteVersion()
 				version.MeshVersion = remoteVersion
+			}
+			if options.GetProxyVersions != nil && remote {
+				version.DataPlaneVersion, _ = options.GetProxyVersions()
 			}
 
 			switch output {
