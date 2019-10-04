@@ -15,8 +15,9 @@
 package ledger
 
 import (
-	"istio.io/pkg/cache"
 	"time"
+
+	"istio.io/pkg/cache"
 
 	//"fmt"
 	"sync"
@@ -44,6 +45,7 @@ type CacheDB struct {
 type ByteCache struct {
 	cache cache.ExpiringCache
 }
+
 // Set inserts an entry in the cache. This will replace any entry with
 // the same key that is already in the cache. The entry may be automatically
 // expunged from the cache at some point, depending on the eviction policies
@@ -54,7 +56,7 @@ func (b *ByteCache) Set(key Hash, value [][]byte) {
 
 // Get retrieves the value associated with the supplied key if the key
 // is present in the cache.
-func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool){
+func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool) {
 	ivalue, ok := b.cache.Get(key)
 	if ok {
 		value, _ = ivalue.([][]byte)
@@ -69,7 +71,6 @@ func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool){
 func (b *ByteCache) SetWithExpiration(key Hash, value [][]byte, expiration time.Duration) {
 	b.cache.SetWithExpiration(key, value, expiration)
 }
-
 
 func (db *CacheDB) serializeBatch(batch [][]byte) []byte {
 	serialized := make([]byte, 4) //, 30*33)

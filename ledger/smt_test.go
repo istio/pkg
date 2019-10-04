@@ -17,12 +17,13 @@ package ledger
 import (
 	"bytes"
 	"fmt"
-	"istio.io/pkg/cache"
 	"math/rand"
 	"runtime"
 	"sort"
 	"testing"
 	"time"
+
+	"istio.io/pkg/cache"
 )
 
 func TestSmtEmptyTrie(t *testing.T) {

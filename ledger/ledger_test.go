@@ -16,14 +16,15 @@ package ledger
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/spaolacci/murmur3"
-	"gotest.tools/assert"
 	"math/rand"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/spaolacci/murmur3"
+	"gotest.tools/assert"
 )
 
 func TestGetAndPrevious(t *testing.T) {
@@ -61,7 +62,7 @@ func TestOrderAgnosticism(t *testing.T) {
 	assert.NilError(t, err)
 	secondHash, err := l.Put("foo", "baz")
 	assert.NilError(t, err)
-	assert.Assert(t, firstHash!=secondHash)
+	assert.Assert(t, firstHash != secondHash)
 	lastHash, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	assert.Equal(t, firstHash, lastHash)
@@ -73,15 +74,15 @@ func BenchmarkRandGen(b *testing.B) {
 	l := &SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
 	wg := sync.WaitGroup{}
 	ids := make([]string, configSize)
-	for  i := 0; i< configSize; i++ {
+	for i := 0; i < configSize; i++ {
 		ids = append(ids, addConfig(l))
 	}
 	wg.Add(b.N)
 	b.ResetTimer()
 	// TODO: finish having each N represent one operation
-	for n:=0; n<b.N; n++ {
+	for n := 0; n < b.N; n++ {
 		go func() {
-			_ = fmt.Sprint(rand.Int()%configSize)
+			_ = fmt.Sprint(rand.Int() % configSize)
 			_ = fmt.Sprintf("%d", rand.Int())
 			wg.Done()
 		}()
@@ -161,13 +162,13 @@ func BenchmarkScale(b *testing.B) {
 	l := &SMTLedger{tree: *NewSMT(nil, HashCollider, nil, time.Minute)}
 	wg := sync.WaitGroup{}
 	ids := make([]string, configSize)
-	for  i := 0; i< configSize; i++ {
+	for i := 0; i < configSize; i++ {
 		ids = append(ids, addConfig(l))
 	}
 	wg.Add(b.N)
 	b.ResetTimer()
 	// TODO: finish having each N represent one operation
-	for n:=0; n<b.N; n++ {
+	for n := 0; n < b.N; n++ {
 		go func() {
 			_, err := l.Put(ids[rand.Int()%configSize], fmt.Sprintf("%d", rand.Int()))
 			if err != nil {
@@ -188,7 +189,7 @@ func TestScale(t *testing.T) {
 	fmt.Printf("%v\n", forever.Hours())
 	l := &SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
 	ids := []string{}
-	for  i := 0; i< configSize; i++ {
+	for i := 0; i < configSize; i++ {
 		ids = append(ids, addConfig(l))
 		//addConfigChanger(updateFreq, l)
 		//time.Sleep(11*time.Millisecond)
@@ -196,9 +197,9 @@ func TestScale(t *testing.T) {
 	fmt.Printf("built initial config: %s\n", time.Now().String())
 	done := runChanger(l, updateFreq, ids)
 	syncChan := make(chan event, 1000)
-	for i := 0; i< syncSize; i++ {
+	for i := 0; i < syncSize; i++ {
 		addSync(i, syncFreq, l, syncChan)
-		time.Sleep(1*time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 	fmt.Printf("started changer and syncers: %s\n", time.Now().String())
 	var lock sync.Mutex
@@ -214,7 +215,7 @@ func TestScale(t *testing.T) {
 		//fmt.Sprint(event)
 	}()
 	fmt.Printf("started status update loop: %s\n", time.Now().String())
-	time.Sleep(4*time.Second)
+	time.Sleep(4 * time.Second)
 	fmt.Printf("finished sleeping: %s\n", time.Now().String())
 	lock.Lock()
 	fmt.Printf("got the lock: %s\n", time.Now().String())
@@ -265,7 +266,7 @@ func runChanger(ledger Ledger, changeFreq time.Duration, ids []string) chan bool
 }
 
 type event struct {
-	id int
+	id      int
 	version string
 }
 
@@ -287,7 +288,7 @@ func addSync(id int, syncFreq time.Duration, ledger Ledger, statusChan chan even
 }
 
 func addConfig(ledger Ledger) string {
-	objectID := strings.Replace(uuid.New().String(), "-", "", -1 )
+	objectID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := ledger.Put(objectID, fmt.Sprintf("%d", rand.Int()))
 	if err != nil {
 		fmt.Println("aaaah")
@@ -298,7 +299,7 @@ func addConfig(ledger Ledger) string {
 func addConfigChanger(changeFreq time.Duration, ledger Ledger) {
 	ticker := time.NewTicker(changeFreq)
 	done := make(chan bool)
-	objectID := strings.Replace(uuid.New().String(), "-", "", -1 )
+	objectID := strings.Replace(uuid.New().String(), "-", "", -1)
 
 	go func() {
 		for {

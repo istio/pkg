@@ -16,6 +16,7 @@ package ledger
 
 import (
 	"bytes"
+
 	"github.com/spaolacci/murmur3"
 )
 
@@ -25,7 +26,7 @@ var (
 )
 
 const (
-	HashLength   = 8
+	HashLength = 8
 )
 
 type Hash [HashLength]byte
@@ -45,6 +46,7 @@ func Hasher(data ...[]byte) []byte {
 	result := hasher.Sum(nil)
 	return result
 }
+
 // for sorting
 type DataArray [][]byte
 

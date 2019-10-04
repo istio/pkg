@@ -25,7 +25,7 @@ type Ledger interface {
 	Delete(key string) error
 	Get(key string) (string, error)
 	RootHash() string
-	GetPreviousValue(previousHash, key string)(result string, err error)
+	GetPreviousValue(previousHash, key string) (result string, err error)
 }
 
 type SMTLedger struct {
@@ -53,7 +53,7 @@ func (s *SMTLedger) Delete(key string) (err error) {
 }
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.
-func (s *SMTLedger) GetPreviousValue(previousHash, key string)(result string, err error) {
+func (s *SMTLedger) GetPreviousValue(previousHash, key string) (result string, err error) {
 	b, err := s.tree.GetPreviousValue([]byte(previousHash), []byte(fmt.Sprintf("%8v", key)))
 	result = strings.TrimSpace(string(b))
 	return
@@ -68,4 +68,3 @@ func (s *SMTLedger) Get(key string) (result string, err error) {
 func (s *SMTLedger) RootHash() string {
 	return string(s.tree.Root)
 }
-

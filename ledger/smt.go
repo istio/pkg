@@ -20,9 +20,10 @@ package ledger
 import (
 	"bytes"
 	"fmt"
-	"istio.io/pkg/cache"
 	"sync"
 	"time"
+
+	"istio.io/pkg/cache"
 )
 
 // TODO when using the SMT, make sure keys and values are same length as Hash
@@ -74,9 +75,9 @@ func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
 	s := &SMT{
-		hash:       hash,
-		TrieHeight: len(hash([]byte("height"))) * 8, // hash any string to get output length
-		counterOn:  false,
+		hash:              hash,
+		TrieHeight:        len(hash([]byte("height"))) * 8, // hash any string to get output length
+		counterOn:         false,
 		retentionDuration: retentionDuration,
 	}
 	s.db = &CacheDB{
