@@ -234,10 +234,10 @@ func TestSmtRaisesError(t *testing.T) {
 	// Check errors are raised is a keys is not in cache nor db
 	for _, key := range keys {
 		_, err := smt.Get(key)
-		assert.Error(t, err, "Error not created if database doesnt have a node")
+		assert.ErrorContains(t, err, "is unavailable in the disk db",
+			"Error not created if database doesnt have a node")
 	}
 
-	assert.Error(t, err, "Error not created if database doesnt have a node")
 }
 
 func getFreshData(size int) [][]byte {
