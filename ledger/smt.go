@@ -34,22 +34,16 @@ type SMT struct {
 	Root []byte
 	// defaultHashes are the default values of empty trees
 	defaultHashes [][]byte
-	// pastTries stores the past maxPastTries trie roots to revert
-	pastTries [][]byte
 	// db holds the cache and related locks
 	db *CacheDB
 	// hash is the hash function used in the trie
 	hash func(data ...[]byte) []byte
 	// TrieHeight is the number if bits in a key
 	TrieHeight int
-	// CacheHeightLimit is the number of tree levels we want to store in cache
-	CacheHeightLimit int
 	// the minimum length of time old nodes will be retained.
 	retentionDuration time.Duration
 	// lock is for the whole struct
 	lock sync.RWMutex
-	// counterOn is used to enable/diseable for efficiency
-	counterOn bool
 	// atomicUpdate, commit all the changes made by intermediate update calls
 	atomicUpdate bool
 }
@@ -68,7 +62,6 @@ func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 	s := &SMT{
 		hash:              hash,
 		TrieHeight:        len(hash([]byte("height"))) * 8, // hash any string to get output length
-		counterOn:         false,
 		retentionDuration: retentionDuration,
 	}
 	s.db = &CacheDB{
@@ -76,7 +69,6 @@ func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 		updatedNodes: ByteCache{cache: updateCache},
 	}
 	// don'tree store any cache by default (contracts state don'tree use cache)
-	s.CacheHeightLimit = s.TrieHeight + 1
 	s.Root = root
 	s.loadDefaultHashes()
 	return s
@@ -114,8 +106,6 @@ func (s *SMT) Update(keys, values [][]byte) ([]byte, error) {
 	} else {
 		s.Root = nil
 	}
-	// TODO: not clear if we need this still
-	s.pastTries = append(s.pastTries, s.Root)
 
 	return s.Root, nil
 }

@@ -121,7 +121,6 @@ func BenchmarkScale(b *testing.B) {
 		ids = append(ids, addConfig(l))
 	}
 	b.ResetTimer()
-	// TODO: finish having each N represent one operation
 	for n := 0; n < b.N; n++ {
 		eg.Go(func() error {
 			_, err := l.Put(ids[rand.Int()%configSize], fmt.Sprintf("%d", rand.Int()))
