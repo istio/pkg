@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// Trie default value : hash of 0x0
+	// DefaultLeaf is the Trie default value : hash of 0x0
 	DefaultLeaf = Hasher([]byte{0x0})
 )
 
@@ -41,7 +41,7 @@ func bitSet(bits []byte, i int) {
 func Hasher(data ...[]byte) []byte {
 	var hasher = murmur3.New64()
 	for i := 0; i < len(data); i++ {
-		hasher.Write(data[i])
+		_, _ = hasher.Write(data[i])
 	}
 	result := hasher.Sum(nil)
 	return result

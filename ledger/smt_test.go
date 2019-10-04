@@ -38,8 +38,8 @@ func TestSmtUpdateAndGet(t *testing.T) {
 	smt.atomicUpdate = false
 
 	// Add data to empty trie
-	keys := getFreshData(10, 8)
-	values := getFreshData(10, 8)
+	keys := getFreshData(10)
+	values := getFreshData(10)
 	ch := make(chan result, 1)
 	smt.update(smt.Root, keys, values, nil, 0, smt.TrieHeight, false, true, ch)
 	res := <-ch
@@ -54,8 +54,8 @@ func TestSmtUpdateAndGet(t *testing.T) {
 	}
 
 	// Append to the trie
-	newKeys := getFreshData(5, 8)
-	newValues := getFreshData(5, 8)
+	newKeys := getFreshData(5)
+	newValues := getFreshData(5)
 	ch = make(chan result, 1)
 	smt.update(root, newKeys, newValues, nil, 0, smt.TrieHeight, false, true, ch)
 	res = <-ch
@@ -81,15 +81,9 @@ func TestSmtUpdateAndGet(t *testing.T) {
 func TestTrieAtomicUpdate(t *testing.T) {
 	smt := NewSMT(nil, Hasher, nil, time.Minute)
 	smt.CacheHeightLimit = 0
-	keys := getFreshData(10, 8)
-	values := getFreshData(10, 8)
+	keys := getFreshData(10)
+	values := getFreshData(10)
 	root, _ := smt.Update(keys, values)
-	//updatedNb := len(smt.db.updatedNodes.Items())
-	//newvalues := getFreshData(10, 8)
-	//smt.Update(keys, newvalues)
-	//if len(smt.db.updatedNodes.Items()) != 2*updatedNb {
-	//	tree.Fatal("Atomic update doesnt store all tries")
-	//}
 
 	// check keys of previous atomic update are accessible in
 	// updated nodes with root.
@@ -106,10 +100,9 @@ func TestSmtPublicUpdateAndGet(t *testing.T) {
 	smt := NewSMT(nil, Hasher, nil, time.Minute)
 	smt.CacheHeightLimit = 0
 	// Add data to empty trie
-	keys := getFreshData(5, 8)
-	values := getFreshData(5, 8)
+	keys := getFreshData(5)
+	values := getFreshData(5)
 	root, _ := smt.Update(keys, values)
-	//cacheNb := len(smt.db.liveCache)
 
 	// Check all keys have been stored
 	for i, key := range keys {
@@ -122,7 +115,7 @@ func TestSmtPublicUpdateAndGet(t *testing.T) {
 		t.Fatal("Root not stored")
 	}
 
-	newValues := getFreshData(5, 8)
+	newValues := getFreshData(5)
 	smt.Update(keys, newValues)
 
 	// Check all keys have been modified
@@ -133,8 +126,8 @@ func TestSmtPublicUpdateAndGet(t *testing.T) {
 		}
 	}
 
-	newKeys := getFreshData(5, 8)
-	newValues = getFreshData(5, 8)
+	newKeys := getFreshData(5)
+	newValues = getFreshData(5)
 	smt.Update(newKeys, newValues)
 	for i, key := range newKeys {
 		value, _ := smt.Get(key)
@@ -151,7 +144,7 @@ func TestSmtDifferentKeySize(tree *testing.T) {
 	smt := NewSMT(uint64(keySize), hash, nil)
 	// Add data to empty trie
 	keys := getFreshData(10, keySize)
-	values := getFreshData(10, 8)
+	values := getFreshData(10)
 	smt.Update(keys, values)
 
 	// Check all keys have been stored
@@ -161,7 +154,7 @@ func TestSmtDifferentKeySize(tree *testing.T) {
 			tree.Fatal("trie not updated")
 		}
 	}
-	newValues := getFreshData(10, 8)
+	newValues := getFreshData(10)
 	smt.Update(keys, newValues)
 	// Check all keys have been modified
 	for i, key := range keys {
@@ -189,8 +182,8 @@ func TestSmtDifferentKeySize(tree *testing.T) {
 func TestSmtDelete(t *testing.T) {
 	smt := NewSMT(nil, Hasher, nil, time.Minute)
 	// Add data to empty trie
-	keys := getFreshData(10, 8)
-	values := getFreshData(10, 8)
+	keys := getFreshData(10)
+	values := getFreshData(10)
 	ch := make(chan result, 1)
 	smt.update(smt.Root, keys, values, nil, 0, smt.TrieHeight, false, true, ch)
 	res := <-ch
@@ -234,11 +227,11 @@ func TestSmtDelete(t *testing.T) {
 	}
 	// Test deleting an already empty key
 	smt = NewSMT(nil, Hasher, nil, time.Minute)
-	keys = getFreshData(2, 8)
-	values = getFreshData(2, 8)
+	keys = getFreshData(2)
+	values = getFreshData(2)
 	root, _ = smt.Update(keys, values)
-	key0 := make([]byte, 8, 8)
-	key1 := make([]byte, 8, 8)
+	key0 := make([]byte, 8)
+	key1 := make([]byte, 8)
 	smt.Update([][]byte{key0, key1}, [][]byte{DefaultLeaf, DefaultLeaf})
 	if !bytes.Equal(root, smt.Root) {
 		t.Fatal("deleting a default key shouldnt' modify the tree")
@@ -249,8 +242,8 @@ func TestSmtDelete(t *testing.T) {
 func TestTrieUpdateAndDelete(t *testing.T) {
 	smt := NewSMT(nil, Hasher, nil, time.Minute)
 	smt.CacheHeightLimit = 0
-	key0 := make([]byte, 8, 8)
-	values := getFreshData(1, 8)
+	key0 := make([]byte, 8)
+	values := getFreshData(1)
 	root, _ := smt.Update([][]byte{key0}, values)
 	smt.atomicUpdate = false
 	_, _, k, v, isShortcut, _ := smt.loadChildren(root, smt.TrieHeight, 0, nil)
@@ -258,28 +251,21 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 		t.Fatal("leaf shortcut didn'tree move up to root")
 	}
 
-	key1 := make([]byte, 8, 8)
+	key1 := make([]byte, 8)
 	// set the last bit
 	bitSet(key1, 63)
 	keys := [][]byte{key0, key1}
-	values = [][]byte{DefaultLeaf, getFreshData(1, 8)[0]}
+	values = [][]byte{DefaultLeaf, getFreshData(1)[0]}
 	smt.Update(keys, values)
-
-	// shortcut nodes don'tree move up so size is 16+1 instead of 1.
-	//x := len(smt.db.updatedNodes)
-	//if x != 17 {
-	//	tree.Fatalf("number of cache nodes not correct after delete: %d", x)
-	//}
 }
 
 func TestSmtRaisesError(t *testing.T) {
 
 	smt := NewSMT(nil, Hasher, nil, time.Minute)
 	// Add data to empty trie
-	keys := getFreshData(10, 8)
-	values := getFreshData(10, 8)
+	keys := getFreshData(10)
+	values := getFreshData(10)
 	smt.Update(keys, values)
-	//smt.db.liveCache = make(map[Hash][][]byte)
 	smt.db.updatedNodes = ByteCache{cache: cache.NewTTL(forever, time.Minute)}
 	smt.loadDefaultHashes()
 
@@ -297,7 +283,8 @@ func TestSmtRaisesError(t *testing.T) {
 	}
 }
 
-func getFreshData(size, length int) [][]byte {
+func getFreshData(size int) [][]byte {
+	length := 8
 	var data [][]byte
 	for i := 0; i < size; i++ {
 		key := make([]byte, 8)
@@ -312,11 +299,10 @@ func getFreshData(size, length int) [][]byte {
 }
 
 func benchmark10MAccounts10Ktps(smt *SMT, b *testing.B) {
-	//b.ReportAllocs()
 	fmt.Println("\nLoading b.N x 1000 accounts")
 	for index := 0; index < b.N; index++ {
-		newkeys := getFreshData(1000, 8)
-		newvalues := getFreshData(1000, 8)
+		newkeys := getFreshData(1000)
+		newvalues := getFreshData(1000)
 		start := time.Now()
 		smt.Update(newkeys, newvalues)
 		end := time.Now()
@@ -335,8 +321,6 @@ func benchmark10MAccounts10Ktps(smt *SMT, b *testing.B) {
 		runtime.ReadMemStats(&m)
 		fmt.Println(index, " : update time : ", elapsed, "commit time : ", elapsed2,
 			"\n1000 Get time : ", elapsed3,
-			"\ndb read : ", smt.LoadDbCounter, "    cache read : ", smt.LoadCacheCounter,
-			//"\ncache size : ", len(smt.db.liveCache.Items()),
 			"\nRAM : ", m.Sys/1024/1024, " MiB")
 	}
 }

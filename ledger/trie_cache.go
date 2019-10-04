@@ -19,25 +19,14 @@ import (
 
 	"istio.io/pkg/cache"
 
-	//"fmt"
 	"sync"
 )
 
 type CacheDB struct {
-	// liveCache contains the first levels of the trie (nodes that have 2 non default children)
-	//liveCache CacheWrapper
-	// liveMux is a lock for liveCache
-	liveMux sync.RWMutex
 	// updatedNodes that have will be flushed to disk
 	updatedNodes ByteCache
 	// updatedMux is a lock for updatedNodes
 	updatedMux sync.RWMutex
-	// nodesToRevert will be deleted from db
-	nodesToRevert [][]byte
-	// revertMux is a lock for updatedNodes
-	revertMux sync.RWMutex
-	// lock for CacheDB
-	lock sync.RWMutex
 }
 
 // ByteCache implements a modified ExpiringCache interface, returning byte arrays
@@ -70,19 +59,4 @@ func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool) {
 // requested expiration time.
 func (b *ByteCache) SetWithExpiration(key Hash, value [][]byte, expiration time.Duration) {
 	b.cache.SetWithExpiration(key, value, expiration)
-}
-
-func (db *CacheDB) serializeBatch(batch [][]byte) []byte {
-	serialized := make([]byte, 4) //, 30*33)
-	if batch[0][0] == 1 {
-		// the batch node is a shortcut
-		bitSet(serialized, 31)
-	}
-	for i := 1; i < 31; i++ {
-		if len(batch[i]) != 0 {
-			bitSet(serialized, i-1)
-			serialized = append(serialized, batch[i]...)
-		}
-	}
-	return serialized
 }
