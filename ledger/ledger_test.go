@@ -2,7 +2,6 @@ package ledger
 
 import (
 	"fmt"
-	"github.com/aergoio/aergo-lib/db"
 	"github.com/google/uuid"
 	"github.com/spaolacci/murmur3"
 	"gotest.tools/assert"
@@ -15,9 +14,7 @@ import (
 
 func TestGetAndPrevious(t *testing.T) {
 	var l SMTLedger
-	st := db.NewDB(db.BadgerImpl, "/tmp/badger2.db")
-	defer st.Close()
-	l = SMTLedger{t:*NewSMT(nil, MyHasher, st)}
+	l = SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
 	resultHashes := map[string]bool{}
 	l.Put("foo", "bar")
 	firstHash := l.RootHash()
@@ -43,9 +40,7 @@ func TestGetAndPrevious(t *testing.T) {
 
 func TestOrderAgnosticism(t *testing.T) {
 	var l SMTLedger
-	st := db.NewDB(db.BadgerImpl, "/tmp/badger2.db")
-	defer st.Close()
-	l = SMTLedger{t:*trie.NewSMT(nil, MyHasher, st)}
+	l = SMTLedger{tree: *NewSMT(nil, MyHasher, nil, time.Minute)}
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	firstHash, err := l.Put("second", "value")
@@ -61,7 +56,7 @@ func TestOrderAgnosticism(t *testing.T) {
 func BenchmarkRandGen(b *testing.B) {
 	const configSize = 100
 	//const testLength = 100
-	l := &SMTLedger{t:*trie.NewSMT(nil, trie.Hasher, nil)}
+	l := &SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
 	wg := sync.WaitGroup{}
 	ids := make([]string, configSize)
 	for  i := 0; i< configSize; i++ {
@@ -126,14 +121,12 @@ func TestCollision(t *testing.T) {
 		return MyHasher(data...)
 	}
 	var l SMTLedger
-	st := db.NewDB(db.BadgerImpl, "/tmp/badger2.db")
-	defer st.Close()
-	l = SMTLedger{t:*trie.NewSMT(nil, HashCollider, st)}
+	l = SMTLedger{tree: *NewSMT(nil, HashCollider, nil, time.Minute)}
 	hit = true
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	_, err = l.Put("fhgwgads", "shouldcollide")
-	//assert.Assert(t, hit, "collision condition was never hit")
+	//assert.Assert(tree, hit, "collision condition was never hit")
 	assert.NilError(t, err)
 	value, err := l.Get("foo")
 	assert.NilError(t, err)
@@ -149,11 +142,9 @@ func BenchmarkScale(b *testing.B) {
 	const configSize = 100
 	b.ReportAllocs()
 	//const testLength = 100
-	st := db.NewDB(db.BadgerImpl, "/tmp/badger2.db")
-	defer st.Close()
 	b.SetBytes(8)
-	//l := &SMTLedger{t:*trie.NewSMT(nil, trie.Hasher, st)}
-	l := &SMTLedger{t:*trie.NewSMT(nil, HashCollider, st)}
+	//l := &SMTLedger{tree:*NewSMT(nil, Hasher, st)}
+	l := &SMTLedger{tree: *NewSMT(nil, HashCollider, nil, time.Minute)}
 	wg := sync.WaitGroup{}
 	ids := make([]string, configSize)
 	for  i := 0; i< configSize; i++ {
@@ -180,7 +171,8 @@ func TestScale(t *testing.T) {
 	const updateFreq = time.Millisecond * 50
 	const syncSize = 1000
 	const syncFreq = time.Second
-	l := &SMTLedger{t:*trie.NewSMT(nil, trie.Hasher, nil)}
+	fmt.Printf("%v\n", forever.Hours())
+	l := &SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
 	ids := []string{}
 	for  i := 0; i< configSize; i++ {
 		ids = append(ids, addConfig(l))
@@ -250,7 +242,7 @@ func runChanger(ledger Ledger, changeFreq time.Duration, ids []string) chan bool
 				randomId := ids[rand.Int()%len(ids)]
 				_, err := ledger.Put(randomId, fmt.Sprintf("%d", rand.Int()))
 				if err != nil {
-					fmt.Println("aaaah")
+					fmt.Printf("%v\n", err)
 				}
 			}
 		}

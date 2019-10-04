@@ -27,23 +27,6 @@ func bitIsSet(bits []byte, i int) bool {
 func bitSet(bits []byte, i int) {
 	bits[i/8] |= 1 << uint(7-i%8)
 }
-func bitUnSet(bits []byte, i int) {
-	bits[i/8] = bits[i/8] &^ (1 << uint(7-i%8))
-}
-func bitSplit(bits []byte, i int) (split []byte) {
-	split = make([]byte, len(bits))
-	copy(split, bits)
-	bitSet(split, i)
-	return
-}
-
-//func Hasher(data ...[]byte) []byte {
-//	hasher := sha256.New()
-//	for i := 0; i < len(data); i++ {
-//		hasher.Write(data[i])
-//	}
-//	return hasher.Sum(nil)
-//}
 
 func Hasher(data ...[]byte) []byte {
 	var hasher = murmur3.New64()

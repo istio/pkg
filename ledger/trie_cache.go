@@ -6,7 +6,6 @@
 package ledger
 
 import (
-	"github.com/patrickmn/go-cache"
 	"istio.io/pkg/cache"
 	"time"
 

@@ -48,13 +48,18 @@ type SMT struct {
 	pastTries [][]byte
 	// atomicUpdate, commit all the changes made by intermediate update calls
 	atomicUpdate bool
+	// the minimum length of time old nodes will be retained.
+	retentionDuration time.Duration
 }
 
-// this is the closest time.Duration comes to Forever, with a duration of ~290 years
-const forever time.Duration = 1<<(64-1) - 1
+// this is the closest time.Duration comes to Forever, with a duration of ~145 years
+// we can'tree use int64 max because the duration gets added to Now(), and the ints
+// rollover, causing an immediate expiration (ironic, eh?)
+const forever time.Duration = 1<<(63-1) - 1
 
-// NewSMT creates a new SMT given a keySize and a hash function.
-func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache) *SMT {
+// NewSMT creates a new SMT given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
+// duration for old nodes.
+func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
@@ -62,12 +67,13 @@ func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 		hash:       hash,
 		TrieHeight: len(hash([]byte("height"))) * 8, // hash any string to get output length
 		counterOn:  false,
+		retentionDuration: retentionDuration,
 	}
 	s.db = &CacheDB{
 		//liveCache:    CacheWrapper{Cache: *cache.New(-1, 1*time.Minute) },
 		updatedNodes: ByteCache{cache: updateCache},
 	}
-	// don't store any cache by default (contracts state don't use cache)
+	// don'tree store any cache by default (contracts state don'tree use cache)
 	s.CacheHeightLimit = s.TrieHeight + 1
 	s.Root = root
 	s.loadDefaultHashes()
@@ -92,30 +98,6 @@ func (s *SMT) loadDefaultHashes() {
 // values of different keys are unique(hash contains the key for example)
 // otherwise some subtree may get overwritten with the wrong hash.
 func (s *SMT) Update(keys, values [][]byte) ([]byte, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.atomicUpdate = false
-	s.LoadDbCounter = 0
-	s.LoadCacheCounter = 0
-
-	ch := make(chan result, 1)
-	s.update(s.Root, keys, values, nil, 0, s.TrieHeight, false, true, ch)
-	result := <-ch
-	if result.err != nil {
-		return nil, result.err
-	}
-	if len(result.update) != 0 {
-		s.Root = result.update[:HashLength]
-	} else {
-		s.Root = nil
-	}
-	return s.Root, nil
-}
-
-// AtomicUpdate can be called multiple times and all the updated nodes will be commited
-// and roots will be stored in past tries.
-// Can be used for updating several blocks before committing to DB.
-func (s *SMT) AtomicUpdate(keys, values [][]byte) ([]byte, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.atomicUpdate = true
@@ -471,7 +453,7 @@ func (s *SMT) deleteOldNode(root []byte, height int) {
 		s.db.updatedMux.Lock()
 		//mark for expiration?
 		if val, ok := s.db.updatedNodes.Get(node); ok {
-			s.db.updatedNodes.SetWithExpiration(node, val, time.Minute)
+			s.db.updatedNodes.SetWithExpiration(node, val, s.retentionDuration)
 		}
 		//delete(s.db.updatedNodes, node)
 		s.db.updatedMux.Unlock()
