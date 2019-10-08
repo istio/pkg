@@ -48,6 +48,12 @@ type ServerInfo struct {
 // MeshInfo contains the versions for all Istio control plane components
 type MeshInfo []ServerInfo
 
+// ProxyInfo contains the version for a single data plane component
+type ProxyInfo struct {
+	ID           string
+	IstioVersion string
+}
+
 // NewBuildInfoFromOldString creates a BuildInfo struct based on the output
 // of previous Istio components '-- version' output
 func NewBuildInfoFromOldString(oldOutput string) (BuildInfo, error) {

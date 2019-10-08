@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
@@ -25,13 +26,15 @@ import (
 
 // Version holds info for client and control plane versions
 type Version struct {
-	ClientVersion *BuildInfo `json:"clientVersion,omitempty" yaml:"clientVersion,omitempty"`
-	MeshVersion   *MeshInfo  `json:"meshVersion,omitempty" yaml:"meshVersion,omitempty"`
+	ClientVersion    *BuildInfo   `json:"clientVersion,omitempty" yaml:"clientVersion,omitempty"`
+	MeshVersion      *MeshInfo    `json:"meshVersion,omitempty" yaml:"meshVersion,omitempty"`
+	DataPlaneVersion *[]ProxyInfo `json:"dataPlaneVersion,omitempty" yaml:"dataPlaneVersion,omitempty"`
 }
 
 // GetRemoteVersionFunc is the function protoype to be passed to CobraOptions so that it is
 // called when invoking `cmd version`
 type GetRemoteVersionFunc func() (*MeshInfo, error)
+type GetProxyVersionFunc func() (*[]ProxyInfo, error)
 
 // CobraOptions holds options to be passed to `CobraCommandWithOptions`
 type CobraOptions struct {
@@ -39,6 +42,7 @@ type CobraOptions struct {
 	// Istio components. Optional. If not set, the 'version' subcommand will not attempt
 	// to connect to a remote side, and CLI flags such as '--remote' will be hidden.
 	GetRemoteVersion GetRemoteVersionFunc
+	GetProxyVersions GetProxyVersionFunc
 }
 
 // CobraCommand returns a command used to print version information.
@@ -72,6 +76,9 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 				remoteVersion, serverErr = options.GetRemoteVersion()
 				version.MeshVersion = remoteVersion
 			}
+			if options.GetProxyVersions != nil && remote {
+				version.DataPlaneVersion, _ = options.GetProxyVersions()
+			}
 
 			switch output {
 			case "":
@@ -86,6 +93,9 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 					} else {
 						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\n", version.ClientVersion.Version)
 					}
+					if version.DataPlaneVersion != nil {
+						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "data plane version: %s\n", renderProxyVersions(version.DataPlaneVersion))
+					}
 				} else {
 					if remoteVersion != nil {
 						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "client version: %s\n", version.ClientVersion.LongForm())
@@ -94,6 +104,11 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 						}
 					} else {
 						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\n", version.ClientVersion.LongForm())
+					}
+					if version.DataPlaneVersion != nil {
+						for _, proxy := range *version.DataPlaneVersion {
+							_, _ = fmt.Fprintf(cmd.OutOrStdout(), "data plane version: %#v\n", proxy)
+						}
 					}
 				}
 			case "yaml":
@@ -145,4 +160,22 @@ func identicalVersions(remoteVersion MeshInfo) bool {
 	}
 
 	return true
+}
+
+// renderProxyVersions produces human-readable summary of an array of sidecar Istio versions
+func renderProxyVersions(pinfos *[]ProxyInfo) string {
+	if len(*pinfos) == 0 {
+		return "none"
+	}
+
+	versions := make(map[string][]string)
+	for _, pinfo := range *pinfos {
+		ids := versions[pinfo.IstioVersion]
+		versions[pinfo.IstioVersion] = append(ids, pinfo.ID)
+	}
+	counts := []string{}
+	for ver, ids := range versions {
+		counts = append(counts, fmt.Sprintf("%s: (%d proxies)", ver, len(ids)))
+	}
+	return strings.Join(counts, ", ")
 }
