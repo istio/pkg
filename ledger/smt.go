@@ -55,7 +55,7 @@ const forever time.Duration = 1<<(63-1) - 1
 
 // newSMT creates a new SMT given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
 // duration for old nodes.
-func newSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
+func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
@@ -67,7 +67,6 @@ func newSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 	s.db = &CacheDB{
 		updatedNodes: ByteCache{cache: updateCache},
 	}
-	s.Root = root
 	s.loadDefaultHashes()
 	return s
 }

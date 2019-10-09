@@ -29,14 +29,14 @@ import (
 )
 
 func TestSmtEmptyTrie(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	if !bytes.Equal([]byte{}, smt.Root) {
 		t.Fatal("empty trie root hash not correct")
 	}
 }
 
 func TestSmtUpdateAndGet(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	smt.atomicUpdate = false
 
 	// Add data to empty trie
@@ -81,7 +81,7 @@ func TestSmtUpdateAndGet(t *testing.T) {
 }
 
 func TestTrieAtomicUpdate(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	keys := getFreshData(10)
 	values := getFreshData(10)
 	root, _ := smt.Update(keys, values)
@@ -98,7 +98,7 @@ func TestTrieAtomicUpdate(t *testing.T) {
 }
 
 func TestSmtPublicUpdateAndGet(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	// Add data to empty trie
 	keys := getFreshData(5)
 	values := getFreshData(5)
@@ -140,7 +140,7 @@ func TestSmtPublicUpdateAndGet(t *testing.T) {
 }
 
 func TestSmtDelete(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	// Add data to empty trie
 	keys := getFreshData(10)
 	values := getFreshData(10)
@@ -164,7 +164,7 @@ func TestSmtDelete(t *testing.T) {
 		t.Fatal("Failed to delete from trie")
 	}
 	// Remove deleted key from keys and check root with a clean trie.
-	smt2 := newSMT(nil, Hasher, nil, time.Minute)
+	smt2 := newSMT(Hasher, nil, time.Minute)
 	ch = make(chan result, 1)
 	smt2.update(smt2.Root, keys[1:], values[1:], nil, 0, smt.TrieHeight, false, true, ch)
 	res = <-ch
@@ -186,7 +186,7 @@ func TestSmtDelete(t *testing.T) {
 		t.Fatal("empty trie root hash not correct")
 	}
 	// Test deleting an already empty key
-	smt = newSMT(nil, Hasher, nil, time.Minute)
+	smt = newSMT(Hasher, nil, time.Minute)
 	keys = getFreshData(2)
 	values = getFreshData(2)
 	root, _ = smt.Update(keys, values)
@@ -201,7 +201,7 @@ func TestSmtDelete(t *testing.T) {
 
 // test updating and deleting at the same time
 func TestTrieUpdateAndDelete(t *testing.T) {
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	key0 := make([]byte, 8)
 	values := getFreshData(1)
 	root, _ := smt.Update([][]byte{key0}, values)
@@ -222,7 +222,7 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 
 func TestSmtRaisesError(t *testing.T) {
 
-	smt := newSMT(nil, Hasher, nil, time.Minute)
+	smt := newSMT(Hasher, nil, time.Minute)
 	// Add data to empty trie
 	keys := getFreshData(10)
 	values := getFreshData(10)
@@ -284,6 +284,6 @@ func benchmark10MAccounts10Ktps(smt *SMT, b *testing.B) {
 
 //go test -run=xxx -bench=. -benchmem -test.benchtime=20s
 func BenchmarkCacheHeightLimit(b *testing.B) {
-	smt := newSMT(nil, Hasher, cache.NewTTL(forever, time.Minute), time.Minute)
+	smt := newSMT(Hasher, cache.NewTTL(forever, time.Minute), time.Minute)
 	benchmark10MAccounts10Ktps(smt, b)
 }

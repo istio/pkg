@@ -36,7 +36,7 @@ type SMTLedger struct {
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
 func Make(retention time.Duration) Ledger {
-	return &SMTLedger{tree: *newSMT(nil, Hasher, nil, retention)}
+	return &SMTLedger{tree: *newSMT(Hasher, nil, retention)}
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
@@ -59,7 +59,7 @@ func (s *SMTLedger) GetPreviousValue(previousHash, key string) (result string, e
 	var i int
 	// trim leading 0's from b
 	for i = range b {
-		if b[i]!=0 {
+		if b[i] != 0 {
 			break
 		}
 	}
