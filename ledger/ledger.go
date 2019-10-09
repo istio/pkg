@@ -80,10 +80,10 @@ func (s *SMTLedger) RootHash() string {
 func coerceToHashLen(val string) []byte {
 	// hash length is fixed at 64 bits until generic support is added
 	const hashLen = 64
-	zerofill := make([]byte, hashLen/8)
 	byteVal := []byte(val)
 	if len(byteVal) < hashLen/8 {
 		// zero fill the left side of the slice
+		zerofill := make([]byte, hashLen/8)
 		byteVal = append(zerofill[:hashLen/8-len(byteVal)], byteVal...)
 	}
 	return byteVal[:hashLen/8]
