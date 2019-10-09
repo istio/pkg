@@ -14,8 +14,6 @@
 
 package ledger
 
-// The Package Trie implements a sparse merkle trie.
-
 import (
 	"bytes"
 )

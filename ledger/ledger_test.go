@@ -17,6 +17,7 @@ package ledger
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ import (
 )
 
 func TestGetAndPrevious(t *testing.T) {
-	l := SMTLedger{tree: *NewSMT(nil, Hasher, nil, time.Minute)}
+	l := SMTLedger{tree: *newSMT(nil, Hasher, nil, time.Minute)}
 	resultHashes := map[string]bool{}
 	l.Put("foo", "bar")
 	firstHash := l.RootHash()
@@ -54,7 +55,7 @@ func TestGetAndPrevious(t *testing.T) {
 }
 
 func TestOrderAgnosticism(t *testing.T) {
-	l := SMTLedger{tree: *NewSMT(nil, MyHasher, nil, time.Minute)}
+	l := SMTLedger{tree: *newSMT(nil, MyHasher, nil, time.Minute)}
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	firstHash, err := l.Put("second", "value")
@@ -94,7 +95,7 @@ func TestCollision(t *testing.T) {
 		}
 		return MyHasher(data...)
 	}
-	l := SMTLedger{tree: *NewSMT(nil, HashCollider, nil, time.Minute)}
+	l := SMTLedger{tree: *newSMT(nil, HashCollider, nil, time.Minute)}
 	hit = true
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
@@ -114,7 +115,7 @@ func BenchmarkScale(b *testing.B) {
 	const configSize = 100
 	b.ReportAllocs()
 	b.SetBytes(8)
-	l := &SMTLedger{tree: *NewSMT(nil, HashCollider, nil, time.Minute)}
+	l := &SMTLedger{tree: *newSMT(nil, HashCollider, nil, time.Minute)}
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
@@ -123,7 +124,7 @@ func BenchmarkScale(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		eg.Go(func() error {
-			_, err := l.Put(ids[rand.Int()%configSize], fmt.Sprintf("%d", rand.Int()))
+			_, err := l.Put(ids[rand.Int()%configSize], strconv.Itoa(rand.Int()))
 			return err
 		})
 	}

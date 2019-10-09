@@ -53,9 +53,9 @@ type SMT struct {
 // rollover, causing an immediate expiration (ironic, eh?)
 const forever time.Duration = 1<<(63-1) - 1
 
-// NewSMT creates a new SMT given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
+// newSMT creates a new SMT given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
 // duration for old nodes.
-func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
+func newSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
@@ -65,10 +65,8 @@ func NewSMT(root []byte, hash func(data ...[]byte) []byte, updateCache cache.Exp
 		retentionDuration: retentionDuration,
 	}
 	s.db = &CacheDB{
-		//liveCache:    CacheWrapper{Cache: *cache.New(-1, 1*time.Minute) },
 		updatedNodes: ByteCache{cache: updateCache},
 	}
-	// don'tree store any cache by default (contracts state don'tree use cache)
 	s.Root = root
 	s.loadDefaultHashes()
 	return s
