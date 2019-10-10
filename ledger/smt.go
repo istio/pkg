@@ -17,9 +17,10 @@ package ledger
 import (
 	"bytes"
 	"fmt"
-	"istio.io/pkg/cache"
 	"sync"
 	"time"
+
+	"istio.io/pkg/cache"
 )
 
 // The smt is derived from https://github.com/aergoio/SMT with modifications

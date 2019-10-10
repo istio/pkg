@@ -46,7 +46,8 @@ func (b *byteCache) Set(key hash, value [][]byte) {
 // Get retrieves the value associated with the supplied key if the key
 // is present in the cache.
 func (b *byteCache) Get(key hash) (value [][]byte, ok bool) {
-	ivalue, ok := b.cache.Get(key); if ok {
+	ivalue, ok := b.cache.Get(key)
+	if ok {
 		value, _ = ivalue.([][]byte)
 	}
 	return
