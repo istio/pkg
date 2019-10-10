@@ -19,6 +19,7 @@
 package ledger
 
 import (
+	"encoding/base64"
 	"time"
 )
 
@@ -55,7 +56,11 @@ func (s *SMTLedger) Delete(key string) (err error) {
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.
 func (s *SMTLedger) GetPreviousValue(previousHash, key string) (result string, err error) {
-	b, err := s.tree.GetPreviousValue([]byte(previousHash), coerceToHashLen(key))
+	prevBytes, err := base64.StdEncoding.DecodeString(previousHash)
+	if err != nil {
+		return "", err
+	}
+	b, err := s.tree.GetPreviousValue(prevBytes, coerceToHashLen(key))
 	var i int
 	// trim leading 0's from b
 	for i = range b {
@@ -74,7 +79,7 @@ func (s *SMTLedger) Get(key string) (result string, err error) {
 
 // RootHash represents the hash of the current state of the ledger.
 func (s *SMTLedger) RootHash() string {
-	return string(s.tree.Root)
+	return base64.StdEncoding.EncodeToString(s.tree.Root)
 }
 
 func coerceToHashLen(val string) []byte {
