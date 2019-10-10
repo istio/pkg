@@ -354,7 +354,7 @@ func (s *smt) loadBatch(root []byte) ([][]byte, error) {
 func (s *smt) interiorHash(left, right []byte, height, iBatch int, oldRoot []byte, shortcut, store bool, keys, values,
 	batch [][]byte) []byte {
 	var h []byte
-	if (len(left) == 0) && (len(right)) == 0 {
+	if len(left) == 0 && len(right) == 0 {
 		// if a key was deleted, the node becomes default
 		batch[2*iBatch+1] = left
 		batch[2*iBatch+2] = right
