@@ -119,7 +119,7 @@ func BenchmarkScale(b *testing.B) {
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
-		ids = append(ids, addConfig(l))
+		ids = append(ids, addConfig(l, t))
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -133,11 +133,9 @@ func BenchmarkScale(b *testing.B) {
 	}
 	b.StopTimer()
 }
-func addConfig(ledger Ledger) string {
+func addConfig(ledger Ledger, t testing.T) string {
 	objectID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := ledger.Put(objectID, fmt.Sprintf("%d", rand.Int()))
-	if err != nil {
-		fmt.Println("aaaah")
-	}
+	assert.NilError(&t, err)
 	return objectID
 }
