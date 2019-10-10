@@ -21,21 +21,21 @@ import (
 )
 
 var (
-	// DefaultLeaf is the Trie default value : hash of 0x0
-	DefaultLeaf = Hasher([]byte{0x0})
+	// defaultLeaf is the Trie default value : hash of 0x0
+	defaultLeaf = hasher([]byte{0x0})
 )
 
 const (
-	HashLength = 8
+	hashLength = 8
 )
 
-type Hash [HashLength]byte
+type hash [hashLength]byte
 
 func bitIsSet(bits []byte, i int) bool {
 	return bits[i/8]&(1<<uint(7-i%8)) != 0
 }
 
-func Hasher(data ...[]byte) []byte {
+func hasher(data ...[]byte) []byte {
 	var hasher = murmur3.New64()
 	for i := 0; i < len(data); i++ {
 		_, _ = hasher.Write(data[i])
@@ -45,14 +45,14 @@ func Hasher(data ...[]byte) []byte {
 }
 
 // for sorting
-type DataArray [][]byte
+type dataArray [][]byte
 
-func (d DataArray) Len() int {
+func (d dataArray) Len() int {
 	return len(d)
 }
-func (d DataArray) Swap(i, j int) {
+func (d dataArray) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
-func (d DataArray) Less(i, j int) bool {
+func (d dataArray) Less(i, j int) bool {
 	return bytes.Compare(d[i], d[j]) == -1
 }

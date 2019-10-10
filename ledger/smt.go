@@ -14,28 +14,52 @@
 
 package ledger
 
-// The SMT is derived from https://github.com/aergoio/SMT with modifications
-// to remove unneeded features, and to support retention of old nodes for a fixed time.
-
 import (
 	"bytes"
 	"fmt"
+	"istio.io/pkg/cache"
 	"sync"
 	"time"
-
-	"istio.io/pkg/cache"
 )
 
-// TODO when using the SMT, make sure keys and values are same length as Hash
+// The smt is derived from https://github.com/aergoio/SMT with modifications
+// to remove unneeded features, and to support retention of old nodes for a fixed time.
+// The aergoio smt license is as follows:
+/*
+MIT License
 
-// SMT is a sparse Merkle tree.
-type SMT struct {
+Copyright (c) 2018 aergo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+© 2019 GitHub, Inc.
+*/
+
+// TODO when using the smt, make sure keys and values are same length as hash
+
+// smt is a sparse Merkle tree.
+type smt struct {
 	// Root is the current root of the smt.
 	Root []byte
 	// defaultHashes are the default values of empty trees
 	defaultHashes [][]byte
 	// db holds the cache and related locks
-	db *CacheDB
+	db *cacheDB
 	// hash is the hash function used in the trie
 	hash func(data ...[]byte) []byte
 	// TrieHeight is the number if bits in a key
@@ -53,28 +77,28 @@ type SMT struct {
 // rollover, causing an immediate expiration (ironic, eh?)
 const forever time.Duration = 1<<(63-1) - 1
 
-// newSMT creates a new SMT given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
+// newSMT creates a new smt given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
 // duration for old nodes.
-func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *SMT {
+func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *smt {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
-	s := &SMT{
+	s := &smt{
 		hash:              hash,
 		TrieHeight:        len(hash([]byte("height"))) * 8, // hash any string to get output length
 		retentionDuration: retentionDuration,
 	}
-	s.db = &CacheDB{
-		updatedNodes: ByteCache{cache: updateCache},
+	s.db = &cacheDB{
+		updatedNodes: byteCache{cache: updateCache},
 	}
 	s.loadDefaultHashes()
 	return s
 }
 
 // loadDefaultHashes creates the default hashes
-func (s *SMT) loadDefaultHashes() {
+func (s *smt) loadDefaultHashes() {
 	s.defaultHashes = make([][]byte, s.TrieHeight+1)
-	s.defaultHashes[0] = DefaultLeaf
+	s.defaultHashes[0] = defaultLeaf
 	var h []byte
 	for i := 1; i <= s.TrieHeight; i++ {
 		h = s.hash(s.defaultHashes[i-1], s.defaultHashes[i-1])
@@ -88,7 +112,7 @@ func (s *SMT) loadDefaultHashes() {
 // When calling Update multiple times without commit, make sure the
 // values of different keys are unique(hash contains the key for example)
 // otherwise some subtree may get overwritten with the wrong hash.
-func (s *SMT) Update(keys, values [][]byte) ([]byte, error) {
+func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.atomicUpdate = true
@@ -99,7 +123,7 @@ func (s *SMT) Update(keys, values [][]byte) ([]byte, error) {
 		return nil, result.err
 	}
 	if len(result.update) != 0 {
-		s.Root = result.update[:HashLength]
+		s.Root = result.update[:hashLength]
 	} else {
 		s.Root = nil
 	}
@@ -115,9 +139,9 @@ type result struct {
 
 // update adds a sorted list of keys and their values to the trie.
 // It returns the root of the updated tree.
-func (s *SMT) update(root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut, store bool, ch chan<- result) {
+func (s *smt) update(root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut, store bool, ch chan<- result) {
 	if height == 0 {
-		if bytes.Equal(values[0], DefaultLeaf) {
+		if bytes.Equal(values[0], defaultLeaf) {
 			ch <- result{nil, nil}
 		} else {
 			ch <- result{values[0], nil}
@@ -130,7 +154,7 @@ func (s *SMT) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 		return
 	}
 	if isShortcut {
-		keys, values = s.maybeAddShortcutToKV(keys, values, lnode[:HashLength], rnode[:HashLength])
+		keys, values = s.maybeAddShortcutToKV(keys, values, lnode[:hashLength], rnode[:hashLength])
 		// The shortcut node was added to keys and values so consider this subtree default.
 		lnode, rnode = nil, nil
 		// update in the batch (set key, value to default to the next loadChildren is correct)
@@ -149,7 +173,7 @@ func (s *SMT) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 		shortcut = false // remove shortcut node flag
 	}
 	if (len(lnode) == 0) && (len(rnode) == 0) && (len(keys) == 1) && store {
-		if !bytes.Equal(values[0], DefaultLeaf) {
+		if !bytes.Equal(values[0], defaultLeaf) {
 			shortcut = true
 		} else {
 			// if the subtree contains only one key, store the key/value in a shortcut node
@@ -168,7 +192,7 @@ func (s *SMT) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 }
 
 // updateParallel updates both sides of the trie simultaneously
-func (s *SMT) updateParallel(lnode, rnode, root []byte, keys, values, batch, lkeys, rkeys, lvalues, rvalues [][]byte,
+func (s *smt) updateParallel(lnode, rnode, root []byte, keys, values, batch, lkeys, rkeys, lvalues, rvalues [][]byte,
 	iBatch, height int, shortcut, store bool, ch chan<- result) {
 	// keys are separated between the left and right branches
 	// update the branches in parallel
@@ -192,7 +216,7 @@ func (s *SMT) updateParallel(lnode, rnode, root []byte, keys, values, batch, lke
 }
 
 // updateRight updates the right side of the tree
-func (s *SMT) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
+func (s *smt) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
 	store bool, ch chan<- result) {
 	// all the keys go in the right subtree
 	newch := make(chan result, 1)
@@ -207,7 +231,7 @@ func (s *SMT) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byt
 }
 
 // updateLeft updates the left side of the tree
-func (s *SMT) updateLeft(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
+func (s *smt) updateLeft(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
 	store bool, ch chan<- result) {
 	// all the keys go in the left subtree
 	newch := make(chan result, 1)
@@ -222,7 +246,7 @@ func (s *SMT) updateLeft(lnode, rnode, root []byte, keys, values, batch [][]byte
 }
 
 // splitKeys devides the array of keys into 2 so they can update left and right branches in parallel
-func (s *SMT) splitKeys(keys [][]byte, height int) ([][]byte, [][]byte) {
+func (s *smt) splitKeys(keys [][]byte, height int) ([][]byte, [][]byte) {
 	for i, key := range keys {
 		if bitIsSet(key, height) {
 			return keys[:i], keys[i:]
@@ -233,7 +257,7 @@ func (s *SMT) splitKeys(keys [][]byte, height int) ([][]byte, [][]byte) {
 
 // maybeAddShortcutToKV adds a shortcut key to the keys array to be updated.
 // this is used when a subtree containing a shortcut node is being updated
-func (s *SMT) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutVal []byte) ([][]byte, [][]byte) {
+func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutVal []byte) ([][]byte, [][]byte) {
 	newKeys := make([][]byte, 0, len(keys)+1)
 	newVals := make([][]byte, 0, len(keys)+1)
 
@@ -273,19 +297,21 @@ func (s *SMT) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 	return newKeys, newVals
 }
 
+const batchLen int = 31
+
 // loadChildren looks for the children of a node.
 // if the node is not stored in cache, it will be loaded from db.
-func (s *SMT) loadChildren(root []byte, height, iBatch int, batch [][]byte) ([][]byte, int, []byte, []byte, bool,
+func (s *smt) loadChildren(root []byte, height, iBatch int, batch [][]byte) ([][]byte, int, []byte, []byte, bool,
 	error) {
 	isShortcut := false
 	if height%4 == 0 {
 		if len(root) == 0 {
 			// create a new default batch
-			batch = make([][]byte, 31)
+			batch = make([][]byte, batchLen)
 			batch[0] = []byte{0}
 		} else {
 			var err error
-			batch, err = s.loadBatch(root[:HashLength])
+			batch, err = s.loadBatch(root[:hashLength])
 			if err != nil {
 				return nil, 0, nil, nil, false, err
 			}
@@ -294,15 +320,15 @@ func (s *SMT) loadChildren(root []byte, height, iBatch int, batch [][]byte) ([][
 		if batch[0][0] == 1 {
 			isShortcut = true
 		}
-	} else if len(batch[iBatch]) != 0 && batch[iBatch][HashLength] == 1 {
+	} else if len(batch[iBatch]) != 0 && batch[iBatch][hashLength] == 1 {
 		isShortcut = true
 	}
 	return batch, iBatch, batch[2*iBatch+1], batch[2*iBatch+2], isShortcut, nil
 }
 
 // loadBatch fetches a batch of nodes in cache or db
-func (s *SMT) loadBatch(root []byte) ([][]byte, error) {
-	var node Hash
+func (s *smt) loadBatch(root []byte) ([][]byte, error) {
+	var node hash
 	copy(node[:], root)
 
 	// checking updated nodes is useful if get() or update() is called twice in a row without db commit
@@ -313,7 +339,7 @@ func (s *SMT) loadBatch(root []byte) ([][]byte, error) {
 		if s.atomicUpdate {
 			// Return a copy so that Commit() doesnt have to be called at
 			// each block and still commit every state transition.
-			newVal := make([][]byte, 31)
+			newVal := make([][]byte, batchLen)
 			copy(newVal, val)
 			return newVal, nil
 		}
@@ -325,7 +351,7 @@ func (s *SMT) loadBatch(root []byte) ([][]byte, error) {
 // interiorHash hashes 2 children to get the parent hash and stores it in the updatedNodes and maybe in liveCache.
 // the key is the hash and the value is the appended child nodes or the appended key/value in case of a shortcut.
 // keys of go mappings cannot be byte slices so the hash is copied to a byte array
-func (s *SMT) interiorHash(left, right []byte, height, iBatch int, oldRoot []byte, shortcut, store bool, keys, values,
+func (s *smt) interiorHash(left, right []byte, height, iBatch int, oldRoot []byte, shortcut, store bool, keys, values,
 	batch [][]byte) []byte {
 	var h []byte
 	if (len(left) == 0) && (len(right)) == 0 {
@@ -335,23 +361,23 @@ func (s *SMT) interiorHash(left, right []byte, height, iBatch int, oldRoot []byt
 		s.deleteOldNode(oldRoot)
 		return nil
 	} else if len(left) == 0 {
-		h = s.hash(s.defaultHashes[height-1], right[:HashLength])
+		h = s.hash(s.defaultHashes[height-1], right[:hashLength])
 	} else if len(right) == 0 {
-		h = s.hash(left[:HashLength], s.defaultHashes[height-1])
+		h = s.hash(left[:hashLength], s.defaultHashes[height-1])
 	} else {
-		h = s.hash(left[:HashLength], right[:HashLength])
+		h = s.hash(left[:hashLength], right[:hashLength])
 	}
 	if !store {
 		// a shortcut node cannot move up
-		return append(h, byte(0))
+		return append(h, 0)
 	}
 	if !shortcut {
-		h = append(h, byte(0))
+		h = append(h, 0)
 	} else {
 		// store the value at the shortcut node instead of height 0.
-		h = append(h, byte(1))
-		left = append(keys[0], byte(2))
-		right = append(values[0], byte(2))
+		h = append(h, 1)
+		left = append(keys[0], 2)
+		right = append(values[0], 2)
 	}
 	batch[2*iBatch+2] = right
 	batch[2*iBatch+1] = left
@@ -370,9 +396,9 @@ func (s *SMT) interiorHash(left, right []byte, height, iBatch int, oldRoot []byt
 }
 
 // storeNode stores a batch and deletes the old node from cache
-func (s *SMT) storeNode(batch [][]byte, h, oldRoot []byte) {
+func (s *smt) storeNode(batch [][]byte, h, oldRoot []byte) {
 	if !bytes.Equal(h, oldRoot) {
-		var node Hash
+		var node hash
 		copy(node[:], h)
 		// record new node
 		s.db.updatedMux.Lock()
@@ -383,8 +409,8 @@ func (s *SMT) storeNode(batch [][]byte, h, oldRoot []byte) {
 }
 
 // deleteOldNode deletes an old node that has been updated
-func (s *SMT) deleteOldNode(root []byte) {
-	var node Hash
+func (s *smt) deleteOldNode(root []byte) {
+	var node hash
 	copy(node[:], root)
 	if !s.atomicUpdate {
 		// dont delete old nodes with atomic updated except when

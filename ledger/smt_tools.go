@@ -19,12 +19,12 @@ import (
 )
 
 // Get fetches the value of a key by going down the current trie root.
-func (s *SMT) Get(key []byte) ([]byte, error) {
+func (s *smt) Get(key []byte) ([]byte, error) {
 	return s.GetPreviousValue(s.Root, key)
 }
 
 // GetPreviousValue returns the value as of the specified root hash.
-func (s *SMT) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
+func (s *smt) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	s.atomicUpdate = false
@@ -32,12 +32,12 @@ func (s *SMT) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 }
 
 // get fetches the value of a key given a trie root
-func (s *SMT) get(root []byte, key []byte, batch [][]byte, iBatch, height int) ([]byte, error) {
+func (s *smt) get(root []byte, key []byte, batch [][]byte, iBatch, height int) ([]byte, error) {
 	if len(root) == 0 {
 		return nil, nil
 	}
 	if height == 0 {
-		return root[:HashLength], nil
+		return root[:hashLength], nil
 	}
 	// Fetch the children of the node
 	batch, iBatch, lnode, rnode, isShortcut, err := s.loadChildren(root, height, iBatch, batch)
@@ -45,8 +45,8 @@ func (s *SMT) get(root []byte, key []byte, batch [][]byte, iBatch, height int) (
 		return nil, err
 	}
 	if isShortcut {
-		if bytes.Equal(lnode[:HashLength], key) {
-			return rnode[:HashLength], nil
+		if bytes.Equal(lnode[:hashLength], key) {
+			return rnode[:hashLength], nil
 		}
 		return nil, nil
 	}
@@ -59,6 +59,6 @@ func (s *SMT) get(root []byte, key []byte, batch [][]byte, iBatch, height int) (
 }
 
 // DefaultHash is a getter for the defaultHashes array
-func (s *SMT) DefaultHash(height int) []byte {
+func (s *smt) DefaultHash(height int) []byte {
 	return s.defaultHashes[height]
 }

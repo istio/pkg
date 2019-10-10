@@ -22,16 +22,16 @@ import (
 	"sync"
 )
 
-type CacheDB struct {
+type cacheDB struct {
 	// updatedNodes that have will be flushed to disk
-	updatedNodes ByteCache
+	updatedNodes byteCache
 	// updatedMux is a lock for updatedNodes
 	updatedMux sync.RWMutex
 }
 
-// ByteCache implements a modified ExpiringCache interface, returning byte arrays
-// for ease of integration with SMT calls.
-type ByteCache struct {
+// byteCache implements a modified ExpiringCache interface, returning byte arrays
+// for ease of integration with smt calls.
+type byteCache struct {
 	cache cache.ExpiringCache
 }
 
@@ -39,15 +39,14 @@ type ByteCache struct {
 // the same key that is already in the cache. The entry may be automatically
 // expunged from the cache at some point, depending on the eviction policies
 // of the cache and the options specified when the cache was created.
-func (b *ByteCache) Set(key Hash, value [][]byte) {
+func (b *byteCache) Set(key hash, value [][]byte) {
 	b.cache.Set(key, value)
 }
 
 // Get retrieves the value associated with the supplied key if the key
 // is present in the cache.
-func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool) {
-	ivalue, ok := b.cache.Get(key)
-	if ok {
+func (b *byteCache) Get(key hash) (value [][]byte, ok bool) {
+	ivalue, ok := b.cache.Get(key); if ok {
 		value, _ = ivalue.([][]byte)
 	}
 	return
@@ -57,6 +56,6 @@ func (b *ByteCache) Get(key Hash) (value [][]byte, ok bool) {
 // This will replace any entry with the same key that is already in the cache.
 // The entry will be automatically expunged from the cache at or slightly after the
 // requested expiration time.
-func (b *ByteCache) SetWithExpiration(key Hash, value [][]byte, expiration time.Duration) {
+func (b *byteCache) SetWithExpiration(key hash, value [][]byte, expiration time.Duration) {
 	b.cache.SetWithExpiration(key, value, expiration)
 }
