@@ -34,9 +34,6 @@ type Hash [HashLength]byte
 func bitIsSet(bits []byte, i int) bool {
 	return bits[i/8]&(1<<uint(7-i%8)) != 0
 }
-func bitSet(bits []byte, i int) {
-	bits[i/8] |= 1 << uint(7-i%8)
-}
 
 func Hasher(data ...[]byte) []byte {
 	var hasher = murmur3.New64()
