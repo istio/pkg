@@ -55,8 +55,8 @@ func (s *SMTLedger) Delete(key string) (err error) {
 }
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.
-func (s *SMTLedger) GetPreviousValue(previousHash, key string) (result string, err error) {
-	prevBytes, err := base64.StdEncoding.DecodeString(previousHash)
+func (s *SMTLedger) GetPreviousValue(previousRootHash, key string) (result string, err error) {
+	prevBytes, err := base64.StdEncoding.DecodeString(previousRootHash)
 	if err != nil {
 		return "", err
 	}
