@@ -54,16 +54,16 @@ SOFTWARE.
 
 // smt is a sparse Merkle tree.
 type smt struct {
-	// Root is the current root of the smt.
-	Root []byte
+	// root is the current root of the smt.
+	root []byte
 	// defaultHashes are the default values of empty trees
 	defaultHashes [][]byte
 	// db holds the cache and related locks
 	db *cacheDB
 	// hash is the hash function used in the trie
 	hash func(data ...[]byte) []byte
-	// TrieHeight is the number if bits in a key
-	TrieHeight int
+	// trieHeight is the number if bits in a key
+	trieHeight int
 	// the minimum length of time old nodes will be retained.
 	retentionDuration time.Duration
 	// lock is for the whole struct
@@ -85,7 +85,7 @@ func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, r
 	}
 	s := &smt{
 		hash:              hash,
-		TrieHeight:        len(hash([]byte("height"))) * 8, // hash any string to get output length
+		trieHeight:        len(hash([]byte("height"))) * 8, // hash any string to get output length
 		retentionDuration: retentionDuration,
 	}
 	s.db = &cacheDB{
@@ -97,10 +97,10 @@ func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, r
 
 // loadDefaultHashes creates the default hashes
 func (s *smt) loadDefaultHashes() {
-	s.defaultHashes = make([][]byte, s.TrieHeight+1)
+	s.defaultHashes = make([][]byte, s.trieHeight+1)
 	s.defaultHashes[0] = defaultLeaf
 	var h []byte
-	for i := 1; i <= s.TrieHeight; i++ {
+	for i := 1; i <= s.trieHeight; i++ {
 		h = s.hash(s.defaultHashes[i-1], s.defaultHashes[i-1])
 		s.defaultHashes[i] = h
 	}
@@ -117,18 +117,18 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	defer s.lock.Unlock()
 	s.atomicUpdate = true
 	ch := make(chan result, 1)
-	s.update(s.Root, keys, values, nil, 0, s.TrieHeight, false, true, ch)
+	s.update(s.root, keys, values, nil, 0, s.trieHeight, false, true, ch)
 	result := <-ch
 	if result.err != nil {
 		return nil, result.err
 	}
 	if len(result.update) != 0 {
-		s.Root = result.update[:hashLength]
+		s.root = result.update[:hashLength]
 	} else {
-		s.Root = nil
+		s.root = nil
 	}
 
-	return s.Root, nil
+	return s.root, nil
 }
 
 // result is used to contain the result of goroutines and is sent through a channel.
@@ -164,7 +164,7 @@ func (s *smt) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 
 	// Split the keys array so each branch can be updated in parallel
 	// Does this require that keys are sorted?  Yes, see Update()
-	lkeys, rkeys := s.splitKeys(keys, s.TrieHeight-height)
+	lkeys, rkeys := s.splitKeys(keys, s.trieHeight-height)
 	splitIndex := len(lkeys)
 	lvalues, rvalues := values[:splitIndex], values[splitIndex:]
 
@@ -172,7 +172,7 @@ func (s *smt) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 		store = false    //stop storing only after the shortcut node.
 		shortcut = false // remove shortcut node flag
 	}
-	if (len(lnode) == 0) && (len(rnode) == 0) && (len(keys) == 1) && store {
+	if len(lnode) == 0 && len(rnode) == 0 && len(keys) == 1 && store {
 		if !bytes.Equal(values[0], defaultLeaf) {
 			shortcut = true
 		} else {

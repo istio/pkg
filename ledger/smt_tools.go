@@ -20,7 +20,7 @@ import (
 
 // Get fetches the value of a key by going down the current trie root.
 func (s *smt) Get(key []byte) ([]byte, error) {
-	return s.GetPreviousValue(s.Root, key)
+	return s.GetPreviousValue(s.root, key)
 }
 
 // GetPreviousValue returns the value as of the specified root hash.
@@ -28,7 +28,7 @@ func (s *smt) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	s.atomicUpdate = false
-	return s.get(prevRoot, key, nil, 0, s.TrieHeight)
+	return s.get(prevRoot, key, nil, 0, s.trieHeight)
 }
 
 // get fetches the value of a key given a trie root
@@ -50,7 +50,7 @@ func (s *smt) get(root []byte, key []byte, batch [][]byte, iBatch, height int) (
 		}
 		return nil, nil
 	}
-	if bitIsSet(key, s.TrieHeight-height) {
+	if bitIsSet(key, s.trieHeight-height) {
 		// visit right node
 		return s.get(rnode, key, batch, 2*iBatch+2, height-1)
 	}
