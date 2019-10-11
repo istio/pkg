@@ -41,30 +41,30 @@ type Ledger interface {
 }
 
 type smtLedger struct {
-	tree smt
+	tree *smt
 }
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
 func Make(retention time.Duration) Ledger {
-	return &smtLedger{tree: *newSMT(hasher, nil, retention)}
+	return smtLedger{tree: newSMT(hasher, nil, retention)}
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
 // removal after the retention specified in Make()
-func (s *smtLedger) Put(key, value string) (result string, err error) {
+func (s smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{coerceToHashLen(key)}, [][]byte{coerceToHashLen(value)})
 	result = string(b)
 	return
 }
 
 // Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
-func (s *smtLedger) Delete(key string) (err error) {
+func (s smtLedger) Delete(key string) (err error) {
 	_, err = s.tree.Update([][]byte{[]byte(key)}, [][]byte{defaultLeaf})
 	return
 }
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.
-func (s *smtLedger) GetPreviousValue(previousRootHash, key string) (result string, err error) {
+func (s smtLedger) GetPreviousValue(previousRootHash, key string) (result string, err error) {
 	prevBytes, err := base64.StdEncoding.DecodeString(previousRootHash)
 	if err != nil {
 		return "", err
@@ -82,12 +82,12 @@ func (s *smtLedger) GetPreviousValue(previousRootHash, key string) (result strin
 }
 
 // Get returns the current value of key.
-func (s *smtLedger) Get(key string) (result string, err error) {
+func (s smtLedger) Get(key string) (result string, err error) {
 	return s.GetPreviousValue(s.RootHash(), key)
 }
 
 // RootHash represents the hash of the current state of the ledger.
-func (s *smtLedger) RootHash() string {
+func (s smtLedger) RootHash() string {
 	return base64.StdEncoding.EncodeToString(s.tree.root)
 }
 
