@@ -151,10 +151,10 @@ func identicalVersions(remoteVersion MeshInfo) bool {
 	exemplar := remoteVersion[0].Info
 	for i := 1; i < len(remoteVersion); i++ {
 		candidate := (remoteVersion)[i].Info
-		// Note that we don't compare GitRevision, BuildStatus,
+		// Note that we don't compare GitTag, GitRevision, BuildStatus,
 		// or DockerHub because released Istio versions may use the same version tag
 		// but differ in those fields.
-		if exemplar.GitTag != candidate.GitTag {
+		if exemplar.Version != candidate.Version {
 			return false
 		}
 	}
@@ -175,7 +175,7 @@ func renderProxyVersions(pinfos *[]ProxyInfo) string {
 	}
 	counts := []string{}
 	for ver, ids := range versions {
-		counts = append(counts, fmt.Sprintf("%s: (%d proxies)", ver, len(ids)))
+		counts = append(counts, fmt.Sprintf("%s (%d proxies)", ver, len(ids)))
 	}
 	return strings.Join(counts, ", ")
 }
