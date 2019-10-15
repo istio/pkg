@@ -32,9 +32,9 @@ import (
 func TestLongKeys(t *testing.T) {
 	longKey := "virtual-service/frontend/default"
 	l := smtLedger{tree: newSMT(hasher, nil, time.Minute)}
-	_, err := l.Put(longKey+ "1", "1")
+	_, err := l.Put(longKey+"1", "1")
 	assert.NilError(t, err)
-	_, err = l.Put(longKey+ "2", "2")
+	_, err = l.Put(longKey+"2", "2")
 	assert.NilError(t, err)
 	res, err := l.Get(longKey + "1")
 	assert.NilError(t, err)

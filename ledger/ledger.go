@@ -20,8 +20,9 @@ package ledger
 
 import (
 	"encoding/base64"
-	"github.com/spaolacci/murmur3"
 	"time"
+
+	"github.com/spaolacci/murmur3"
 )
 
 // Ledger exposes a modified map with three unique characteristics:
