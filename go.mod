@@ -23,7 +23,7 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/prometheus/client_golang v0.9.4
+	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/prometheus/prom2json v1.1.0
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72
