@@ -29,6 +29,24 @@ import (
 	"gotest.tools/assert"
 )
 
+func TestLongKeys(t *testing.T) {
+	longKey := "virtual-service/frontend/default"
+	l := smtLedger{tree: newSMT(hasher, nil, time.Minute)}
+	_, err := l.Put(longKey+ "1", "1")
+	assert.NilError(t, err)
+	_, err = l.Put(longKey+ "2", "2")
+	assert.NilError(t, err)
+	res, err := l.Get(longKey + "1")
+	assert.NilError(t, err)
+	assert.Equal(t, res, "1")
+	res, err = l.Get(longKey + "2")
+	assert.NilError(t, err)
+	assert.Equal(t, res, "2")
+	res, err = l.Get(longKey)
+	assert.NilError(t, err)
+	assert.Equal(t, res, "")
+}
+
 func TestGetAndPrevious(t *testing.T) {
 	l := smtLedger{tree: newSMT(hasher, nil, time.Minute)}
 	resultHashes := map[string]bool{}

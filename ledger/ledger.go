@@ -20,6 +20,7 @@ package ledger
 
 import (
 	"encoding/base64"
+	"github.com/spaolacci/murmur3"
 	"time"
 )
 
@@ -52,7 +53,7 @@ func Make(retention time.Duration) Ledger {
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
 // removal after the retention specified in Make()
 func (s smtLedger) Put(key, value string) (result string, err error) {
-	b, err := s.tree.Update([][]byte{coerceToHashLen(key)}, [][]byte{coerceToHashLen(value)})
+	b, err := s.tree.Update([][]byte{coerceKeyToHashLen(key)}, [][]byte{coerceToHashLen(value)})
 	result = string(b)
 	return
 }
@@ -69,7 +70,7 @@ func (s smtLedger) GetPreviousValue(previousRootHash, key string) (result string
 	if err != nil {
 		return "", err
 	}
-	b, err := s.tree.GetPreviousValue(prevBytes, coerceToHashLen(key))
+	b, err := s.tree.GetPreviousValue(prevBytes, coerceKeyToHashLen(key))
 	var i int
 	// trim leading 0's from b
 	for i = range b {
@@ -89,6 +90,12 @@ func (s smtLedger) Get(key string) (result string, err error) {
 // RootHash represents the hash of the current state of the ledger.
 func (s smtLedger) RootHash() string {
 	return base64.StdEncoding.EncodeToString(s.tree.root)
+}
+
+func coerceKeyToHashLen(val string) []byte {
+	hasher := murmur3.New64()
+	_, _ = hasher.Write([]byte(val))
+	return hasher.Sum(nil)
 }
 
 func coerceToHashLen(val string) []byte {
