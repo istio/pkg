@@ -244,7 +244,7 @@ func (c *lruCache) SetWithExpiration(key interface{}, value interface{}, expirat
 	ent.value = value
 	ent.expiration = exp
 
-	atomic.AddUint64(&c.stats.Writes, 1)
+	c.stats.Writes++
 
 	c.Unlock()
 }
