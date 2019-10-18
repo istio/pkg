@@ -40,11 +40,13 @@ type ttlWrapper struct {
 }
 
 type ttlCache struct {
+	// baseTimeNanos must be at start of struct to ensure 64bit alignment for atomics on
+	// 32bit architectures. See also: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
+	baseTimeNanos     int64
 	entries           sync.Map
 	stats             Stats
 	defaultExpiration time.Duration
 	stopEvicter       chan bool
-	baseTimeNanos     int64
 	evicterTerminated sync.WaitGroup // used by unit tests to verify the finalizer ran
 	callback          EvictionCallback
 }
