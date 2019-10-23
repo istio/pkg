@@ -28,6 +28,7 @@ var (
 	buildGitRevision = "unknown"
 	buildStatus      = "unknown"
 	buildTag         = "unknown"
+	buildHub         = "unknown"
 )
 
 // BuildInfo describes version information about the binary build.
@@ -52,6 +53,12 @@ type MeshInfo []ServerInfo
 type ProxyInfo struct {
 	ID           string
 	IstioVersion string
+}
+
+// DockerBuildInfo contains and exposes Hub: buildHub and Tag: buildVersion
+type DockerBuildInfo struct {
+	Hub string
+	Tag string
 }
 
 // NewBuildInfoFromOldString creates a BuildInfo struct based on the output
@@ -93,7 +100,8 @@ func NewBuildInfoFromOldString(oldOutput string) (BuildInfo, error) {
 
 var (
 	// Info exports the build version information.
-	Info BuildInfo
+	Info       BuildInfo
+	DockerInfo DockerBuildInfo
 )
 
 // String produces a single-line version info
@@ -124,5 +132,10 @@ func init() {
 		GolangVersion: runtime.Version(),
 		BuildStatus:   buildStatus,
 		GitTag:        buildTag,
+	}
+
+	DockerInfo = DockerBuildInfo{
+		Hub: buildHub,
+		Tag: buildVersion,
 	}
 }
