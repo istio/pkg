@@ -43,7 +43,7 @@ func (procTopic) Prefix() string {
 type procInfo struct {
 	Egid       int    `json:"egid"`
 	Euid       int    `json:"euid"`
-	Gid        int    `json:"gid"`
+	GID        int    `json:"gid"`
 	Groups     []int  `json:"groups"`
 	Pid        int    `json:"pid"`
 	Ppid       int    `json:"ppid"`
@@ -59,7 +59,7 @@ func getProcInfo() *procInfo {
 	pi := procInfo{
 		Egid:       os.Getegid(),
 		Euid:       os.Geteuid(),
-		Gid:        os.Getgid(),
+		GID:        os.Getgid(),
 		Pid:        os.Getpid(),
 		Ppid:       os.Getppid(),
 		UID:        os.Getuid(),
