@@ -100,10 +100,10 @@ some_bizarre_file:47.49,48.0 39 19`
 
 	// clear and download again
 	baseJSONUrl := "http://" + lj.Addr().String()
-	_ = postOrFail(t, baseJSONUrl+"/clear")
+	postOrFail(t, baseJSONUrl+"/clear")
 
 	baseJSONUrl = "http://" + lj.Addr().String()
-	_ = postOrFail(t, baseJSONUrl+"/snapshot")
+	postOrFail(t, baseJSONUrl+"/snapshot")
 
 	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
@@ -129,7 +129,7 @@ some_bizarre_file:47.49,48.0 39 0`
 
 	// snapshot and download again
 	baseJSONUrl = "http://" + lj.Addr().String()
-	_ = postOrFail(t, baseJSONUrl+"/snapshot")
+	postOrFail(t, baseJSONUrl+"/snapshot")
 
 	resp = getOrFail(t, baseURL+"/download")
 	expected = `mode: atomic
@@ -169,7 +169,7 @@ func getOrFail(t *testing.T, url string) string {
 	return string(b)
 }
 
-func postOrFail(t *testing.T, url string) string {
+func postOrFail(t *testing.T, url string) {
 	t.Helper()
 
 	r, err := http.Post(url, "", nil)
@@ -181,12 +181,10 @@ func postOrFail(t *testing.T, url string) string {
 		t.Fatalf("Unexpected Post status for %q: %v", url, r.StatusCode)
 	}
 
-	b, err := ioutil.ReadAll(r.Body)
+	_, err = ioutil.ReadAll(r.Body)
 	if err != nil {
 		t.Fatalf("Error reading body for %q: %v", url, err)
 	}
-
-	return string(b)
 }
 
 type topicContext struct {

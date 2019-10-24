@@ -14,12 +14,16 @@
 
 export ARTIFACTS ?= "/tmp"
 
-gen:
+gen-go:
 	@go generate ./...
+
+gen: gen-go tidy-go
+
+gen-check: gen mirror-licenses check-clean-repo
 
 lint: lint-all
 
-fmt: format-go
+fmt: format-go tidy-go
 
 build:
 	@go build ./...
