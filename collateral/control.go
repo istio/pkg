@@ -432,6 +432,7 @@ func (g *generator) genFrontMatter(root *cobra.Command, numEntries int) {
 	g.emit("description: ", root.Short)
 	g.emit("generator: pkg-collateral-docs")
 	g.emit("number_of_entries: ", strconv.Itoa(numEntries))
+	g.emit("force_inline_toc: true")
 	g.emit("---")
 }
 
