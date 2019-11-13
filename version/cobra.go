@@ -74,6 +74,9 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 
 			if options.GetRemoteVersion != nil && remote {
 				remoteVersion, serverErr = options.GetRemoteVersion()
+				if serverErr != nil {
+					return serverErr
+				}
 				version.MeshVersion = remoteVersion
 			}
 			if options.GetProxyVersions != nil && remote {
@@ -121,7 +124,7 @@ func CobraCommandWithOptions(options CobraOptions) *cobra.Command {
 				}
 			}
 
-			return serverErr
+			return nil
 		},
 	}
 

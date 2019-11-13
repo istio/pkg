@@ -29,7 +29,7 @@ import (
 func TestOpts(t *testing.T) {
 	ordinaryCmd := CobraCommand()
 	remoteCmd := CobraCommandWithOptions(
-		CobraOptions{GetRemoteVersion: mockRemoteMesh(&meshInfoMultiVersion)})
+		CobraOptions{GetRemoteVersion: mockRemoteMesh(&meshInfoMultiVersion, nil)})
 
 	cases := []struct {
 		args       string
@@ -106,6 +106,8 @@ func TestOpts(t *testing.T) {
 	}
 }
 
+var meshEmptyVersion = MeshInfo{}
+
 var meshInfoSingleVersion = MeshInfo{
 	{"Pilot", BuildInfo{"1.2.0", "gitSHA123", "go1.10", "Clean", "tag"}},
 	{"Injector", BuildInfo{"1.2.0", "gitSHAabc", "go1.10.1", "Modified", "tag"}},
@@ -118,9 +120,9 @@ var meshInfoMultiVersion = MeshInfo{
 	{"Citadel", BuildInfo{"1.2", "gitSHA321", "go1.11.0", "Clean", "1.2"}},
 }
 
-func mockRemoteMesh(meshInfo *MeshInfo) GetRemoteVersionFunc {
+func mockRemoteMesh(meshInfo *MeshInfo, err error) GetRemoteVersionFunc {
 	return func() (*MeshInfo, error) {
-		return meshInfo, nil
+		return meshInfo, err
 	}
 }
 
@@ -160,6 +162,7 @@ func TestVersion(t *testing.T) {
 	cases := []struct {
 		args           []string
 		remoteMesh     *MeshInfo
+		err            error
 		expectFail     bool
 		expectedOutput string         // Expected constant output
 		expectedRegexp *regexp.Regexp // Expected regexp output
@@ -251,11 +254,17 @@ func TestVersion(t *testing.T) {
 control plane version: 1.2.0
 `,
 		},
+		{ // case 11 remote, GetRemoteVersion returns a server error
+			args:       strings.Split("version --remote=true", " "),
+			remoteMesh: &meshEmptyVersion,
+			err:        fmt.Errorf("server error"),
+			expectFail: true,
+		},
 	}
 
 	for i, v := range cases {
 		t.Run(fmt.Sprintf("case %d %s", i, strings.Join(v.args, " ")), func(t *testing.T) {
-			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh)})
+			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh, v.err)})
 			var out bytes.Buffer
 			cmd.SetOutput(&out)
 			cmd.SetArgs(v.args)
