@@ -31,7 +31,8 @@ type fileClient struct {
 }
 
 // NewFileClient creates an instance of Client based on the file status specified
-// in the path. The specified period is the interval of the probe, so if this
+// in the path. The specified period is the interval of the probe, so if the last
+// modified time is not within the interval, probe controller is not running fine.
 func NewFileClient(opt *Options) Client {
 	return &fileClient{opt: opt, statFunc: os.Stat}
 }
