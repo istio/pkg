@@ -60,11 +60,12 @@ func (r *OpenCensusRegistry) ExportView(d *view.Data) {
 
 func (r *OpenCensusRegistry) ExportedMetrics() []Exported {
 	r.RLock()
+	defer r.RUnlock()
+
 	names := []string{}
 	for key := range r.metrics {
 		names = append(names, key)
 	}
-	r.RUnlock()
 
 	sort.Strings(names)
 
