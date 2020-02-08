@@ -24,20 +24,35 @@ func TestOption(t *testing.T) {
 	if o.IsValid() {
 		t.Error("nil should not be valid")
 	}
+	if err := o.Validate(); err == nil {
+		t.Errorf("nil should produce an error")
+	}
 	o = &Options{}
 	if o.IsValid() {
 		t.Errorf("Empty option %+v should not be valid", o)
+	}
+	if err := o.Validate(); err == nil {
+		t.Errorf("Empty option %+v should produce an error", o)
 	}
 	o.Path = "foo"
 	if o.IsValid() {
 		t.Errorf("%+v should not be valid since interval is missing", o)
 	}
+	if err := o.Validate(); err == nil {
+		t.Errorf("%+v should produce an error since interval is missing", o)
+	}
 	o.UpdateInterval = time.Second
 	if !o.IsValid() {
 		t.Errorf("%+v should be valid", o)
 	}
+	if err := o.Validate(); err != nil {
+		t.Errorf("%+v should be no error but got %v", o, err)
+	}
 	o.Path = ""
 	if o.IsValid() {
 		t.Errorf("%+v should not be valid since path is missing", o)
+	}
+	if err := o.Validate(); err == nil {
+		t.Errorf("%+v should produce an error since path is missing", o)
 	}
 }
