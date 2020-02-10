@@ -23,7 +23,7 @@ import (
 var (
 	probeLongDesc = `Check the liveness or readiness of a locally-running server
 
-Check if the target file is older than the interval. The locally-running server updates the last modifiled time
+Check if the target file is older than the interval. The locally-running server updates the last modified time
 (you need to enable it on server side), so probe command compares it with current time.`
 
 	probeExample = `
