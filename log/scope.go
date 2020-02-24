@@ -36,6 +36,7 @@ type Scope struct {
 	callerSkip  int
 
 	// set by the Configure method and adjustable dynamically
+	utcTimeZone     atomic.Value
 	outputLevel     atomic.Value
 	stackTraceLevel atomic.Value
 	logCallers      atomic.Value
@@ -66,6 +67,7 @@ func RegisterScope(name string, description string, callerSkip int) *Scope {
 		s.SetOutputLevel(InfoLevel)
 		s.SetStackTraceLevel(NoneLevel)
 		s.SetLogCallers(false)
+		s.SetUTCTimeZone(true)
 
 		if name != DefaultScopeName {
 			s.nameToEmit = name
@@ -277,6 +279,10 @@ func (s *Scope) emit(level zapcore.Level, dumpStack bool, msg string, fields []z
 		e.Stack = zap.Stack("").String
 	}
 
+	if s.GetUTCTimeZone() {
+		e.Time = e.Time.UTC()
+	}
+
 	pt := funcs.Load().(patchTable)
 	if pt.write != nil {
 		if err := pt.write(e, fields); err != nil {
@@ -314,4 +320,14 @@ func (s *Scope) SetLogCallers(logCallers bool) {
 // GetLogCallers returns the output level associated with the scope.
 func (s *Scope) GetLogCallers() bool {
 	return s.logCallers.Load().(bool)
+}
+
+// SetUTCTimeZone adjusts the utc associated with the scope.
+func (s *Scope) SetUTCTimeZone(utc bool) {
+	s.utcTimeZone.Store(utc)
+}
+
+// GetUTCTimeZone returns the utc associated with the scope.
+func (s *Scope) GetUTCTimeZone() bool {
+	return s.utcTimeZone.Load().(bool)
 }
