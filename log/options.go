@@ -111,6 +111,9 @@ type Options struct {
 	// JSONEncoding controls whether the log is formatted as JSON.
 	JSONEncoding bool
 
+	// UTCTimeZone controls whether to use UTC or local time zone.
+	UTCTimeZone bool
+
 	// LogGrpc indicates that Grpc logs should be captured. The default is true.
 	// This is not exposed through the command-line flags, as this flag is mainly useful for testing: Grpc
 	// stack will hold on to the logger even though it gets closed. This causes data races.
@@ -131,6 +134,7 @@ func DefaultOptions() *Options {
 		RotationMaxBackups: defaultRotationMaxBackups,
 		outputLevels:       DefaultScopeName + ":" + levelToString[defaultOutputLevel],
 		stackTraceLevels:   DefaultScopeName + ":" + levelToString[defaultStackTraceLevel],
+		UTCTimeZone:        true,
 		LogGrpc:            true,
 	}
 }
@@ -343,6 +347,9 @@ func (o *Options) AttachFlags(
 
 	boolVar(&o.JSONEncoding, "log_as_json", o.JSONEncoding,
 		"Whether to format output as JSON or in plain console-friendly format")
+
+	boolVar(&o.UTCTimeZone, "log_utc_time_zone", o.UTCTimeZone,
+		"Whether to use UTC time zone or local.")
 
 	levelListString := fmt.Sprintf("[%s, %s, %s, %s, %s, %s]",
 		levelToString[DebugLevel],

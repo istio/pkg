@@ -30,6 +30,30 @@ func TestOpts(t *testing.T) {
 		cmdLine string
 		result  Options
 	}{
+		{"--log_utc_time_zone", Options{
+			OutputPaths:        []string{defaultOutputPath},
+			ErrorOutputPaths:   []string{defaultErrorOutputPath},
+			outputLevels:       DefaultScopeName + ":" + levelToString[defaultOutputLevel],
+			stackTraceLevels:   DefaultScopeName + ":" + levelToString[defaultStackTraceLevel],
+			RotationMaxAge:     defaultRotationMaxAge,
+			RotationMaxSize:    defaultRotationMaxSize,
+			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
+			LogGrpc:            true,
+		}},
+
+		{"--log_utc_time_zone=false", Options{
+			OutputPaths:        []string{defaultOutputPath},
+			ErrorOutputPaths:   []string{defaultErrorOutputPath},
+			outputLevels:       DefaultScopeName + ":" + levelToString[defaultOutputLevel],
+			stackTraceLevels:   DefaultScopeName + ":" + levelToString[defaultStackTraceLevel],
+			RotationMaxAge:     defaultRotationMaxAge,
+			RotationMaxSize:    defaultRotationMaxSize,
+			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        false,
+			LogGrpc:            true,
+		}},
+
 		{"--log_as_json", Options{
 			OutputPaths:        []string{defaultOutputPath},
 			ErrorOutputPaths:   []string{defaultErrorOutputPath},
@@ -39,6 +63,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -50,6 +75,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -62,6 +88,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -73,6 +100,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -84,6 +112,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -95,6 +124,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -106,6 +136,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -117,6 +148,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -128,6 +160,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -139,6 +172,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -150,6 +184,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -161,6 +196,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -172,6 +208,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -183,6 +220,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -194,6 +232,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -205,6 +244,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -216,6 +256,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -227,6 +268,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -239,6 +281,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -250,6 +293,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     1234,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -261,6 +305,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    1234,
 			RotationMaxBackups: defaultRotationMaxBackups,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 
@@ -272,6 +317,7 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: 1234,
+			UTCTimeZone:        true,
 			LogGrpc:            true,
 		}},
 	}

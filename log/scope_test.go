@@ -27,12 +27,13 @@ func TestBasicScopes(t *testing.T) {
 	s := RegisterScope("testScope", "z", 0)
 
 	cases := []struct {
-		f          func()
-		pat        string
-		json       bool
-		caller     bool
-		wantExit   bool
-		stackLevel Level
+		f           func()
+		pat         string
+		json        bool
+		caller      bool
+		wantExit    bool
+		stackLevel  Level
+		utcTimeZone bool
 	}{
 		{
 			f:   func() { s.Debug("Hello") },
@@ -133,17 +134,19 @@ func TestBasicScopes(t *testing.T) {
 			f: func() { s.Debug("Hello") },
 			pat: "{\"level\":\"debug\",\"time\":\"" + timePattern + "\",\"scope\":\"testScope\",\"caller\":\"log/scope_test.go:.*\",\"msg\":\"Hello\"," +
 				"\"stack\":\".*\"}",
-			json:       true,
-			caller:     true,
-			stackLevel: DebugLevel,
+			json:        true,
+			caller:      true,
+			stackLevel:  DebugLevel,
+			utcTimeZone: true,
 		},
 		{
 			f: func() { s.Info("Hello") },
 			pat: "{\"level\":\"info\",\"time\":\"" + timePattern + "\",\"scope\":\"testScope\",\"caller\":\"log/scope_test.go:.*\",\"msg\":\"Hello\"," +
 				"\"stack\":\".*\"}",
-			json:       true,
-			caller:     true,
-			stackLevel: DebugLevel,
+			json:        true,
+			caller:      true,
+			stackLevel:  DebugLevel,
+			utcTimeZone: true,
 		},
 		{
 			f: func() { s.Warn("Hello") },
@@ -158,19 +161,21 @@ func TestBasicScopes(t *testing.T) {
 			pat: "{\"level\":\"error\",\"time\":\"" + timePattern + "\",\"scope\":\"testScope\",\"caller\":\"log/scope_test.go:.*\"," +
 				"\"msg\":\"Hello\"," +
 				"\"stack\":\".*\"}",
-			json:       true,
-			caller:     true,
-			stackLevel: DebugLevel,
+			json:        true,
+			caller:      true,
+			stackLevel:  DebugLevel,
+			utcTimeZone: true,
 		},
 		{
 			f: func() { s.Fatal("Hello") },
 			pat: "{\"level\":\"fatal\",\"time\":\"" + timePattern + "\",\"scope\":\"testScope\",\"caller\":\"log/scope_test.go:.*\"," +
 				"\"msg\":\"Hello\"," +
 				"\"stack\":\".*\"}",
-			json:       true,
-			caller:     true,
-			wantExit:   true,
-			stackLevel: DebugLevel,
+			json:        true,
+			caller:      true,
+			wantExit:    true,
+			stackLevel:  DebugLevel,
+			utcTimeZone: true,
 		},
 	}
 
@@ -194,6 +199,7 @@ func TestBasicScopes(t *testing.T) {
 				s.SetOutputLevel(DebugLevel)
 				s.SetStackTraceLevel(c.stackLevel)
 				s.SetLogCallers(c.caller)
+				s.SetUTCTimeZone(c.utcTimeZone)
 
 				c.f()
 				_ = Sync()

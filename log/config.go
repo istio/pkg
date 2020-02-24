@@ -167,7 +167,6 @@ func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer,
 }
 
 func formatDate(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	t = t.UTC()
 	year, month, day := t.Date()
 	hour, minute, second := t.Clock()
 	micros := t.Nanosecond() / 1000
@@ -217,6 +216,11 @@ func updateScopes(options *Options) error {
 	// update the stack tracing levels of all listed scopes
 	if err := processLevels(allScopes, options.stackTraceLevels, func(s *Scope, l Level) { s.SetStackTraceLevel(l) }); err != nil {
 		return err
+	}
+
+	// update the log utc of all listed scopes
+	for _, scope := range allScopes {
+		scope.SetUTCTimeZone(options.UTCTimeZone)
 	}
 
 	// update the caller location setting of all listed scopes
