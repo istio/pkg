@@ -728,7 +728,7 @@ var _templatesProcHtml = []byte(`{{ define "content" }}
 
         <tr>
             <td>Group Id</td>
-            <td>{{.Gid}}</td>
+            <td>{{.GID}}</td>
         </tr>
 
         <tr>
@@ -1120,23 +1120,8 @@ var _templatesVersionHtml = []byte(`{{ define "content" }}
         </tr>
 
         <tr>
-            <td>User</td>
-            <td>{{.User}}</td>
-        </tr>
-
-        <tr>
-            <td>Host</td>
-            <td>{{.Host}}</td>
-        </tr>
-
-        <tr>
             <td>GolangVersion</td>
             <td>{{.GolangVersion}}</td>
-        </tr>
-
-        <tr>
-            <td>DockerHub</td>
-            <td>{{.DockerHub}}</td>
         </tr>
 
         <tr>
