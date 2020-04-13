@@ -18,14 +18,13 @@ import (
 	"fmt"
 	"testing"
 
-	configpb "istio.io/api/policy/v1beta1"
 	descriptorpb "istio.io/api/policy/v1beta1"
 )
 
 func TestFinder(t *testing.T) {
 
 	var finder AttributeDescriptorFinder = finder{
-		attributes: map[string]*configpb.AttributeManifest_AttributeInfo{
+		attributes: map[string]*descriptorpb.AttributeManifest_AttributeInfo{
 			"foo": {
 				ValueType: descriptorpb.DOUBLE,
 			},
@@ -64,7 +63,7 @@ func TestFinder(t *testing.T) {
 }
 
 func TestChainedFinder(t *testing.T) {
-	finder := NewFinder(map[string]*configpb.AttributeManifest_AttributeInfo{
+	finder := NewFinder(map[string]*descriptorpb.AttributeManifest_AttributeInfo{
 		"foo": {
 			ValueType: descriptorpb.DOUBLE,
 		},
@@ -73,7 +72,7 @@ func TestChainedFinder(t *testing.T) {
 		},
 	})
 
-	child := NewChainedFinder(finder, map[string]*configpb.AttributeManifest_AttributeInfo{
+	child := NewChainedFinder(finder, map[string]*descriptorpb.AttributeManifest_AttributeInfo{
 		"bar": {
 			ValueType: descriptorpb.INT64,
 		},
