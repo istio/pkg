@@ -15,6 +15,7 @@
 package monitoring_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 
@@ -40,6 +42,12 @@ var (
 
 	goofySum = testSum.With(kind.Value("goofy"))
 
+	hookSum = monitoring.NewSum(
+		"hook_total",
+		"Number of hook events observed",
+		monitoring.WithLabels(name),
+	)
+
 	testDistribution = monitoring.NewDistribution(
 		"test_buckets",
 		"Testing distribution functionality",
@@ -55,7 +63,7 @@ var (
 )
 
 func init() {
-	monitoring.MustRegister(testSum, testDistribution, testGauge)
+	monitoring.MustRegister(testSum, hookSum, testDistribution, testGauge)
 }
 
 func TestSum(t *testing.T) {
@@ -253,6 +261,52 @@ func TestViewExport(t *testing.T) {
 
 }
 
+func TestRecordHook(t *testing.T) {
+	exp := &testExporter{rows: make(map[string][]*view.Row)}
+	view.RegisterExporter(exp)
+	view.SetReportingPeriod(1 * time.Millisecond)
+
+	// testRocordHook will record value for hookSum measure when testSum is recorded
+	rh := &testRecordHook{}
+	monitoring.RegisterRecordHook(testSum.Name(), rh)
+
+	testSum.With(name.Value("foo"), kind.Value("bar")).Increment()
+	testSum.With(name.Value("baz"), kind.Value("bar")).Record(45)
+	err := retry(
+		func() error {
+			exp.Lock()
+			defer exp.Unlock()
+			if len(exp.rows[hookSum.Name()]) < 2 {
+				return errors.New("less than 2 values recorded for hook events sum")
+			}
+			hookFooSumVal := float64(0)
+			hookBazSumVal := float64(0)
+			for _, r := range exp.rows[hookSum.Name()] {
+				if findTagWithValue("name", "foo", r.Tags) {
+					if sd, ok := r.Data.(*view.SumData); ok {
+						hookFooSumVal = sd.Value
+					}
+				} else if findTagWithValue("name", "baz", r.Tags) {
+					if sd, ok := r.Data.(*view.SumData); ok {
+						hookBazSumVal = sd.Value
+					}
+				}
+			}
+			if got, want := hookFooSumVal, 1.0; got != want {
+				return fmt.Errorf("bad value for %q: %f, want %f", hookSum.Name(), got, want)
+			}
+			if got, want := hookBazSumVal, 45.0; got != want {
+				return fmt.Errorf("bad value for %q: %f, want %f", hookSum.Name(), got, want)
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Errorf("failure recording sum values with record hook: %v", err)
+	}
+}
+
 type registerFail struct {
 	monitoring.Metric
 }
@@ -307,4 +361,29 @@ func retry(fn func() error) error {
 		}
 		<-time.After(10 * time.Millisecond)
 	}
+}
+
+type testRecordHook struct{}
+
+func (r *testRecordHook) OnRecordFloat64Measure(f *stats.Float64Measure, tags []tag.Mutator, value float64) {
+	// Check if this is `events_total` metric.
+	if f.Name() != "events_total" {
+		return
+	}
+
+	// Get name tag of recorded testSume metric, and record the corresponding hookSum metric.
+	ctx, err := tag.New(context.Background(), tags...)
+	if err != nil {
+		return
+	}
+	tm := tag.FromContext(ctx)
+	tk, err := tag.NewKey("name")
+	if err != nil {
+		return
+	}
+	v, found := tm.Value(tk)
+	if !found {
+		return
+	}
+	hookSum.With(name.Value(v)).Record(value)
 }
