@@ -17,6 +17,7 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -69,7 +70,28 @@ type (
 		unit   Unit
 		labels []Label
 	}
+
+	// RecordHook has a callback function which a measure is recorded.
+	RecordHook interface {
+		OnRecordFloat64Measure(f *stats.Float64Measure, tags []tag.Mutator, value float64)
+	}
 )
+
+var (
+	recordHooks     map[string]RecordHook
+	recordHookMutex sync.RWMutex
+)
+
+func init() {
+	recordHooks = make(map[string]RecordHook)
+}
+
+// RegisterRecordHook adds a RecordHook for a given measure.
+func RegisterRecordHook(name string, h RecordHook) {
+	recordHookMutex.Lock()
+	defer recordHookMutex.Unlock()
+	recordHooks[name] = h
+}
 
 // WithLabels provides configuration options for a new Metric, providing the expected
 // dimensions for data collection for that Metric.
@@ -176,6 +198,11 @@ func (f *float64Metric) Name() string {
 }
 
 func (f *float64Metric) Record(value float64) {
+	recordHookMutex.RLock()
+	if rh, ok := recordHooks[f.Name()]; ok {
+		rh.OnRecordFloat64Measure(f.Float64Measure, f.tags, value)
+	}
+	recordHookMutex.RUnlock()
 	stats.RecordWithTags(context.Background(), f.tags, f.M(value)) //nolint:errcheck
 }
 
