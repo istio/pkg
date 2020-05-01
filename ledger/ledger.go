@@ -90,7 +90,7 @@ func (s smtLedger) Get(key string) (result string, err error) {
 
 // RootHash represents the hash of the current state of the ledger.
 func (s smtLedger) RootHash() string {
-	return base64.StdEncoding.EncodeToString(s.tree.root)
+	return base64.StdEncoding.EncodeToString(s.tree.Root())
 }
 
 func coerceKeyToHashLen(val string) []byte {

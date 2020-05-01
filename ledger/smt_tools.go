@@ -20,7 +20,7 @@ import (
 
 // Get fetches the value of a key by going down the current trie root.
 func (s *smt) Get(key []byte) ([]byte, error) {
-	return s.GetPreviousValue(s.root, key)
+	return s.GetPreviousValue(s.Root(), key)
 }
 
 // GetPreviousValue returns the value as of the specified root hash.

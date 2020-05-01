@@ -143,6 +143,7 @@ func BenchmarkScale(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		eg.Go(func() error {
 			_, err := l.Put(ids[rand.Int()%configSize], strconv.Itoa(rand.Int()))
+			_ = l.RootHash()
 			return err
 		})
 	}
