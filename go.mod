@@ -6,6 +6,8 @@ replace github.com/golang/glog => github.com/istio/glog v0.0.0-20190424172949-d7
 
 replace github.com/spf13/viper => github.com/istio/viper v1.3.3-0.20190515210538-2789fed3109c
 
+replace golang.org/x/tools => golang.org/x/tools v0.0.0-20191216173652-a0e659d51361
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7

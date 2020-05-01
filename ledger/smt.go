@@ -55,6 +55,7 @@ SOFTWARE.
 
 // smt is a sparse Merkle tree.
 type smt struct {
+	rootMu sync.RWMutex
 	// root is the current root of the smt.
 	root []byte
 	// defaultHashes are the default values of empty trees
@@ -96,6 +97,12 @@ func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, r
 	return s
 }
 
+func (s *smt) Root() []byte {
+	s.rootMu.RLock()
+	defer s.rootMu.RUnlock()
+	return s.root
+}
+
 // loadDefaultHashes creates the default hashes
 func (s *smt) loadDefaultHashes() {
 	s.defaultHashes = make([][]byte, s.trieHeight+1)
@@ -118,11 +125,13 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	defer s.lock.Unlock()
 	s.atomicUpdate = true
 	ch := make(chan result, 1)
-	s.update(s.root, keys, values, nil, 0, s.trieHeight, false, true, ch)
+	s.update(s.Root(), keys, values, nil, 0, s.trieHeight, false, true, ch)
 	result := <-ch
 	if result.err != nil {
 		return nil, result.err
 	}
+	s.rootMu.Lock()
+	defer s.rootMu.Unlock()
 	if len(result.update) != 0 {
 		s.root = result.update[:hashLength]
 	} else {
