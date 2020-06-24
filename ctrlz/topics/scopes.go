@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 
@@ -86,6 +87,10 @@ func (scopeTopic) Activate(context fw.TopicContext) {
 		for _, scope := range allScopes {
 			s = append(s, *getScopeInfo(scope))
 		}
+		sort.Slice(s, func(i, j int) bool {
+			return s[i].Name < s[j].Name
+		})
+
 		fw.RenderHTML(w, tmpl, s)
 	})
 
@@ -101,6 +106,9 @@ func getAllScopes(w http.ResponseWriter, _ *http.Request) {
 	for _, s := range allScopes {
 		scopeInfos = append(scopeInfos, *getScopeInfo(s))
 	}
+	sort.Slice(scopeInfos, func(i, j int) bool {
+		return scopeInfos[i].Name < scopeInfos[j].Name
+	})
 
 	fw.RenderJSON(w, http.StatusOK, scopeInfos)
 }
