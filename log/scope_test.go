@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"go.uber.org/zap/zapcore"
+
+	"istio.io/pkg/errdict"
 )
 
 func TestBasicScopes(t *testing.T) {
@@ -215,6 +217,130 @@ func TestBasicScopes(t *testing.T) {
 				t.Errorf("Got '%v', expected a match with '%v'", lines[0], c.pat)
 			}
 		})
+	}
+}
+
+func TestScopeAddLabel(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		funcs.Store(funcs.Load().(patchTable))
+		s.AddLabel("foo", "bar").AddLabel("baz", 123).AddLabel("qux", 0.123).Debuga("Hello")
+		s.Debuga("Hello")
+		_ = Sync()
+	})
+
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	expect := `Hello {"foo":"bar","baz":1,"qux":0.123}`
+	mustRegexMatchString(t, lines[0], expect)
+	mustRegexMatchString(t, lines[1], expect)
+}
+
+func TestScopeWithLabel(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		funcs.Store(funcs.Load().(patchTable))
+		s.AddLabel("foo", "bar").WithLabel("baz", 123).Debuga("Hello")
+		s.Debuga("Hello")
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
+	mustRegexMatchString(t, lines[1], `Hello {"foo":"bar"}`)
+}
+
+func TestScopeClearLabel(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		funcs.Store(funcs.Load().(patchTable))
+		s.AddLabel("foo", "bar").AddLabel("baz", 123).AddLabel("qux", 0.123)
+		s.ClearLabelKey("qux")
+		s.Debuga("Hello")
+		s.ClearAllLabels()
+		s.Debuga("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
+	mustRegexMatchString(t, lines[1], `Hello$`)
+}
+
+func TestScopeLocal(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		funcs.Store(funcs.Load().(patchTable))
+		s.AddLabel("foo", "bar").AddLabel("baz", 123)
+		s2 := s.Local()
+		s2.ClearAllLabels()
+		s.Debuga("Hello")
+		s2.Debuga("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
+	mustRegexMatchString(t, lines[1], `Hello$`)
+}
+
+func TestScopeErrorDictionary(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	ie := &errdict.IstioErrorStruct{
+		MoreInfo:     "MoreInfo",
+		Impact:       "Impact",
+		Action:       "Action",
+		LikelyCauses: "LikelyCauses",
+	}
+	lines, err := captureStdout(func() {
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabel("foo", "bar").Debuga(ie, "Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `{"moreInfo":"MoreInfo","impact":"Impact","action":"Action","likelyCauses":"LikelyCauses","foo":"bar","message":"Hello"}`)
+}
+
+func mustRegexMatchString(t *testing.T, got, want string) {
+	t.Helper()
+	match, _ := regexp.MatchString(want, got)
+
+	if !match {
+		t.Fatalf("Got '%v', expected a match with '%v'", got, want)
 	}
 }
 
