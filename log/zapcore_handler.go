@@ -34,6 +34,8 @@ func init() {
 	RegisterDefaultHandler(ZapLogHandlerCallbackFunc)
 }
 
+// ZapLogHandlerCallbackFunc is the handler function that emulates the previous Istio logging output and adds
+// support for errdict package and structured logging.
 func ZapLogHandlerCallbackFunc(
 	level Level,
 	scope *Scope,
@@ -45,7 +47,7 @@ func ZapLogHandlerCallbackFunc(
 		ss = append(ss, fmt.Sprintf(`"moreInfo":"%s"`, ie.MoreInfo))
 		ss = append(ss, fmt.Sprintf(`"impact":"%s"`, ie.Impact))
 		ss = append(ss, fmt.Sprintf(`"action":"%s"`, ie.Action))
-		ss = append(ss, fmt.Sprintf(`"likelyCauses":"%s"`, ie.LikelyCauses))
+		ss = append(ss, fmt.Sprintf(`"likelyCauses":"%s"`, ie.LikelyCause))
 	}
 	if len(scope.structuredKey) > 0 {
 		scope.mu.RLock()
