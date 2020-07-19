@@ -317,10 +317,10 @@ func TestScopeErrorDictionary(t *testing.T) {
 	s.SetOutputLevel(DebugLevel)
 
 	ie := &errdict.IstioErrorStruct{
-		MoreInfo:     "MoreInfo",
-		Impact:       "Impact",
-		Action:       "Action",
-		LikelyCauses: "LikelyCauses",
+		MoreInfo:    "MoreInfo",
+		Impact:      "Impact",
+		Action:      "Action",
+		LikelyCause: "LikelyCause",
 	}
 	lines, err := captureStdout(func() {
 		funcs.Store(funcs.Load().(patchTable))
@@ -332,7 +332,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `{"moreInfo":"MoreInfo","impact":"Impact","action":"Action","likelyCauses":"LikelyCauses","foo":"bar","message":"Hello"}`)
+	mustRegexMatchString(t, lines[0], `{"moreInfo":"MoreInfo","impact":"Impact","action":"Action","likelyCauses":"LikelyCause","foo":"bar","message":"Hello"}`)
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {

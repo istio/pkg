@@ -53,6 +53,8 @@ type Scope struct {
 var scopes = make(map[string]*Scope)
 var lock = sync.RWMutex{}
 
+// ScopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
+// function calls.
 type ScopeHandlerCallbackFunc func(
 	level Level,
 	scope *Scope,
@@ -65,6 +67,8 @@ var (
 	mu              sync.RWMutex
 )
 
+// RegisterDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
+// current list of scope handlers.
 func RegisterDefaultHandler(callback ScopeHandlerCallbackFunc) {
 	mu.Lock()
 	defer mu.Unlock()
