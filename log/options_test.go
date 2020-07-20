@@ -39,7 +39,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_target stdout --log_target stderr", Options{
@@ -50,7 +49,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_caller default", Options{
@@ -62,7 +60,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level debug", Options{
@@ -73,7 +70,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level default:debug", Options{
@@ -84,7 +80,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level info", Options{
@@ -95,7 +90,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level default:info", Options{
@@ -106,7 +100,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level warn", Options{
@@ -117,7 +110,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level default:warn", Options{
@@ -128,7 +120,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level error", Options{
@@ -139,7 +130,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level default:error", Options{
@@ -150,7 +140,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level none", Options{
@@ -161,7 +150,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_stacktrace_level default:none", Options{
@@ -172,7 +160,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_output_level debug", Options{
@@ -183,7 +170,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_output_level info", Options{
@@ -194,7 +180,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_output_level warn", Options{
@@ -205,7 +190,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_output_level error", Options{
@@ -216,7 +200,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_output_level none", Options{
@@ -227,7 +210,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_rotate foobar", Options{
@@ -239,7 +221,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_rotate_max_age 1234", Options{
@@ -250,7 +231,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     1234,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_rotate_max_size 1234", Options{
@@ -261,7 +241,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    1234,
 			RotationMaxBackups: defaultRotationMaxBackups,
-			LogGrpc:            true,
 		}},
 
 		{"--log_rotate_max_backups 1234", Options{
@@ -272,7 +251,6 @@ func TestOpts(t *testing.T) {
 			RotationMaxAge:     defaultRotationMaxAge,
 			RotationMaxSize:    defaultRotationMaxSize,
 			RotationMaxBackups: 1234,
-			LogGrpc:            true,
 		}},
 	}
 

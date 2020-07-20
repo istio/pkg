@@ -334,6 +334,7 @@ func TestCapture(t *testing.T) {
 		o := DefaultOptions()
 		o.SetLogCallers(DefaultScopeName, true)
 		o.SetOutputLevel(DefaultScopeName, DebugLevel)
+		o.LogGrpc = true
 		_ = Configure(o)
 
 		// output to the plain golang "log" package
