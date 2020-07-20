@@ -22,7 +22,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
-	"istio.io/pkg/errdict"
+	"istio.io/pkg/structured"
 )
 
 // Scope let's you log data for an area of code, enabling the user full control over
@@ -42,36 +42,31 @@ type Scope struct {
 	// context data - key slice to preserve ordering
 	contextKey []string
 	context    map[string]interface{}
-	// structured data - key slice to preserve ordering
-	structuredKey []string
-	structured    map[string]interface{}
-	// scope specific handlers
-	handlers []ScopeHandlerCallbackFunc
-	mu       sync.RWMutex
+	// labels data - key slice to preserve ordering
+	labelKeys []string
+	labels    map[string]interface{}
 }
 
-var scopes = make(map[string]*Scope)
-var lock = sync.RWMutex{}
+var (
+	scopes          = make(map[string]*Scope)
+	defaultHandlers []ScopeHandlerCallbackFunc
+	lock            sync.RWMutex
+)
 
 // ScopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
 // function calls.
 type ScopeHandlerCallbackFunc func(
 	level Level,
 	scope *Scope,
-	ie *errdict.IstioErrorStruct,
+	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field)
-
-var (
-	defaultHandlers []ScopeHandlerCallbackFunc
-	mu              sync.RWMutex
-)
 
 // RegisterDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
 // current list of scope handlers.
 func RegisterDefaultHandler(callback ScopeHandlerCallbackFunc) {
-	mu.Lock()
-	defer mu.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 	defaultHandlers = append(defaultHandlers, callback)
 }
 
@@ -106,7 +101,7 @@ func RegisterScope(name string, description string, callerSkip int) *Scope {
 	}
 
 	s.context = make(map[string]interface{})
-	s.structured = make(map[string]interface{})
+	s.labels = make(map[string]interface{})
 
 	return s
 }
@@ -344,131 +339,78 @@ func (s *Scope) GetLogCallers() bool {
 	return s.logCallers.Load().(bool)
 }
 
-// RegisterHandler registers a handler for s that is called for all Fatal*, Error*, Warn*, Info* and Debug* function calls.
-func (s *Scope) RegisterHandler(callback ScopeHandlerCallbackFunc) {
-	mu.Lock()
-	defer mu.Unlock()
-	s.handlers = append(s.handlers, callback)
-}
-
-// ClearHandlers clears all handlers from s.
-func (s *Scope) ClearHandlers() {
-	mu.Lock()
-	defer mu.Unlock()
-	s.handlers = nil
-}
-
-// Local makes a copy of s and returns a pointer to it.
-func (s *Scope) Local() *Scope {
+// Copy makes a copy of s and returns a pointer to it.
+func (s *Scope) Copy() *Scope {
 	out := *s
 	out.context = copyStringInterfaceMap(s.context)
-	out.structured = copyStringInterfaceMap(s.structured)
-	out.handlers = make([]ScopeHandlerCallbackFunc, len(s.handlers))
-	copy(out.handlers, s.handlers)
+	out.labels = copyStringInterfaceMap(s.labels)
 	return &out
 }
 
-// AddContext adds a key-value pair to s, which is treated as context information.
-func (s *Scope) AddContext(key string, value interface{}) *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	s.context[key] = value
-	s.contextKey = append(s.contextKey, key)
-	return s
-}
+// WithLabels adds a key-value pairs to the labels in s.
+func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
+	out := s.Copy()
+	if len(kvlist)%2 != 0 {
+		out.labels["WithLabels error"] = fmt.Sprintf("even number of parameters required, got %d", len(kvlist))
+		return out
+	}
 
-// WithContext returns a copy of s with the given key-value appended to the context.
-func (s *Scope) WithContext(key string, value interface{}) *Scope {
-	out := s.Local()
-	out.AddContext(key, value)
+	for i := 0; i < len(kvlist); i += 2 {
+		keyi := kvlist[i]
+		key, ok := keyi.(string)
+		if !ok {
+			out.labels["WithLabels error"] = fmt.Sprintf("label name %v must be a string, got %T ", keyi, keyi)
+			return out
+		}
+		out.labels[key] = kvlist[i+1]
+		out.labelKeys = append(out.labelKeys, key)
+	}
 	return out
 }
 
-// ClearContextKey clears a context by key in s and returns the resulting Scope.
-// If the key is not found, returns s.
-func (s *Scope) ClearContextKey(key string) *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	delete(s.context, key)
-	s.contextKey = removeKey(s.contextKey, key)
-	return s
-}
-
-// ClearAllContext clears all context in s and returns the resulting Scope.
-func (s *Scope) ClearAllContext() *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	s.context = make(map[string]interface{})
-	s.contextKey = nil
-	return s
-}
-
-// AddLabel adds a key-value pair to the labels in s.
-func (s *Scope) AddLabel(key string, value interface{}) *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	s.structured[key] = value
-	s.structuredKey = append(s.structuredKey, key)
-	return s
-}
-
-// WithLabel makes a copy of s with the given key-value appended to its labels.
-func (s *Scope) WithLabel(key string, value interface{}) *Scope {
-	out := s.Local()
-	out.AddLabel(key, value)
+// WithoutLabels makes a copy of s, clears labels in s with the given keys and returns the copy.
+// Not-existent keys are ignored.
+func (s *Scope) WithoutLabels(keys ...string) *Scope {
+	out := s.Copy()
+	for _, key := range keys {
+		delete(out.labels, key)
+		out.labelKeys = removeKey(out.labelKeys, key)
+	}
 	return out
 }
 
-// ClearLabelKey cleans a label in s with the given key and returns the resulting Scope.
-// If the key is not found, returns s.
-func (s *Scope) ClearLabelKey(key string) *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	delete(s.structured, key)
-	s.structuredKey = removeKey(s.structuredKey, key)
-	return s
-}
-
-// ClearAllLabels clears all labels from s and returns the resulting Scope.
-func (s *Scope) ClearAllLabels() *Scope {
-	mu.Lock()
-	defer mu.Unlock()
-	s.structured = make(map[string]interface{})
-	s.structuredKey = nil
-	return s
+// WithoutAnyLabels clears all labels from a copy of s and returns it.
+func (s *Scope) WithoutAnyLabels() *Scope {
+	out := s.Copy()
+	out.labels = make(map[string]interface{})
+	out.labelKeys = nil
+	return out
 }
 
 // callHandlers calls all handlers registered to s.
 func (s *Scope) callHandlers(
 	severity Level,
 	scope *Scope,
-	ie *errdict.IstioErrorStruct,
+	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
-
-	mu.RLock()
-	scope.mu.RLock()
-	hs := append(defaultHandlers, scope.handlers...)
-	scope.mu.RUnlock()
-	mu.RUnlock()
-
-	for _, h := range hs {
+	for _, h := range defaultHandlers {
 		h(severity, scope, ie, msg, fields)
 	}
 }
 
-// getErrorStruct returns (*IstioErrorStruct, 1) if it is the first argument in the list is an IstioErrorStruct ptr,
-// or (nil,0) otherwise. The second return value is the offset to the first non-IstioErrorStruct field.
-func getErrorStruct(fields ...interface{}) (*errdict.IstioErrorStruct, int) {
+// getErrorStruct returns (*Error, 1) if it is the first argument in the list is an Error ptr,
+// or (nil,0) otherwise. The second return value is the offset to the first non-Error field.
+func getErrorStruct(fields ...interface{}) (*structured.Error, int) {
 	ief, ok := fields[0].([]interface{})
 	if !ok {
 		return nil, 0
 	}
-	ie, ok := ief[0].(*errdict.IstioErrorStruct)
+	ie, ok := ief[0].(*structured.Error)
 	if !ok {
 		return nil, 0
 	}
-	// Skip IstioErrorStruct, pass remaining fields on as before.
+	// Skip Error, pass remaining fields on as before.
 	return ie, 1
 }
 

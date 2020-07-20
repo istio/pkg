@@ -1,10 +1,12 @@
-package errdict
+package structured
 
 import "istio.io/pkg/monitoring"
 
-// IstioErrorStruct represents structured error information, for optional use in scope.X or log.X calls.
+// Error represents structured error information, for optional use in scope.X or log.X calls.
+// It is not the same thing as structured logging. The "structured" here means adding a structure to user facing
+// messages.
 // See https://docs.google.com/document/d/1vdYswLQuYnrLA2fDjk6OoZx2flBABa18UjCGTn8gsg8/ for additional information.
-type IstioErrorStruct struct {
+type Error struct {
 	// MoreInfo is additional information about the error e.g. a link to context describing the context for the error.
 	MoreInfo string
 	// Impact is the likely impact of the error on system function e.g. "Proxies are unable to communicate with Istiod."
