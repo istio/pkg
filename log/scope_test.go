@@ -22,7 +22,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
-	"istio.io/pkg/errdict"
+	"istio.io/pkg/structured"
 )
 
 func TestBasicScopes(t *testing.T) {
@@ -220,28 +220,6 @@ func TestBasicScopes(t *testing.T) {
 	}
 }
 
-func TestScopeAddLabel(t *testing.T) {
-	const name = "TestScope"
-	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
-	s.SetOutputLevel(DebugLevel)
-
-	lines, err := captureStdout(func() {
-		funcs.Store(funcs.Load().(patchTable))
-		s.AddLabel("foo", "bar").AddLabel("baz", 123).AddLabel("qux", 0.123).Debuga("Hello")
-		s.Debuga("Hello")
-		_ = Sync()
-	})
-
-	if err != nil {
-		t.Errorf("Got error '%v', expected success", err)
-	}
-
-	expect := `Hello {"foo":"bar","baz":1,"qux":0.123}`
-	mustRegexMatchString(t, lines[0], expect)
-	mustRegexMatchString(t, lines[1], expect)
-}
-
 func TestScopeWithLabel(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
@@ -250,30 +228,9 @@ func TestScopeWithLabel(t *testing.T) {
 
 	lines, err := captureStdout(func() {
 		funcs.Store(funcs.Load().(patchTable))
-		s.AddLabel("foo", "bar").WithLabel("baz", 123).Debuga("Hello")
-		s.Debuga("Hello")
-		_ = Sync()
-	})
-	if err != nil {
-		t.Errorf("Got error '%v', expected success", err)
-	}
-
-	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
-	mustRegexMatchString(t, lines[1], `Hello {"foo":"bar"}`)
-}
-
-func TestScopeClearLabel(t *testing.T) {
-	const name = "TestScope"
-	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
-	s.SetOutputLevel(DebugLevel)
-
-	lines, err := captureStdout(func() {
-		funcs.Store(funcs.Load().(patchTable))
-		s.AddLabel("foo", "bar").AddLabel("baz", 123).AddLabel("qux", 0.123)
-		s.ClearLabelKey("qux")
-		s.Debuga("Hello")
-		s.ClearAllLabels()
+		s2 := s.WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123)
+		s2.Debuga("Hello")
+		// s should be unmodified.
 		s.Debuga("Hello")
 
 		_ = Sync()
@@ -282,11 +239,11 @@ func TestScopeClearLabel(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
+	mustRegexMatchString(t, lines[0], `Hello {"foo": "bar","baz": 123, "qux": 0.123}`)
 	mustRegexMatchString(t, lines[1], `Hello$`)
 }
 
-func TestScopeLocal(t *testing.T) {
+func TestScopeWithoutLabels(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
 	s := RegisterScope(name, desc, 0)
@@ -294,10 +251,11 @@ func TestScopeLocal(t *testing.T) {
 
 	lines, err := captureStdout(func() {
 		funcs.Store(funcs.Load().(patchTable))
-		s.AddLabel("foo", "bar").AddLabel("baz", 123)
-		s2 := s.Local()
-		s2.ClearAllLabels()
+		s = s.WithLabels("foo", "bar", "baz", 123)
+		s2 := s.WithoutLabels("baz")
 		s.Debuga("Hello")
+		s2.Debuga("Hello")
+		s2 = s.WithoutAnyLabels()
 		s2.Debuga("Hello")
 
 		_ = Sync()
@@ -307,7 +265,8 @@ func TestScopeLocal(t *testing.T) {
 	}
 
 	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
-	mustRegexMatchString(t, lines[1], `Hello$`)
+	mustRegexMatchString(t, lines[1], `Hello {"foo":"bar"}`)
+	mustRegexMatchString(t, lines[2], `Hello$`)
 }
 
 func TestScopeErrorDictionary(t *testing.T) {
@@ -316,7 +275,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 	s := RegisterScope(name, desc, 0)
 	s.SetOutputLevel(DebugLevel)
 
-	ie := &errdict.IstioErrorStruct{
+	ie := &structured.Error{
 		MoreInfo:    "MoreInfo",
 		Impact:      "Impact",
 		Action:      "Action",
@@ -324,7 +283,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 	}
 	lines, err := captureStdout(func() {
 		funcs.Store(funcs.Load().(patchTable))
-		s.WithLabel("foo", "bar").Debuga(ie, "Hello")
+		s.WithLabels("foo", "bar").Debuga(ie, "Hello")
 
 		_ = Sync()
 	})
@@ -332,7 +291,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `{"moreInfo":"MoreInfo","impact":"Impact","action":"Action","likelyCauses":"LikelyCause","foo":"bar","message":"Hello"}`)
+	mustRegexMatchString(t, lines[0], `Hello	{"message": "Hello", "moreInfo": "MoreInfo", "impact": "Impact", "action": "Action", "likelyCauses": "LikelyCause", "foo": "bar"}`)
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {

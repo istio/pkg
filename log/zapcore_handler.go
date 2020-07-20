@@ -3,14 +3,12 @@ package log
 import (
 	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/prometheus/common/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"istio.io/pkg/errdict"
+	"istio.io/pkg/structured"
 )
 
 var (
@@ -35,35 +33,29 @@ func init() {
 }
 
 // ZapLogHandlerCallbackFunc is the handler function that emulates the previous Istio logging output and adds
-// support for errdict package and structured logging.
+// support for errdict package and labels logging.
 func ZapLogHandlerCallbackFunc(
 	level Level,
 	scope *Scope,
-	ie *errdict.IstioErrorStruct,
+	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
-	var ss []string
 	if ie != nil {
-		ss = append(ss, fmt.Sprintf(`"moreInfo":"%s"`, ie.MoreInfo))
-		ss = append(ss, fmt.Sprintf(`"impact":"%s"`, ie.Impact))
-		ss = append(ss, fmt.Sprintf(`"action":"%s"`, ie.Action))
-		ss = append(ss, fmt.Sprintf(`"likelyCauses":"%s"`, ie.LikelyCause))
+		fields = append(fields, zap.String("message", msg))
+		fields = append(fields, zap.String("moreInfo", ie.MoreInfo))
+		fields = append(fields, zap.String("impact", ie.Impact))
+		fields = append(fields, zap.String("action", ie.Action))
+		fields = append(fields, zap.String("likelyCauses", ie.LikelyCause))
 	}
-	if len(scope.structuredKey) > 0 {
-		scope.mu.RLock()
-		for _, k := range scope.structuredKey {
-			v := scope.structured[k]
-			if _, ok := v.(string); ok {
-				ss = append(ss, fmt.Sprintf(`"%s":"%v"`, k, v))
-			} else {
-				ss = append(ss, fmt.Sprintf(`"%s":%v`, k, v))
-			}
+	if len(scope.labelKeys) > 0 {
+		for _, k := range scope.labelKeys {
+			v := scope.labels[k]
+			fields = append(fields, zap.Field{
+				Key:       k,
+				Type:      zapcore.ReflectType,
+				Interface: v,
+			})
 		}
-		scope.mu.RUnlock()
-	}
-	if len(ss) > 0 {
-		ss = append(ss, fmt.Sprintf(`"message":"%s"`, msg))
-		msg = "{" + strings.Join(ss, ",") + "}"
 	}
 	emit(scope, toZapLevel[level], msg, fields)
 }
@@ -76,7 +68,7 @@ func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 	for _, zfi := range fields {
 		zf, ok := zfi.(zapcore.Field)
 		if !ok {
-			log.Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)
+			Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)
 			continue
 		}
 		zfs = append(zfs, zf)
@@ -84,6 +76,8 @@ func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 	return zfs
 }
 
+// callerSkipOffset is how many callers to pop off the stack to determine the caller function locality, used for
+// adding file/line number to log output.
 const callerSkipOffset = 4
 
 func dumpStack(level zapcore.Level, scope *Scope) bool {
