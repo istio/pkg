@@ -227,6 +227,7 @@ func TestScopeWithLabel(t *testing.T) {
 	s.SetOutputLevel(DebugLevel)
 
 	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
 		funcs.Store(funcs.Load().(patchTable))
 		s2 := s.WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123)
 		s2.Debuga("Hello")
@@ -239,8 +240,8 @@ func TestScopeWithLabel(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello {"foo": "bar","baz": 123, "qux": 0.123}`)
-	mustRegexMatchString(t, lines[1], `Hello$`)
+	mustRegexMatchString(t, lines[0], `Hello	foo=bar baz=123 qux=0.123`)
+	mustRegexMatchString(t, lines[1], "Hello$")
 }
 
 func TestScopeWithoutLabels(t *testing.T) {
@@ -251,6 +252,7 @@ func TestScopeWithoutLabels(t *testing.T) {
 
 	lines, err := captureStdout(func() {
 		funcs.Store(funcs.Load().(patchTable))
+		Configure(DefaultOptions())
 		s = s.WithLabels("foo", "bar", "baz", 123)
 		s2 := s.WithoutLabels("baz")
 		s.Debuga("Hello")
@@ -264,9 +266,31 @@ func TestScopeWithoutLabels(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello {"foo":"bar","baz":123}`)
-	mustRegexMatchString(t, lines[1], `Hello {"foo":"bar"}`)
+	mustRegexMatchString(t, lines[0], "Hello\tfoo=bar baz=123")
+	mustRegexMatchString(t, lines[1], "Hello\tfoo=bar")
 	mustRegexMatchString(t, lines[2], `Hello$`)
+}
+
+func TestScopeJSON(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		o := DefaultOptions()
+		o.JSONEncoding = true
+		Configure(o)
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabels("foo", "bar", "baz", 123).Debuga("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `{.*"msg":"Hello","foo":"bar","baz":123}`)
 }
 
 func TestScopeErrorDictionary(t *testing.T) {
@@ -282,6 +306,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 		LikelyCause: "LikelyCause",
 	}
 	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
 		funcs.Store(funcs.Load().(patchTable))
 		s.WithLabels("foo", "bar").Debuga(ie, "Hello")
 
@@ -291,7 +316,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello	{"message": "Hello", "moreInfo": "MoreInfo", "impact": "Impact", "action": "Action", "likelyCauses": "LikelyCause", "foo": "bar"}`)
+	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause foo=bar`)
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {

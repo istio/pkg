@@ -39,9 +39,6 @@ type Scope struct {
 	stackTraceLevel atomic.Value
 	logCallers      atomic.Value
 
-	// context data - key slice to preserve ordering
-	contextKey []string
-	context    map[string]interface{}
 	// labels data - key slice to preserve ordering
 	labelKeys []string
 	labels    map[string]interface{}
@@ -49,22 +46,22 @@ type Scope struct {
 
 var (
 	scopes          = make(map[string]*Scope)
-	defaultHandlers []ScopeHandlerCallbackFunc
+	defaultHandlers []scopeHandlerCallbackFunc
 	lock            sync.RWMutex
 )
 
-// ScopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
+// scopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
 // function calls.
-type ScopeHandlerCallbackFunc func(
+type scopeHandlerCallbackFunc func(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field)
 
-// RegisterDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
+// registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
 // current list of scope handlers.
-func RegisterDefaultHandler(callback ScopeHandlerCallbackFunc) {
+func registerDefaultHandler(callback scopeHandlerCallbackFunc) {
 	lock.Lock()
 	defer lock.Unlock()
 	defaultHandlers = append(defaultHandlers, callback)
@@ -100,7 +97,6 @@ func RegisterScope(name string, description string, callerSkip int) *Scope {
 		scopes[name] = s
 	}
 
-	s.context = make(map[string]interface{})
 	s.labels = make(map[string]interface{})
 
 	return s
@@ -129,7 +125,6 @@ func Scopes() map[string]*Scope {
 }
 
 // Fatal outputs a message at fatal level.
-// func (s *Scope) Fatal(msg string, fields ...zapcore.Field) {
 func (s *Scope) Fatal(fields ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(fields)
@@ -138,7 +133,6 @@ func (s *Scope) Fatal(fields ...interface{}) {
 }
 
 // Fatala uses fmt.Sprint to construct and log a message at fatal level.
-//func (s *Scope) Fatala(args ...interface{}) {
 func (s *Scope) Fatala(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(args)
@@ -147,7 +141,6 @@ func (s *Scope) Fatala(args ...interface{}) {
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
-//func (s *Scope) Fatalf(template string, args ...interface{}) {
 func (s *Scope) Fatalf(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(args)
@@ -165,7 +158,6 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-//func (s *Scope) Error(msg string, fields ...zapcore.Field) {
 func (s *Scope) Error(fields ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(fields)
@@ -174,7 +166,6 @@ func (s *Scope) Error(fields ...interface{}) {
 }
 
 // Errora uses fmt.Sprint to construct and log a message at error level.
-//func (s *Scope) Errora(args ...interface{}) {
 func (s *Scope) Errora(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(args)
@@ -183,7 +174,6 @@ func (s *Scope) Errora(args ...interface{}) {
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
-// func (s *Scope) Errorf(template string, args ...interface{}) {
 func (s *Scope) Errorf(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(args)
@@ -342,7 +332,6 @@ func (s *Scope) GetLogCallers() bool {
 // Copy makes a copy of s and returns a pointer to it.
 func (s *Scope) Copy() *Scope {
 	out := *s
-	out.context = copyStringInterfaceMap(s.context)
 	out.labels = copyStringInterfaceMap(s.labels)
 	return &out
 }

@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -29,7 +30,7 @@ var (
 )
 
 func init() {
-	RegisterDefaultHandler(ZapLogHandlerCallbackFunc)
+	registerDefaultHandler(ZapLogHandlerCallbackFunc)
 }
 
 // ZapLogHandlerCallbackFunc is the handler function that emulates the previous Istio logging output and adds
@@ -40,14 +41,16 @@ func ZapLogHandlerCallbackFunc(
 	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
-	if ie != nil {
-		fields = append(fields, zap.String("message", msg))
-		fields = append(fields, zap.String("moreInfo", ie.MoreInfo))
-		fields = append(fields, zap.String("impact", ie.Impact))
-		fields = append(fields, zap.String("action", ie.Action))
-		fields = append(fields, zap.String("likelyCauses", ie.LikelyCause))
-	}
-	if len(scope.labelKeys) > 0 {
+	if useJSON {
+		if ie != nil {
+			fields = appendNotEmptyField(fields, "message", msg)
+			// Unlike zap, don't leave the message in CLI format.
+			msg = ""
+			fields = appendNotEmptyField(fields, "moreInfo", ie.MoreInfo)
+			fields = appendNotEmptyField(fields, "impact", ie.Impact)
+			fields = appendNotEmptyField(fields, "action", ie.Action)
+			fields = appendNotEmptyField(fields, "likelyCauses", ie.LikelyCause)
+		}
 		for _, k := range scope.labelKeys {
 			v := scope.labels[k]
 			fields = append(fields, zap.Field{
@@ -56,8 +59,45 @@ func ZapLogHandlerCallbackFunc(
 				Interface: v,
 			})
 		}
+	} else {
+		sb := &strings.Builder{}
+		sb.WriteString(msg)
+		if ie != nil || len(scope.labelKeys) > 0 {
+			sb.WriteString("\t")
+		}
+		if ie != nil {
+			appendNotEmptyString(sb, "moreInfo", ie.MoreInfo)
+			appendNotEmptyString(sb, "impact", ie.Impact)
+			appendNotEmptyString(sb, "action", ie.Action)
+			appendNotEmptyString(sb, "likelyCauses", ie.LikelyCause)
+		}
+		space := false
+		for _, k := range scope.labelKeys {
+			if space {
+				sb.WriteString(" ")
+			}
+			sb.WriteString(fmt.Sprintf("%s=%v", k, scope.labels[k]))
+			space = true
+		}
+		msg = sb.String()
 	}
 	emit(scope, toZapLevel[level], msg, fields)
+}
+
+// appendNotEmptyField appends a field with key:value to fields. If value is empty, it does nothing.
+func appendNotEmptyField(fields []zapcore.Field, key, value string) []zapcore.Field {
+	if key == "" {
+		return fields
+	}
+	return append(fields, zap.String(key, value))
+}
+
+// appendNotEmptyString appends a key=value string to sb. If value is empty, it does nothing.
+func appendNotEmptyString(sb *strings.Builder, key, value string) {
+	if key == "" {
+		return
+	}
+	sb.WriteString(fmt.Sprintf("%s=%v ", key, value))
 }
 
 func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
