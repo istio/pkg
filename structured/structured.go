@@ -14,8 +14,6 @@
 
 package structured
 
-import "istio.io/pkg/monitoring"
-
 // Error represents structured error information, for optional use in scope.X or log.X calls.
 // It is not the same thing as structured logging. The "structured" here means adding a structure to user facing
 // messages.
@@ -29,7 +27,4 @@ type Error struct {
 	Action string
 	// LikelyCause is the likely cause for the error e.g. "Software bug."
 	LikelyCause string
-
-	// Metrics is a list of associated metrics that will be passed to a handler from the call site.
-	Metrics []monitoring.Metric
 }
