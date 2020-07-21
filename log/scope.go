@@ -25,8 +25,27 @@ import (
 	"istio.io/pkg/structured"
 )
 
-// Scope let's you log data for an area of code, enabling the user full control over
-// the level of logging output produced.
+// Scope constrains logging control to a named scope level. It gives users a fine grained control over output severity
+// threshold and stack traces.
+//
+// Scope supports structured logging using WithLabels and WithoutLabels:
+//
+//   s := RegisterScope("MyScope", "Description", 0)
+//   s = s.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+//   s.Info("Hello")                      // <time>   info   MyScope   Hello  foo=bar baz=123 qux=0.123
+//   s.WithoutLabels("qux").Info("Hello") // <time>   info   MyScope   Hello  foo=bar baz=123
+//
+// The output format can be globally configured to be JSON instead, using Options in this package.
+//  e.g. <time>   info   MyScope   { "message":"Hello","foo":"bar","baz":123 }
+//
+// Scope also supports an error dictionary. The caller can pass a *structured.Error object as the first parameter
+// to any of the output functions (Fatal*, Error* etc.) and this will append the fields in the object to the output:
+//
+//   e := &structured.Error{MoreInfo:"See the documentation in istio.io/helpful_link"}
+//   s.WithLabels("foo", "bar").Error(e, "Hello")
+//     <time>   info   MyScope   Hello  moreInfo=See the documentation in istio.io/helpful_link foo=bar
+//
+// See structured.Error for additional guidance on defining errors in a dictionary.
 type Scope struct {
 	// immutable, set at creation
 	name        string
@@ -60,7 +79,7 @@ type scopeHandlerCallbackFunc func(
 	fields []zapcore.Field)
 
 // registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
-// current list of scope handlers.
+// current list of default scope handlers.
 func registerDefaultHandler(callback scopeHandlerCallbackFunc) {
 	lock.Lock()
 	defer lock.Unlock()
@@ -336,7 +355,9 @@ func (s *Scope) Copy() *Scope {
 	return &out
 }
 
-// WithLabels adds a key-value pairs to the labels in s.
+// WithLabels adds a key-value pairs to the labels in s. The key must be a string, while the value may be any type.
+// It returns a copy of s, with the labels added.
+// e.g. newScope := oldScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
 func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
 	out := s.Copy()
 	if len(kvlist)%2 != 0 {
@@ -359,6 +380,9 @@ func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
 
 // WithoutLabels makes a copy of s, clears labels in s with the given keys and returns the copy.
 // Not-existent keys are ignored.
+// e.g. myScope = myScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+//      myScope = myScope.WithoutLabels("baz", "qux")
+// Result: myScope retains only the "foo" label.
 func (s *Scope) WithoutLabels(keys ...string) *Scope {
 	out := s.Copy()
 	for _, key := range keys {
@@ -369,6 +393,9 @@ func (s *Scope) WithoutLabels(keys ...string) *Scope {
 }
 
 // WithoutAnyLabels clears all labels from a copy of s and returns it.
+// e.g. myScope = myScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+//      myScope = myScope.WithoutAnyLabels()
+// Result: myScope has no labels.
 func (s *Scope) WithoutAnyLabels() *Scope {
 	out := s.Copy()
 	out.labels = make(map[string]interface{})
