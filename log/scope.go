@@ -28,12 +28,11 @@ import (
 // Scope constrains logging control to a named scope level. It gives users a fine grained control over output severity
 // threshold and stack traces.
 //
-// Scope supports structured logging using WithLabels and WithoutLabels:
+// Scope supports structured logging using WithLabels:
 //
 //   s := RegisterScope("MyScope", "Description", 0)
 //   s = s.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
 //   s.Info("Hello")                      // <time>   info   MyScope   Hello  foo=bar baz=123 qux=0.123
-//   s.WithoutLabels("qux").Info("Hello") // <time>   info   MyScope   Hello  foo=bar baz=123
 //
 // The output format can be globally configured to be JSON instead, using Options in this package.
 //  e.g. <time>   info   MyScope   { "message":"Hello","foo":"bar","baz":123 }
@@ -348,8 +347,8 @@ func (s *Scope) GetLogCallers() bool {
 	return s.logCallers.Load().(bool)
 }
 
-// Copy makes a copy of s and returns a pointer to it.
-func (s *Scope) Copy() *Scope {
+// copy makes a copy of s and returns a pointer to it.
+func (s *Scope) copy() *Scope {
 	out := *s
 	out.labels = copyStringInterfaceMap(s.labels)
 	return &out
@@ -359,7 +358,7 @@ func (s *Scope) Copy() *Scope {
 // It returns a copy of s, with the labels added.
 // e.g. newScope := oldScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
 func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
-	out := s.Copy()
+	out := s.copy()
 	if len(kvlist)%2 != 0 {
 		out.labels["WithLabels error"] = fmt.Sprintf("even number of parameters required, got %d", len(kvlist))
 		return out
@@ -375,31 +374,6 @@ func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
 		out.labels[key] = kvlist[i+1]
 		out.labelKeys = append(out.labelKeys, key)
 	}
-	return out
-}
-
-// WithoutLabels makes a copy of s, clears labels in s with the given keys and returns the copy.
-// Not-existent keys are ignored.
-// e.g. myScope = myScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
-//      myScope = myScope.WithoutLabels("baz", "qux")
-// Result: myScope retains only the "foo" label.
-func (s *Scope) WithoutLabels(keys ...string) *Scope {
-	out := s.Copy()
-	for _, key := range keys {
-		delete(out.labels, key)
-		out.labelKeys = removeKey(out.labelKeys, key)
-	}
-	return out
-}
-
-// WithoutAnyLabels clears all labels from a copy of s and returns it.
-// e.g. myScope = myScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
-//      myScope = myScope.WithoutAnyLabels()
-// Result: myScope has no labels.
-func (s *Scope) WithoutAnyLabels() *Scope {
-	out := s.Copy()
-	out.labels = make(map[string]interface{})
-	out.labelKeys = nil
 	return out
 }
 
@@ -436,14 +410,4 @@ func copyStringInterfaceMap(m map[string]interface{}) map[string]interface{} {
 		out[k] = v
 	}
 	return out
-}
-
-func removeKey(s []string, key string) []string {
-	for i, k := range s {
-		if k == key {
-			s = append(s[:i], s[i+1:]...)
-			return s
-		}
-	}
-	return s
 }
