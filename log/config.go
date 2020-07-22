@@ -85,8 +85,13 @@ type patchTable struct {
 	errorSink   zapcore.WriteSyncer
 }
 
-// function table that can be replaced by tests
-var funcs = &atomic.Value{}
+var (
+	// function table that can be replaced by tests
+	funcs = &atomic.Value{}
+	// controls whether all output is JSON or CLI style. This makes it easier to query how the zap encoder is configured
+	// vs. reading it's internal state.
+	useJSON bool
+)
 
 func init() {
 	// use our defaults for starters so that logging works even before everything is fully configured
@@ -112,8 +117,10 @@ func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer,
 	var enc zapcore.Encoder
 	if options.JSONEncoding {
 		enc = zapcore.NewJSONEncoder(encCfg)
+		useJSON = true
 	} else {
 		enc = zapcore.NewConsoleEncoder(encCfg)
+		useJSON = false
 	}
 
 	var rotaterSink zapcore.WriteSyncer
