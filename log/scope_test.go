@@ -244,33 +244,6 @@ func TestScopeWithLabel(t *testing.T) {
 	mustRegexMatchString(t, lines[1], "Hello$")
 }
 
-func TestScopeWithoutLabels(t *testing.T) {
-	const name = "TestScope"
-	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
-	s.SetOutputLevel(DebugLevel)
-
-	lines, err := captureStdout(func() {
-		funcs.Store(funcs.Load().(patchTable))
-		Configure(DefaultOptions())
-		s = s.WithLabels("foo", "bar", "baz", 123)
-		s2 := s.WithoutLabels("baz")
-		s.Debuga("Hello")
-		s2.Debuga("Hello")
-		s2 = s.WithoutAnyLabels()
-		s2.Debuga("Hello")
-
-		_ = Sync()
-	})
-	if err != nil {
-		t.Errorf("Got error '%v', expected success", err)
-	}
-
-	mustRegexMatchString(t, lines[0], "Hello\tfoo=bar baz=123")
-	mustRegexMatchString(t, lines[1], "Hello\tfoo=bar")
-	mustRegexMatchString(t, lines[2], `Hello$`)
-}
-
 func TestScopeJSON(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
