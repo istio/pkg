@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"go.uber.org/zap/zapcore"
+
+	"istio.io/pkg/structured"
 )
 
 func TestBasicScopes(t *testing.T) {
@@ -215,6 +217,87 @@ func TestBasicScopes(t *testing.T) {
 				t.Errorf("Got '%v', expected a match with '%v'", lines[0], c.pat)
 			}
 		})
+	}
+}
+
+func TestScopeWithLabel(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		funcs.Store(funcs.Load().(patchTable))
+		s2 := s.WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123)
+		s2.Debuga("Hello")
+		// s should be unmodified.
+		s.Debuga("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello	foo=bar baz=123 qux=0.123`)
+	mustRegexMatchString(t, lines[1], "Hello$")
+}
+
+func TestScopeJSON(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		o := DefaultOptions()
+		o.JSONEncoding = true
+		Configure(o)
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabels("foo", "bar", "baz", 123).Debuga("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `{.*"msg":"Hello","foo":"bar","baz":123}`)
+}
+
+func TestScopeErrorDictionary(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	ie := &structured.Error{
+		MoreInfo:    "MoreInfo",
+		Impact:      "Impact",
+		Action:      "Action",
+		LikelyCause: "LikelyCause",
+	}
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabels("foo", "bar").Debuga(ie, "Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause foo=bar`)
+}
+
+func mustRegexMatchString(t *testing.T, got, want string) {
+	t.Helper()
+	match, _ := regexp.MatchString(want, got)
+
+	if !match {
+		t.Fatalf("Got '%v', expected a match with '%v'", got, want)
 	}
 }
 

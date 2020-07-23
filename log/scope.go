@@ -16,18 +16,35 @@ package log
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"istio.io/pkg/structured"
 )
 
-// Scope let's you log data for an area of code, enabling the user full control over
-// the level of logging output produced.
+// Scope constrains logging control to a named scope level. It gives users a fine grained control over output severity
+// threshold and stack traces.
+//
+// Scope supports structured logging using WithLabels:
+//
+//   s := RegisterScope("MyScope", "Description", 0)
+//   s = s.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+//   s.Info("Hello")                      // <time>   info   MyScope   Hello  foo=bar baz=123 qux=0.123
+//
+// The output format can be globally configured to be JSON instead, using Options in this package.
+//  e.g. <time>   info   MyScope   { "message":"Hello","foo":"bar","baz":123 }
+//
+// Scope also supports an error dictionary. The caller can pass a *structured.Error object as the first parameter
+// to any of the output functions (Fatal*, Error* etc.) and this will append the fields in the object to the output:
+//
+//   e := &structured.Error{MoreInfo:"See the documentation in istio.io/helpful_link"}
+//   s.WithLabels("foo", "bar").Error(e, "Hello")
+//     <time>   info   MyScope   Hello  moreInfo=See the documentation in istio.io/helpful_link foo=bar
+//
+// See structured.Error for additional guidance on defining errors in a dictionary.
 type Scope struct {
 	// immutable, set at creation
 	name        string
@@ -39,10 +56,34 @@ type Scope struct {
 	outputLevel     atomic.Value
 	stackTraceLevel atomic.Value
 	logCallers      atomic.Value
+
+	// labels data - key slice to preserve ordering
+	labelKeys []string
+	labels    map[string]interface{}
 }
 
-var scopes = make(map[string]*Scope)
-var lock = sync.RWMutex{}
+var (
+	scopes          = make(map[string]*Scope)
+	defaultHandlers []scopeHandlerCallbackFunc
+	lock            sync.RWMutex
+)
+
+// scopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
+// function calls.
+type scopeHandlerCallbackFunc func(
+	level Level,
+	scope *Scope,
+	ie *structured.Error,
+	msg string,
+	fields []zapcore.Field)
+
+// registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
+// current list of default scope handlers.
+func registerDefaultHandler(callback scopeHandlerCallbackFunc) {
+	lock.Lock()
+	defer lock.Unlock()
+	defaultHandlers = append(defaultHandlers, callback)
+}
 
 // RegisterScope registers a new logging scope. If the same name is used multiple times
 // for a single process, the same Scope struct is returned.
@@ -74,6 +115,8 @@ func RegisterScope(name string, description string, callerSkip int) *Scope {
 		scopes[name] = s
 	}
 
+	s.labels = make(map[string]interface{})
+
 	return s
 }
 
@@ -100,27 +143,30 @@ func Scopes() map[string]*Scope {
 }
 
 // Fatal outputs a message at fatal level.
-func (s *Scope) Fatal(msg string, fields ...zapcore.Field) {
+func (s *Scope) Fatal(fields ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
-		s.emit(zapcore.FatalLevel, s.GetStackTraceLevel() >= FatalLevel, msg, fields)
+		ie, firstIdx := getErrorStruct(fields)
+		s.callHandlers(FatalLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
 	}
 }
 
 // Fatala uses fmt.Sprint to construct and log a message at fatal level.
 func (s *Scope) Fatala(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
-		s.emit(zapcore.FatalLevel, s.GetStackTraceLevel() >= FatalLevel, fmt.Sprint(args...), nil)
+		ie, firstIdx := getErrorStruct(args)
+		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
-func (s *Scope) Fatalf(template string, args ...interface{}) {
+func (s *Scope) Fatalf(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
-		msg := template
-		if len(args) > 0 {
-			msg = fmt.Sprintf(template, args...)
+		ie, firstIdx := getErrorStruct(args)
+		msg := fmt.Sprint(args[firstIdx])
+		if len(args) > 1 {
+			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.emit(zapcore.FatalLevel, s.GetStackTraceLevel() >= FatalLevel, msg, nil)
+		s.callHandlers(FatalLevel, s, ie, msg, nil)
 	}
 }
 
@@ -130,27 +176,30 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func (s *Scope) Error(msg string, fields ...zapcore.Field) {
+func (s *Scope) Error(fields ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		s.emit(zapcore.ErrorLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, fields)
+		ie, firstIdx := getErrorStruct(fields)
+		s.callHandlers(ErrorLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
 	}
 }
 
 // Errora uses fmt.Sprint to construct and log a message at error level.
 func (s *Scope) Errora(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		s.emit(zapcore.ErrorLevel, s.GetStackTraceLevel() >= ErrorLevel, fmt.Sprint(args...), nil)
+		ie, firstIdx := getErrorStruct(args)
+		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
-func (s *Scope) Errorf(template string, args ...interface{}) {
+func (s *Scope) Errorf(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		msg := template
-		if len(args) > 0 {
-			msg = fmt.Sprintf(template, args...)
+		ie, firstIdx := getErrorStruct(args)
+		msg := fmt.Sprint(args[firstIdx])
+		if len(args) > 1 {
+			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.emit(zapcore.ErrorLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, nil)
+		s.callHandlers(ErrorLevel, s, ie, msg, nil)
 	}
 }
 
@@ -160,27 +209,30 @@ func (s *Scope) ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func (s *Scope) Warn(msg string, fields ...zapcore.Field) {
+func (s *Scope) Warn(fields ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
-		s.emit(zapcore.WarnLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, fields)
+		ie, firstIdx := getErrorStruct(fields)
+		s.callHandlers(WarnLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
 	}
 }
 
 // Warna uses fmt.Sprint to construct and log a message at warn level.
 func (s *Scope) Warna(args ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
-		s.emit(zapcore.WarnLevel, s.GetStackTraceLevel() >= ErrorLevel, fmt.Sprint(args...), nil)
+		ie, firstIdx := getErrorStruct(args)
+		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
-func (s *Scope) Warnf(template string, args ...interface{}) {
+func (s *Scope) Warnf(args ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
-		msg := template
-		if len(args) > 0 {
-			msg = fmt.Sprintf(template, args...)
+		ie, firstIdx := getErrorStruct(args)
+		msg := fmt.Sprint(args[firstIdx])
+		if len(args) > 1 {
+			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.emit(zapcore.WarnLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, nil)
+		s.callHandlers(WarnLevel, s, ie, msg, nil)
 	}
 }
 
@@ -190,27 +242,30 @@ func (s *Scope) WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func (s *Scope) Info(msg string, fields ...zapcore.Field) {
+func (s *Scope) Info(fields ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
-		s.emit(zapcore.InfoLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, fields)
+		ie, firstIdx := getErrorStruct(fields)
+		s.callHandlers(InfoLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
 	}
 }
 
 // Infoa uses fmt.Sprint to construct and log a message at info level.
 func (s *Scope) Infoa(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
-		s.emit(zapcore.InfoLevel, s.GetStackTraceLevel() >= ErrorLevel, fmt.Sprint(args...), nil)
+		ie, firstIdx := getErrorStruct(args)
+		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
-func (s *Scope) Infof(template string, args ...interface{}) {
+func (s *Scope) Infof(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
-		msg := template
-		if len(args) > 0 {
-			msg = fmt.Sprintf(template, args...)
+		ie, firstIdx := getErrorStruct(args)
+		msg := fmt.Sprint(args[firstIdx])
+		if len(args) > 1 {
+			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.emit(zapcore.InfoLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, nil)
+		s.callHandlers(InfoLevel, s, ie, msg, nil)
 	}
 }
 
@@ -220,27 +275,30 @@ func (s *Scope) InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func (s *Scope) Debug(msg string, fields ...zapcore.Field) {
+func (s *Scope) Debug(fields ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
-		s.emit(zapcore.DebugLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, fields)
+		ie, firstIdx := getErrorStruct(fields)
+		s.callHandlers(DebugLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
 	}
 }
 
 // Debuga uses fmt.Sprint to construct and log a message at debug level.
 func (s *Scope) Debuga(args ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
-		s.emit(zapcore.DebugLevel, s.GetStackTraceLevel() >= ErrorLevel, fmt.Sprint(args...), nil)
+		ie, firstIdx := getErrorStruct(args)
+		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Debugf uses fmt.Sprintf to construct and log a message at debug level.
-func (s *Scope) Debugf(template string, args ...interface{}) {
+func (s *Scope) Debugf(args ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
-		msg := template
-		if len(args) > 0 {
-			msg = fmt.Sprintf(template, args...)
+		ie, firstIdx := getErrorStruct(args)
+		msg := fmt.Sprint(args[firstIdx])
+		if len(args) > 1 {
+			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.emit(zapcore.DebugLevel, s.GetStackTraceLevel() >= ErrorLevel, msg, nil)
+		s.callHandlers(DebugLevel, s, ie, msg, nil)
 	}
 }
 
@@ -257,33 +315,6 @@ func (s *Scope) Name() string {
 // Description returns this scope's description
 func (s *Scope) Description() string {
 	return s.description
-}
-
-const callerSkipOffset = 2
-
-func (s *Scope) emit(level zapcore.Level, dumpStack bool, msg string, fields []zapcore.Field) {
-	e := zapcore.Entry{
-		Message:    msg,
-		Level:      level,
-		Time:       time.Now(),
-		LoggerName: s.nameToEmit,
-	}
-
-	if s.GetLogCallers() {
-		e.Caller = zapcore.NewEntryCaller(runtime.Caller(s.callerSkip + callerSkipOffset))
-	}
-
-	if dumpStack {
-		e.Stack = zap.Stack("").String
-	}
-
-	pt := funcs.Load().(patchTable)
-	if pt.write != nil {
-		if err := pt.write(e, fields); err != nil {
-			_, _ = fmt.Fprintf(pt.errorSink, "%v log write error: %v\n", time.Now(), err)
-			_ = pt.errorSink.Sync()
-		}
-	}
 }
 
 // SetOutputLevel adjusts the output level associated with the scope.
@@ -314,4 +345,69 @@ func (s *Scope) SetLogCallers(logCallers bool) {
 // GetLogCallers returns the output level associated with the scope.
 func (s *Scope) GetLogCallers() bool {
 	return s.logCallers.Load().(bool)
+}
+
+// copy makes a copy of s and returns a pointer to it.
+func (s *Scope) copy() *Scope {
+	out := *s
+	out.labels = copyStringInterfaceMap(s.labels)
+	return &out
+}
+
+// WithLabels adds a key-value pairs to the labels in s. The key must be a string, while the value may be any type.
+// It returns a copy of s, with the labels added.
+// e.g. newScope := oldScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
+	out := s.copy()
+	if len(kvlist)%2 != 0 {
+		out.labels["WithLabels error"] = fmt.Sprintf("even number of parameters required, got %d", len(kvlist))
+		return out
+	}
+
+	for i := 0; i < len(kvlist); i += 2 {
+		keyi := kvlist[i]
+		key, ok := keyi.(string)
+		if !ok {
+			out.labels["WithLabels error"] = fmt.Sprintf("label name %v must be a string, got %T ", keyi, keyi)
+			return out
+		}
+		out.labels[key] = kvlist[i+1]
+		out.labelKeys = append(out.labelKeys, key)
+	}
+	return out
+}
+
+// callHandlers calls all handlers registered to s.
+func (s *Scope) callHandlers(
+	severity Level,
+	scope *Scope,
+	ie *structured.Error,
+	msg string,
+	fields []zapcore.Field) {
+	for _, h := range defaultHandlers {
+		h(severity, scope, ie, msg, fields)
+	}
+}
+
+// getErrorStruct returns (*Error, 1) if it is the first argument in the list is an Error ptr,
+// or (nil,0) otherwise. The second return value is the offset to the first non-Error field.
+func getErrorStruct(fields ...interface{}) (*structured.Error, int) {
+	ief, ok := fields[0].([]interface{})
+	if !ok {
+		return nil, 0
+	}
+	ie, ok := ief[0].(*structured.Error)
+	if !ok {
+		return nil, 0
+	}
+	// Skip Error, pass remaining fields on as before.
+	return ie, 1
+}
+
+func copyStringInterfaceMap(m map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
