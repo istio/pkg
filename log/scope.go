@@ -63,9 +63,12 @@ type Scope struct {
 }
 
 var (
-	scopes          = make(map[string]*Scope)
+	scopes = make(map[string]*Scope)
+	lock   sync.RWMutex
+
 	defaultHandlers []scopeHandlerCallbackFunc
-	lock            sync.RWMutex
+	// Write lock should only be taken during program startup.
+	defaultHandlersMu sync.RWMutex
 )
 
 // scopeHandlerCallbackFunc is a callback type for the handler called from Fatal*, Error*, Warn*, Info* and Debug*
@@ -80,8 +83,8 @@ type scopeHandlerCallbackFunc func(
 // registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
 // current list of default scope handlers.
 func registerDefaultHandler(callback scopeHandlerCallbackFunc) {
-	lock.Lock()
-	defer lock.Unlock()
+	defaultHandlersMu.Lock()
+	defer defaultHandlersMu.Unlock()
 	defaultHandlers = append(defaultHandlers, callback)
 }
 
@@ -384,6 +387,9 @@ func (s *Scope) callHandlers(
 	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
+
+	defaultHandlersMu.RLock()
+	defer defaultHandlersMu.RUnlock()
 	for _, h := range defaultHandlers {
 		h(severity, scope, ie, msg, fields)
 	}
