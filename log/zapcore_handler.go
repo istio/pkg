@@ -64,6 +64,7 @@ func ZapLogHandlerCallbackFunc(
 			fields = appendNotEmptyField(fields, "impact", ie.Impact)
 			fields = appendNotEmptyField(fields, "action", ie.Action)
 			fields = appendNotEmptyField(fields, "likelyCauses", ie.LikelyCause)
+			fields = appendNotEmptyField(fields, "err", toErrString(ie.Err))
 		}
 		for _, k := range scope.labelKeys {
 			v := scope.labels[k]
@@ -76,19 +77,20 @@ func ZapLogHandlerCallbackFunc(
 	} else {
 		sb := &strings.Builder{}
 		sb.WriteString(msg)
-		if ie != nil || len(scope.labelKeys) > 0 {
-			sb.WriteString("\t")
-		}
 		if ie != nil {
+			sb.WriteString("\t")
 			appendNotEmptyString(sb, "moreInfo", ie.MoreInfo)
 			appendNotEmptyString(sb, "impact", ie.Impact)
 			appendNotEmptyString(sb, "action", ie.Action)
 			appendNotEmptyString(sb, "likelyCauses", ie.LikelyCause)
+			appendNotEmptyString(sb, "err", toErrString(ie.Err))
 		}
 		space := false
 		for _, k := range scope.labelKeys {
 			if space {
 				sb.WriteString(" ")
+			} else {
+				sb.WriteString("\t")
 			}
 			sb.WriteString(fmt.Sprintf("%s=%v", k, scope.labels[k]))
 			space = true
@@ -100,7 +102,7 @@ func ZapLogHandlerCallbackFunc(
 
 // appendNotEmptyField appends a field with key:value to fields. If value is empty, it does nothing.
 func appendNotEmptyField(fields []zapcore.Field, key, value string) []zapcore.Field {
-	if key == "" {
+	if key == "" || value == "" {
 		return fields
 	}
 	return append(fields, zap.String(key, value))
@@ -108,7 +110,7 @@ func appendNotEmptyField(fields []zapcore.Field, key, value string) []zapcore.Fi
 
 // appendNotEmptyString appends a key=value string to sb. If value is empty, it does nothing.
 func appendNotEmptyString(sb *strings.Builder, key, value string) {
-	if key == "" {
+	if key == "" || value == "" {
 		return
 	}
 	sb.WriteString(fmt.Sprintf("%s=%v ", key, value))
@@ -174,4 +176,12 @@ func emit(scope *Scope, level zapcore.Level, msg string, fields []zapcore.Field)
 // backwards compatibility. TODO(mostrowski): remove this
 func (s *Scope) emit(level zapcore.Level, ps bool, msg string, fields []zapcore.Field) {
 	emit(s, level, msg, fields)
+}
+
+// toErrString returns the string representation of err, handling the nil case.
+func toErrString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

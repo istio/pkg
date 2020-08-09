@@ -283,13 +283,20 @@ func TestScopeErrorDictionary(t *testing.T) {
 		funcs.Store(funcs.Load().(patchTable))
 		s.WithLabels("foo", "bar").Debuga(ie, "Hello")
 
+		// Test that structured errors can be returned from a function.
+		err := func() error {
+			return structured.NewErr(ie, errors.New("err"))
+		}()
+		s.WithLabels("foo", "bar").Debugf("Hello: %s", err)
+
 		_ = Sync()
 	})
 	if err != nil {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause foo=bar`)
+	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause 	foo=bar`)
+	mustRegexMatchString(t, lines[1], `Hello: 	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=err	foo=bar`)
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {

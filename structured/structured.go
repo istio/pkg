@@ -14,6 +14,8 @@
 
 package structured
 
+import "fmt"
+
 // Error represents structured error information, for optional use in scope.X or log.X calls.
 // It is not the same thing as structured logging. The "structured" here means adding a structure to user facing
 // messages.
@@ -27,4 +29,28 @@ type Error struct {
 	Action string
 	// LikelyCause is the likely cause for the error e.g. "Software bug."
 	LikelyCause string
+	// Err is the original error string.
+	Err error
+}
+
+// Error implements the error#Error interface.
+func (e *Error) Error() string {
+	if e == nil {
+		return ""
+	}
+	ret := fmt.Sprintf("\tmoreInfo=%s impact=%s action=%s likelyCause=%s",
+		e.MoreInfo, e.Impact, e.Action, e.LikelyCause)
+	if e.Err != nil {
+		ret += fmt.Sprintf(" err=%s", e.Err)
+	}
+
+	return ret
+}
+
+// NewErr creates a new copy of an Error with the content of serr and err and returns a ptr to it.
+func NewErr(serr *Error, err error) *Error {
+	// Make a copy so that dictionary entry is not modified.
+	ne := *serr
+	ne.Err = err
+	return &ne
 }
