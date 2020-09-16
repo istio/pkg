@@ -55,7 +55,7 @@ func ZapLogHandlerCallbackFunc(
 	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
-	if useJSON {
+	if useJSON.Load().(bool) {
 		if ie != nil {
 			fields = appendNotEmptyField(fields, "message", msg)
 			// Unlike zap, don't leave the message in CLI format.

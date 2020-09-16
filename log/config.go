@@ -90,7 +90,7 @@ var (
 	funcs = &atomic.Value{}
 	// controls whether all output is JSON or CLI style. This makes it easier to query how the zap encoder is configured
 	// vs. reading it's internal state.
-	useJSON bool
+	useJSON atomic.Value
 )
 
 func init() {
@@ -117,10 +117,10 @@ func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer,
 	var enc zapcore.Encoder
 	if options.JSONEncoding {
 		enc = zapcore.NewJSONEncoder(encCfg)
-		useJSON = true
+		useJSON.Store(true)
 	} else {
 		enc = zapcore.NewConsoleEncoder(encCfg)
-		useJSON = false
+		useJSON.Store(false)
 	}
 
 	var rotaterSink zapcore.WriteSyncer
