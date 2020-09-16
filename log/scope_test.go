@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"go.uber.org/zap/zapcore"
+
 	"istio.io/pkg/structured"
 )
 

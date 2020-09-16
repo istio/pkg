@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	structuredErrorRegex = regexp.MustCompile(`\[\| moreInfo=(?P<moreInfo>.*) impact=(?P<impact>.*) action=(?P<action>.*) likelyCause=(?P<likelyCause>.*) err=(?P<err>.*) \|\]`)
+	structuredErrorRegex = regexp.MustCompile(`\[\| moreInfo=(?P<moreInfo>.*) impact=(?P<impact>.*) ` +
+		`action=(?P<action>.*) likelyCause=(?P<likelyCause>.*) err=(?P<err>.*) \|\]`)
 )
 
 // Error represents structured error information, for optional use in scope.X or log.X calls.

@@ -17,9 +17,10 @@ package structured
 import (
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestSerialize(t *testing.T) {
@@ -29,11 +30,11 @@ func TestSerialize(t *testing.T) {
 		prefix string
 	}{
 		{
-			desc:   "nil",
+			desc: "nil",
 		},
 		{
-			desc:   "empty",
-			in:     &Error{},
+			desc: "empty",
+			in:   &Error{},
 		},
 		{
 			desc: "empty fields",
@@ -45,7 +46,7 @@ func TestSerialize(t *testing.T) {
 			},
 		},
 		{
-			desc: "all fields",
+			desc:   "all fields",
 			prefix: "prefix: ",
 			in: &Error{
 				MoreInfo:    "MoreInfo",
@@ -56,7 +57,7 @@ func TestSerialize(t *testing.T) {
 			},
 		},
 		{
-			desc: "some fields",
+			desc:   "some fields",
 			prefix: "prefix: ",
 			in: &Error{
 				MoreInfo:    "MoreInfo",
