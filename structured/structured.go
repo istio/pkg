@@ -14,7 +14,16 @@
 
 package structured
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+var (
+	structuredErrorRegex = regexp.MustCompile(`\[\| moreInfo=(?P<moreInfo>.*) impact=(?P<impact>.*) action=(?P<action>.*) likelyCause=(?P<likelyCause>.*) err=(?P<err>.*) \|\]`)
+)
 
 // Error represents structured error information, for optional use in scope.X or log.X calls.
 // It is not the same thing as structured logging. The "structured" here means adding a structure to user facing
@@ -38,13 +47,31 @@ func (e *Error) Error() string {
 	if e == nil {
 		return ""
 	}
-	ret := fmt.Sprintf("\tmoreInfo=%s impact=%s action=%s likelyCause=%s",
-		e.MoreInfo, e.Impact, e.Action, e.LikelyCause)
-	if e.Err != nil {
-		ret += fmt.Sprintf(" err=%s", e.Err)
-	}
+	return fmt.Sprintf("\t[| moreInfo=%s impact=%s action=%s likelyCause=%s err=%v |]",
+		e.MoreInfo, e.Impact, e.Action, e.LikelyCause, e.Err)
+}
 
-	return ret
+func Parse(errStr string) (string, *Error) {
+	// Fast litmus test to avoid regex in most cases.
+	if !strings.Contains(errStr, "\t[| moreInfo=") || !strings.Contains(errStr, " |]") {
+		return errStr, nil
+	}
+	prefix := errStr[:strings.Index(errStr, "\t[|")]
+	sm := structuredErrorRegex.FindSubmatch([]byte(errStr))
+	if len(sm) != 6 {
+		return errStr, nil
+	}
+	var ee error
+	if string(sm[5]) != "<nil>" {
+		ee = errors.New(string(sm[5]))
+	}
+	return prefix, &Error{
+		MoreInfo:    string(sm[1]),
+		Impact:      string(sm[2]),
+		Action:      string(sm[3]),
+		LikelyCause: string(sm[4]),
+		Err:         ee,
+	}
 }
 
 // NewErr creates a new copy of an Error with the content of serr and err and returns a ptr to it.

@@ -55,6 +55,16 @@ func ZapLogHandlerCallbackFunc(
 	ie *structured.Error,
 	msg string,
 	fields []zapcore.Field) {
+
+	if ie == nil {
+		// check if we have a serialized structured.Error in msg
+		np, ne := structured.Parse(msg)
+		if ne != nil {
+			// replace with deserialized versions
+			msg, ie = np, ne
+		}
+	}
+
 	if useJSON.Load().(bool) {
 		if ie != nil {
 			fields = appendNotEmptyField(fields, "message", msg)

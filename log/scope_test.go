@@ -16,12 +16,12 @@ package log
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"testing"
 
 	"go.uber.org/zap/zapcore"
-
 	"istio.io/pkg/structured"
 )
 
@@ -297,6 +297,40 @@ func TestScopeErrorDictionary(t *testing.T) {
 
 	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause 	foo=bar`)
 	mustRegexMatchString(t, lines[1], `Hello: 	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=err	foo=bar`)
+}
+
+func TestScopeErrorDictionarySerialize(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabels("foo", "bar").Debugf("Hello: %s", func2())
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello: func2 prefix: 	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause err=func1 err 	foo=bar`)
+}
+
+func func2() error {
+	return fmt.Errorf("func2 prefix: %s", func1())
+}
+
+func func1() error {
+	return &structured.Error{
+		MoreInfo:    "MoreInfo",
+		Impact:      "Impact",
+		Action:      "Action",
+		LikelyCause: "LikelyCause",
+		Err:         errors.New("func1 err"),
+	}
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {
