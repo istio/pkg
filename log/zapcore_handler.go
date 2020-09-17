@@ -73,7 +73,7 @@ func ZapLogHandlerCallbackFunc(
 			fields = appendNotEmptyField(fields, "moreInfo", ie.MoreInfo)
 			fields = appendNotEmptyField(fields, "impact", ie.Impact)
 			fields = appendNotEmptyField(fields, "action", ie.Action)
-			fields = appendNotEmptyField(fields, "likelyCauses", ie.LikelyCause)
+			fields = appendNotEmptyField(fields, "likelyCause", ie.LikelyCause)
 			fields = appendNotEmptyField(fields, "err", toErrString(ie.Err))
 		}
 		for _, k := range scope.labelKeys {
@@ -92,7 +92,7 @@ func ZapLogHandlerCallbackFunc(
 			appendNotEmptyString(sb, "moreInfo", ie.MoreInfo)
 			appendNotEmptyString(sb, "impact", ie.Impact)
 			appendNotEmptyString(sb, "action", ie.Action)
-			appendNotEmptyString(sb, "likelyCauses", ie.LikelyCause)
+			appendNotEmptyString(sb, "likelyCause", ie.LikelyCause)
 			appendNotEmptyString(sb, "err", toErrString(ie.Err))
 		}
 		space := false

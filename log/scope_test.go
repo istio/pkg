@@ -296,8 +296,8 @@ func TestScopeErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause 	foo=bar`)
-	mustRegexMatchString(t, lines[1], `Hello: 	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=err	foo=bar`)
+	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause 	foo=bar`)
+	mustRegexMatchString(t, lines[1], `Hello: 	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=err 	foo=bar`)
 }
 
 func TestScopeErrorDictionarySerialize(t *testing.T) {
@@ -317,7 +317,7 @@ func TestScopeErrorDictionarySerialize(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello: func2 prefix: 	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause err=func1 err 	foo=bar`)
+	mustRegexMatchString(t, lines[0], `Hello: func2 prefix: 	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=func1 err 	foo=bar`)
 }
 
 func func2() error {
