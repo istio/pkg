@@ -338,6 +338,7 @@ func Configure(options *Options) error {
 		grpclog.SetLogger(zapgrpc.NewLogger(captureLogger.WithOptions(zap.AddCallerSkip(2))))
 	}
 
+	// capture klog (Kubernetes logging) through our logging
 	klog.SetLogger(newLogrAdapter(KlogScope))
 
 	return nil
