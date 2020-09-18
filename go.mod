@@ -12,6 +12,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-logr/logr v0.2.0
 	github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.3.2 // indirect
@@ -46,4 +47,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.7
 	gotest.tools v2.2.0+incompatible
 	istio.io/api v0.0.0-20190515205759-982e5c3888c6
+	k8s.io/klog/v2 v2.3.0
 )
