@@ -63,6 +63,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc/grpclog"
+	"k8s.io/klog/v2"
 )
 
 // none is used to disable logging output as well as to disable stack tracing.
@@ -278,6 +279,8 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 	return nil
 }
 
+var KlogScope = RegisterScope("klog", "", 0)
+
 // Configure initializes Istio's logging subsystem.
 //
 // You typically call this once at process startup.
@@ -334,6 +337,8 @@ func Configure(options *Options) error {
 	if options.LogGrpc {
 		grpclog.SetLogger(zapgrpc.NewLogger(captureLogger.WithOptions(zap.AddCallerSkip(2))))
 	}
+
+	klog.SetLogger(newLogrAdapter(KlogScope))
 
 	return nil
 }
