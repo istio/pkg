@@ -63,6 +63,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc/grpclog"
+	"k8s.io/klog/v2"
 )
 
 // none is used to disable logging output as well as to disable stack tracing.
@@ -90,7 +91,7 @@ var (
 	funcs = &atomic.Value{}
 	// controls whether all output is JSON or CLI style. This makes it easier to query how the zap encoder is configured
 	// vs. reading it's internal state.
-	useJSON bool
+	useJSON atomic.Value
 )
 
 func init() {
@@ -117,10 +118,10 @@ func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer,
 	var enc zapcore.Encoder
 	if options.JSONEncoding {
 		enc = zapcore.NewJSONEncoder(encCfg)
-		useJSON = true
+		useJSON.Store(true)
 	} else {
 		enc = zapcore.NewConsoleEncoder(encCfg)
-		useJSON = false
+		useJSON.Store(false)
 	}
 
 	var rotaterSink zapcore.WriteSyncer
@@ -278,6 +279,8 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 	return nil
 }
 
+var KlogScope = RegisterScope("klog", "", 0)
+
 // Configure initializes Istio's logging subsystem.
 //
 // You typically call this once at process startup.
@@ -334,6 +337,9 @@ func Configure(options *Options) error {
 	if options.LogGrpc {
 		grpclog.SetLogger(zapgrpc.NewLogger(captureLogger.WithOptions(zap.AddCallerSkip(2))))
 	}
+
+	// capture klog (Kubernetes logging) through our logging
+	klog.SetLogger(newLogrAdapter(KlogScope))
 
 	return nil
 }
