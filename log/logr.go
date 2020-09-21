@@ -56,7 +56,11 @@ func (zl *zapLogger) Info(msg string, keysAndVals ...interface{}) {
 
 func (zl *zapLogger) Error(err error, msg string, keysAndVals ...interface{}) {
 	if zl.l.ErrorEnabled() {
-		zl.l.Error(fmt.Sprintf("%v: %s", err.Error(), msg), keysAndVals)
+		if err == nil {
+			zl.l.Error(msg, keysAndVals)
+		} else {
+			zl.l.Error(fmt.Sprintf("%v: %s", err.Error(), msg), keysAndVals)
+		}
 	}
 }
 
