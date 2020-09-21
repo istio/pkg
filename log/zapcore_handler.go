@@ -131,7 +131,7 @@ func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 		}
 		zf, ok := zfi.(zapcore.Field)
 		if !ok {
-			Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)
+			Errorf("bad type: expect zapcore.Field, got %T for field \"%v\"", zfi, zfi)
 			continue
 		}
 		zfs = append(zfs, zf)
