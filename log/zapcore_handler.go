@@ -16,6 +16,7 @@ package log
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -125,6 +126,9 @@ func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 	}
 	for i := index; i < len(fl); i++ {
 		zfi := fl[i]
+		if isNil(zfi) {
+			continue
+		}
 		zf, ok := zfi.(zapcore.Field)
 		if !ok {
 			Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)
@@ -133,6 +137,17 @@ func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 		zfs = append(zfs, zf)
 	}
 	return zfs
+}
+
+func isNil(i interface{}) bool {
+	if i == nil {
+		return true
+	}
+	switch reflect.TypeOf(i).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice, reflect.Interface:
+		return reflect.ValueOf(i).IsNil()
+	}
+	return false
 }
 
 // callerSkipOffset is how many callers to pop off the stack to determine the caller function locality, used for
