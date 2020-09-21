@@ -116,10 +116,15 @@ func appendNotEmptyString(sb *strings.Builder, key, value string) {
 
 func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
 	var zfs []zapcore.Field
-	if len(fields) <= index {
+	if len(fields) == 0 {
 		return nil
 	}
-	for _, zfi := range fields {
+	fl := fields[0].([]interface{})
+	if len(fl) <= index {
+		return nil
+	}
+	for i := index; i < len(fl); i++ {
+		zfi := fl[i]
 		zf, ok := zfi.(zapcore.Field)
 		if !ok {
 			Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)

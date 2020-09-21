@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"testing"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"istio.io/pkg/structured"
@@ -37,8 +38,8 @@ func TestBasicScopes(t *testing.T) {
 		stackLevel Level
 	}{
 		{
-			f:   func() { s.Debug("Hello") },
-			pat: timePattern + "\tdebug\ttestScope\tHello",
+			f:   func() { s.Debug("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
+			pat: timePattern + "\tdebug\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
 		},
 		{
 			f:   func() { s.Debugf("Hello") },
@@ -54,8 +55,8 @@ func TestBasicScopes(t *testing.T) {
 		},
 
 		{
-			f:   func() { s.Info("Hello") },
-			pat: timePattern + "\tinfo\ttestScope\tHello",
+			f:   func() { s.Info("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
+			pat: timePattern + "\tinfo\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
 		},
 		{
 			f:   func() { s.Infof("Hello") },
@@ -71,8 +72,8 @@ func TestBasicScopes(t *testing.T) {
 		},
 
 		{
-			f:   func() { s.Warn("Hello") },
-			pat: timePattern + "\twarn\ttestScope\tHello",
+			f:   func() { s.Warn("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
+			pat: timePattern + "\twarn\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
 		},
 		{
 			f:   func() { s.Warnf("Hello") },
@@ -88,8 +89,8 @@ func TestBasicScopes(t *testing.T) {
 		},
 
 		{
-			f:   func() { s.Error("Hello") },
-			pat: timePattern + "\terror\ttestScope\tHello",
+			f:   func() { s.Error("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
+			pat: timePattern + "\terror\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
 		},
 		{
 			f:   func() { s.Errorf("Hello") },
