@@ -58,6 +58,13 @@ func mustMatchLength(t *testing.T, l int, items []string) {
 }
 
 func TestLogr(t *testing.T) {
+	t.Run("newlines not duplicated", func(t *testing.T) {
+		lines := runLogrTest(t, func(l logr.Logger) {
+			l.Info("msg\n")
+		})
+		mustMatchLength(t, 1, lines)
+		mustRegexMatchString(t, lines[0], "msg")
+	})
 	t.Run("info level log is output", func(t *testing.T) {
 		lines := runLogrTest(t, func(l logr.Logger) {
 			l.Info("msg")
