@@ -16,6 +16,7 @@ package log
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"testing"
@@ -281,7 +282,12 @@ func TestScopeErrorDictionary(t *testing.T) {
 	lines, err := captureStdout(func() {
 		Configure(DefaultOptions())
 		funcs.Store(funcs.Load().(patchTable))
-		s.WithLabels("foo", "bar").Debuga(ie, "Hello")
+
+		// Test that structured errors can be returned from a function.
+		err := func() error {
+			return structured.NewErr(ie, errors.New("err"))
+		}()
+		s.WithLabels("foo", "bar").Debugf("Hello %s", err)
 
 		_ = Sync()
 	})
@@ -289,7 +295,48 @@ func TestScopeErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], `Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause foo=bar`)
+	mustRegexMatchString(t, lines[0], "Hello \tmoreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause err=err\tfoo=bar")
+}
+
+func TestScopeErrorDictionaryWrap(t *testing.T) {
+	const name = "TestScope"
+	const desc = "Desc"
+	s := RegisterScope(name, desc, 0)
+	s.SetOutputLevel(DebugLevel)
+
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		funcs.Store(funcs.Load().(patchTable))
+		s.WithLabels("foo", "bar").Debugf("Hello: %s", func2())
+		var ie *structured.Error
+		eWrap := func2()
+		if !errors.As(eWrap, &ie) {
+			t.Fatalf("expected returned type to be *structured.Error")
+		}
+		s.WithLabels("foo", "bar").Debugf(ie, "Hello ", eWrap)
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], "Hello: func2 prefix: \tmoreInfo=someMoreInfo impact=someImpact action=someAction likelyCause=someLikelyCause err=someErr\tfoo=bar")
+}
+
+// func2 is used to test correct error return through %w verb.
+func func2() error {
+	return fmt.Errorf("func2 prefix: %w", func1())
+}
+
+func func1() error {
+	return &structured.Error{
+		MoreInfo:    "someMoreInfo",
+		Impact:      "someImpact",
+		Action:      "someAction",
+		LikelyCause: "someLikelyCause",
+		Err:         errors.New("someErr"),
+	}
 }
 
 func mustRegexMatchString(t *testing.T, got, want string) {
