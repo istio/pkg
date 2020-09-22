@@ -266,3 +266,18 @@ func TestEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultWithLabel(t *testing.T) {
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		funcs.Store(funcs.Load().(patchTable))
+		WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123).Errora("Hello")
+
+		_ = Sync()
+	})
+	if err != nil {
+		t.Errorf("Got error '%v', expected success", err)
+	}
+
+	mustRegexMatchString(t, lines[0], `Hello	foo=bar baz=123 qux=0.123`)
+}
