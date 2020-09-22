@@ -121,3 +121,9 @@ func Debugf(args ...interface{}) {
 func DebugEnabled() bool {
 	return defaultScope.DebugEnabled()
 }
+
+// WithLabels adds a key-value pairs to the labels in s. The key must be a string, while the value may be any type.
+// It returns a copy of the default scope, with the labels added.
+func WithLabels(kvlist ...interface{}) *Scope {
+	return defaultScope.WithLabels(kvlist...)
+}
