@@ -38,12 +38,13 @@ func TestBasicScopes(t *testing.T) {
 		stackLevel Level
 	}{
 		{
+			// zap.Field is no longer supported, prints like regular Sprint.
 			f:   func() { s.Debug("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\tdebug\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
+			pat: timePattern + "\tdebug\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
 		},
 		{
-			f:   func() { s.Debug("Hello", "bad", "fields") },
-			pat: timePattern + "\terror\tbad type: expect zapcore.Field, got string for field \"bad\"",
+			f:   func() { s.Debug("Hello", " some", " fields") },
+			pat: timePattern + "\tdebug\ttestScope\tHello some fields",
 		},
 		{
 			f:   func() { s.Debugf("Hello") },
@@ -60,11 +61,11 @@ func TestBasicScopes(t *testing.T) {
 
 		{
 			f:   func() { s.Info("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\tinfo\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
+			pat: timePattern + "\tinfo\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
 		},
 		{
-			f:   func() { s.Info("Hello", "bad", "fields") },
-			pat: timePattern + "\terror\tbad type: expect zapcore.Field, got string for field \"bad\"",
+			f:   func() { s.Info("Hello", " some", " fields") },
+			pat: timePattern + "\tinfo\ttestScope\tHello some fields",
 		},
 		{
 			f:   func() { s.Infof("Hello") },
@@ -81,11 +82,11 @@ func TestBasicScopes(t *testing.T) {
 
 		{
 			f:   func() { s.Warn("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\twarn\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
+			pat: timePattern + "\twarn\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
 		},
 		{
-			f:   func() { s.Warn("Hello", "bad", "fields") },
-			pat: timePattern + "\terror\tbad type: expect zapcore.Field, got string for field \"bad\"",
+			f:   func() { s.Warn("Hello", " some", " fields") },
+			pat: timePattern + "\twarn\ttestScope\tHello some fields",
 		},
 		{
 			f:   func() { s.Warnf("Hello") },
@@ -102,7 +103,7 @@ func TestBasicScopes(t *testing.T) {
 
 		{
 			f:   func() { s.Error("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\terror\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
+			pat: timePattern + "\terror\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
 		},
 		{
 			f:   func() { s.Errorf("Hello") },
@@ -124,12 +125,12 @@ func TestBasicScopes(t *testing.T) {
 		},
 		{
 			f:        func() { s.Fatal("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat:      timePattern + "\tfatal\ttestScope\tHello\t{\"key\": \"value\", \"intkey\": 123}",
+			pat:      timePattern + "\tfatal\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
 			wantExit: true,
 		},
 		{
-			f:        func() { s.Fatal("Hello", "bad", "fields") },
-			pat:      timePattern + "\terror\tbad type: expect zapcore.Field, got string for field \"bad\"",
+			f:        func() { s.Fatal("Hello", " some", " fields") },
+			pat:      timePattern + "\tfatal\ttestScope\tHello some fields",
 			wantExit: true,
 		},
 		{

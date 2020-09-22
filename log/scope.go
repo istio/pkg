@@ -145,20 +145,22 @@ func Scopes() map[string]*Scope {
 	return s
 }
 
-// Fatal outputs a message at fatal level.
-func (s *Scope) Fatal(fields ...interface{}) {
+// Fatal uses fmt.Sprint to construct and log a message at fatal level.
+func (s *Scope) Fatal(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(FatalLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args...), nil)
+			return
+		}
+		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Fatala uses fmt.Sprint to construct and log a message at fatal level.
+// Deprecated: use Fatal.
 func (s *Scope) Fatala(args ...interface{}) {
-	if s.GetOutputLevel() >= FatalLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Fatal(args...)
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
@@ -179,19 +181,21 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func (s *Scope) Error(fields ...interface{}) {
+func (s *Scope) Error(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(ErrorLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args...), nil)
+			return
+		}
+		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Errora uses fmt.Sprint to construct and log a message at error level.
+// Deprecated: use Error.
 func (s *Scope) Errora(args ...interface{}) {
-	if s.GetOutputLevel() >= ErrorLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Error(args...)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
@@ -212,19 +216,21 @@ func (s *Scope) ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func (s *Scope) Warn(fields ...interface{}) {
+func (s *Scope) Warn(args ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(WarnLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args...), nil)
+			return
+		}
+		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Warna uses fmt.Sprint to construct and log a message at warn level.
+// Deprecated: use Warn.
 func (s *Scope) Warna(args ...interface{}) {
-	if s.GetOutputLevel() >= WarnLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Warn(args...)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
@@ -245,19 +251,21 @@ func (s *Scope) WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func (s *Scope) Info(fields ...interface{}) {
+func (s *Scope) Info(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(InfoLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args...), nil)
+			return
+		}
+		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
 
 // Infoa uses fmt.Sprint to construct and log a message at info level.
+// Deprecated: use Info.
 func (s *Scope) Infoa(args ...interface{}) {
-	if s.GetOutputLevel() >= InfoLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Info(args...)
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
@@ -278,17 +286,13 @@ func (s *Scope) InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func (s *Scope) Debug(fields ...interface{}) {
-	if s.GetOutputLevel() >= DebugLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(DebugLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
-	}
-}
-
-// Debuga uses fmt.Sprint to construct and log a message at debug level.
-func (s *Scope) Debuga(args ...interface{}) {
+func (s *Scope) Debug(args ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
 		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args...), nil)
+			return
+		}
 		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
 	}
 }
@@ -303,6 +307,12 @@ func (s *Scope) Debugf(args ...interface{}) {
 		}
 		s.callHandlers(DebugLevel, s, ie, msg, nil)
 	}
+}
+
+// Debuga outputs a message at debug level.
+// Deprecated: use Debug.
+func (s *Scope) Debuga(args ...interface{}) {
+	s.Debug(args...)
 }
 
 // DebugEnabled returns whether output of messages using this scope is currently enabled for debug-level output.
