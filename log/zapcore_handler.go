@@ -16,7 +16,6 @@ package log
 
 import (
 	"fmt"
-	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -54,8 +53,8 @@ func ZapLogHandlerCallbackFunc(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field) {
+	msg string) {
+	var fields []zapcore.Field
 	if useJSON.Load().(bool) {
 		if ie != nil {
 			fields = appendNotEmptyField(fields, "message", msg)
@@ -113,41 +112,6 @@ func appendNotEmptyString(sb *strings.Builder, key, value string) {
 		return
 	}
 	sb.WriteString(fmt.Sprintf("%s=%v ", key, value))
-}
-
-func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
-	var zfs []zapcore.Field
-	if len(fields) == 0 {
-		return nil
-	}
-	fl := fields[0].([]interface{})
-	if len(fl) <= index {
-		return nil
-	}
-	for i := index; i < len(fl); i++ {
-		zfi := fl[i]
-		if isNil(zfi) {
-			continue
-		}
-		zf, ok := zfi.(zapcore.Field)
-		if !ok {
-			Errorf("bad type: expect zapcore.Field, got %T for field \"%v\"", zfi, zfi)
-			continue
-		}
-		zfs = append(zfs, zf)
-	}
-	return zfs
-}
-
-func isNil(i interface{}) bool {
-	if i == nil {
-		return true
-	}
-	switch reflect.TypeOf(i).Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice, reflect.Interface:
-		return reflect.ValueOf(i).IsNil()
-	}
-	return false
 }
 
 // callerSkipOffset is how many callers to pop off the stack to determine the caller function locality, used for

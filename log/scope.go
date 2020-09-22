@@ -20,8 +20,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.uber.org/zap/zapcore"
-
 	"istio.io/pkg/structured"
 )
 
@@ -77,8 +75,7 @@ type scopeHandlerCallbackFunc func(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field)
+	msg string)
 
 // registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
 // current list of default scope handlers.
@@ -150,10 +147,10 @@ func (s *Scope) Fatal(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
-			s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args...), nil)
+			s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args...))
 			return
 		}
-		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -171,7 +168,7 @@ func (s *Scope) Fatalf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(FatalLevel, s, ie, msg, nil)
+		s.callHandlers(FatalLevel, s, ie, msg)
 	}
 }
 
@@ -185,10 +182,10 @@ func (s *Scope) Error(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
-			s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args...), nil)
+			s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args...))
 			return
 		}
-		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -206,7 +203,7 @@ func (s *Scope) Errorf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(ErrorLevel, s, ie, msg, nil)
+		s.callHandlers(ErrorLevel, s, ie, msg)
 	}
 }
 
@@ -220,10 +217,10 @@ func (s *Scope) Warn(args ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
-			s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args...), nil)
+			s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args...))
 			return
 		}
-		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -241,7 +238,7 @@ func (s *Scope) Warnf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(WarnLevel, s, ie, msg, nil)
+		s.callHandlers(WarnLevel, s, ie, msg)
 	}
 }
 
@@ -255,10 +252,10 @@ func (s *Scope) Info(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
-			s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args...), nil)
+			s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args...))
 			return
 		}
-		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -276,7 +273,7 @@ func (s *Scope) Infof(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(InfoLevel, s, ie, msg, nil)
+		s.callHandlers(InfoLevel, s, ie, msg)
 	}
 }
 
@@ -290,10 +287,10 @@ func (s *Scope) Debug(args ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
-			s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args...), nil)
+			s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args...))
 			return
 		}
-		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -305,7 +302,7 @@ func (s *Scope) Debugf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(DebugLevel, s, ie, msg, nil)
+		s.callHandlers(DebugLevel, s, ie, msg)
 	}
 }
 
@@ -395,13 +392,12 @@ func (s *Scope) callHandlers(
 	severity Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field) {
+	msg string) {
 
 	defaultHandlersMu.RLock()
 	defer defaultHandlersMu.RUnlock()
 	for _, h := range defaultHandlers {
-		h(severity, scope, ie, msg, fields)
+		h(severity, scope, ie, msg)
 	}
 }
 
