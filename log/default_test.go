@@ -237,7 +237,7 @@ func TestErrorDictionary(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	expected := "Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCauses=LikelyCause"
+	expected := "Hello	moreInfo=MoreInfo impact=Impact action=Action likelyCause=LikelyCause"
 	if match, _ := regexp.MatchString(expected, lines[0]); !match {
 		t.Errorf("Got '%v', expected a match with '%v'", lines[0], expected)
 	}
