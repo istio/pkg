@@ -321,7 +321,8 @@ func TestScopeErrorDictionaryWrap(t *testing.T) {
 		t.Errorf("Got error '%v', expected success", err)
 	}
 
-	mustRegexMatchString(t, lines[0], "Hello: func2 prefix: \tmoreInfo=someMoreInfo impact=someImpact action=someAction likelyCause=someLikelyCause err=someErr\tfoo=bar")
+	mustRegexMatchString(t, lines[0], "Hello: func2 prefix: "+
+		"\tmoreInfo=someMoreInfo impact=someImpact action=someAction likelyCause=someLikelyCause err=someErr\tfoo=bar")
 }
 
 // func2 is used to test correct error return through %w verb.
