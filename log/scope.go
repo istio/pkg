@@ -20,8 +20,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.uber.org/zap/zapcore"
-
 	"istio.io/pkg/structured"
 )
 
@@ -77,8 +75,7 @@ type scopeHandlerCallbackFunc func(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field)
+	msg string)
 
 // registerDefaultHandler registers a scope handler that is called by default from all scopes. It is appended to the
 // current list of default scope handlers.
@@ -145,20 +142,22 @@ func Scopes() map[string]*Scope {
 	return s
 }
 
-// Fatal outputs a message at fatal level.
-func (s *Scope) Fatal(fields ...interface{}) {
+// Fatal uses fmt.Sprint to construct and log a message at fatal level.
+func (s *Scope) Fatal(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(FatalLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args...))
+			return
+		}
+		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
 // Fatala uses fmt.Sprint to construct and log a message at fatal level.
+// Deprecated: use Fatal.
 func (s *Scope) Fatala(args ...interface{}) {
-	if s.GetOutputLevel() >= FatalLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(FatalLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Fatal(args...)
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
@@ -169,7 +168,7 @@ func (s *Scope) Fatalf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(FatalLevel, s, ie, msg, nil)
+		s.callHandlers(FatalLevel, s, ie, msg)
 	}
 }
 
@@ -179,19 +178,21 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func (s *Scope) Error(fields ...interface{}) {
+func (s *Scope) Error(args ...interface{}) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(ErrorLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args...))
+			return
+		}
+		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
 // Errora uses fmt.Sprint to construct and log a message at error level.
+// Deprecated: use Error.
 func (s *Scope) Errora(args ...interface{}) {
-	if s.GetOutputLevel() >= ErrorLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Error(args...)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
@@ -202,7 +203,7 @@ func (s *Scope) Errorf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(ErrorLevel, s, ie, msg, nil)
+		s.callHandlers(ErrorLevel, s, ie, msg)
 	}
 }
 
@@ -212,19 +213,21 @@ func (s *Scope) ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func (s *Scope) Warn(fields ...interface{}) {
+func (s *Scope) Warn(args ...interface{}) {
 	if s.GetOutputLevel() >= WarnLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(WarnLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args...))
+			return
+		}
+		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
 // Warna uses fmt.Sprint to construct and log a message at warn level.
+// Deprecated: use Warn.
 func (s *Scope) Warna(args ...interface{}) {
-	if s.GetOutputLevel() >= WarnLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Warn(args...)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
@@ -235,7 +238,7 @@ func (s *Scope) Warnf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(WarnLevel, s, ie, msg, nil)
+		s.callHandlers(WarnLevel, s, ie, msg)
 	}
 }
 
@@ -245,19 +248,21 @@ func (s *Scope) WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func (s *Scope) Info(fields ...interface{}) {
+func (s *Scope) Info(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(InfoLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
+		ie, firstIdx := getErrorStruct(args)
+		if firstIdx == 0 {
+			s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args...))
+			return
+		}
+		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
 // Infoa uses fmt.Sprint to construct and log a message at info level.
+// Deprecated: use Info.
 func (s *Scope) Infoa(args ...interface{}) {
-	if s.GetOutputLevel() >= InfoLevel {
-		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
-	}
+	s.Info(args...)
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
@@ -268,7 +273,7 @@ func (s *Scope) Infof(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(InfoLevel, s, ie, msg, nil)
+		s.callHandlers(InfoLevel, s, ie, msg)
 	}
 }
 
@@ -278,18 +283,14 @@ func (s *Scope) InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func (s *Scope) Debug(fields ...interface{}) {
-	if s.GetOutputLevel() >= DebugLevel {
-		ie, firstIdx := getErrorStruct(fields)
-		s.callHandlers(DebugLevel, s, ie, fields[0].(string), toZapSlice(firstIdx+1, fields))
-	}
-}
-
-// Debuga uses fmt.Sprint to construct and log a message at debug level.
-func (s *Scope) Debuga(args ...interface{}) {
+func (s *Scope) Debug(args ...interface{}) {
 	if s.GetOutputLevel() >= DebugLevel {
 		ie, firstIdx := getErrorStruct(args)
-		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...), nil)
+		if firstIdx == 0 {
+			s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args...))
+			return
+		}
+		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
 }
 
@@ -301,8 +302,14 @@ func (s *Scope) Debugf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		s.callHandlers(DebugLevel, s, ie, msg, nil)
+		s.callHandlers(DebugLevel, s, ie, msg)
 	}
+}
+
+// Debuga outputs a message at debug level.
+// Deprecated: use Debug.
+func (s *Scope) Debuga(args ...interface{}) {
+	s.Debug(args...)
 }
 
 // DebugEnabled returns whether output of messages using this scope is currently enabled for debug-level output.
@@ -385,13 +392,12 @@ func (s *Scope) callHandlers(
 	severity Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field) {
+	msg string) {
 
 	defaultHandlersMu.RLock()
 	defer defaultHandlersMu.RUnlock()
 	for _, h := range defaultHandlers {
-		h(severity, scope, ie, msg, fields)
+		h(severity, scope, ie, msg)
 	}
 }
 

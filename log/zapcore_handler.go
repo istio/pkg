@@ -53,8 +53,8 @@ func ZapLogHandlerCallbackFunc(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string,
-	fields []zapcore.Field) {
+	msg string) {
+	var fields []zapcore.Field
 	if useJSON.Load().(bool) {
 		if ie != nil {
 			fields = appendNotEmptyField(fields, "message", msg)
@@ -114,22 +114,6 @@ func appendNotEmptyString(sb *strings.Builder, key, value string) {
 		return
 	}
 	sb.WriteString(fmt.Sprintf("%s=%v ", key, value))
-}
-
-func toZapSlice(index int, fields ...interface{}) []zapcore.Field {
-	var zfs []zapcore.Field
-	if len(fields) <= index {
-		return nil
-	}
-	for _, zfi := range fields {
-		zf, ok := zfi.(zapcore.Field)
-		if !ok {
-			Errorf("bad interface type: expect zapcore.Field, got %T for fields %v", zf, fields)
-			continue
-		}
-		zfs = append(zfs, zf)
-	}
-	return zfs
 }
 
 // callerSkipOffset is how many callers to pop off the stack to determine the caller function locality, used for
