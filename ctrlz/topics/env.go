@@ -1,4 +1,4 @@
-// Copyright 2018 Istio Authors
+/// Copyright 2018 Istio Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package topics
 
 import (
 	"html/template"
+	"istio.io/pkg/env"
 	"net/http"
 	"os"
 	"sort"
@@ -44,18 +45,28 @@ func (envTopic) Prefix() string {
 type envVar struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	DefaultValue string `json:"defaultvalue"`
+	FeatureStatus string `json:"featurestatus"`
 }
 
 func getVars() []envVar {
-	env := os.Environ()
-	sort.Strings(env)
+	regEnv := env.VarDescriptions()
+	otherEnv := os.Environ()
+	sort.Strings(otherEnv)
 
 	result := []envVar{}
-	for _, v := range env {
+	visited := make(map[string]bool, len(regEnv))
+	for _, v := range regEnv {
+		visited[v.Name] = true
+		result = append(result, envVar{Name: v.Name, Value: v.GetGeneric(), DefaultValue: v.DefaultValue, FeatureStatus: v.FeatureStatus.String()})
+	}
+	for _, v := range otherEnv {
 		var eq = strings.Index(v, "=")
 		var name = v[:eq]
-		var value = v[eq+1:]
-		result = append(result, envVar{Name: name, Value: value})
+		if _, ok := visited[name]; !ok {
+			var value = v[eq+1:]
+			result = append(result, envVar{Name: name, Value: value, DefaultValue: "UNKNOWN", FeatureStatus: "UNKNOWN"})
+		}
 	}
 
 	return result

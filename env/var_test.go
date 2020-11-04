@@ -329,3 +329,32 @@ func TestDupes(t *testing.T) {
 		t.Errorf("Expected 'XYZ', got '%s'", v.Description)
 	}
 }
+
+func TestVar_GetGeneric(t *testing.T) {
+	type fields struct {
+		Var          Var
+		Value		 string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "first",
+			fields: fields{
+				Var:   RegisterStringVar("test", "defaultval", "description").Var,
+				Value: "non-default",
+			},
+			want: "non-default",
+		},
+	}
+		for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv(tt.fields.Var.Name, tt.fields.Value)
+			if got := tt.fields.Var.GetGeneric(); got != tt.want {
+				t.Errorf("GetGeneric() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

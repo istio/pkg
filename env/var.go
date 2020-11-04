@@ -17,6 +17,7 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -42,6 +43,27 @@ const (
 	DURATION
 )
 
+type FeatureStatus byte
+
+const (
+	Alpha FeatureStatus = iota
+	Beta
+	Stable
+	Unknown
+)
+
+func (s FeatureStatus) String() string {
+	switch s {
+	case Alpha:
+		return "Alpha"
+	case Beta:
+		return "Beta"
+	case Stable:
+		return "Stable"
+	}
+	return "Unknown"
+}
+
 // Var describes a single environment variable
 type Var struct {
 	// The name of the environment variable.
@@ -61,6 +83,9 @@ type Var struct {
 
 	// The type of the variable's value
 	Type VarType
+
+	// The support level of the feature controlled by this env var
+	FeatureStatus FeatureStatus
 }
 
 // StringVar represents a single string environment variable.
@@ -109,37 +134,47 @@ func VarDescriptions() []Var {
 
 // RegisterStringVar registers a new string environment variable.
 func RegisterStringVar(name string, defaultValue string, description string) StringVar {
-	v := Var{Name: name, DefaultValue: defaultValue, Description: description, Type: STRING}
+	v := Var{Name: name, DefaultValue: defaultValue, Description: description, Type: STRING, FeatureStatus: Unknown}
 	RegisterVar(v)
 	return StringVar{getVar(name)}
 }
 
 // RegisterBoolVar registers a new boolean environment variable.
 func RegisterBoolVar(name string, defaultValue bool, description string) BoolVar {
-	v := Var{Name: name, DefaultValue: strconv.FormatBool(defaultValue), Description: description, Type: BOOL}
+	v := Var{Name: name, DefaultValue: strconv.FormatBool(defaultValue), Description: description, Type: BOOL, FeatureStatus: Unknown}
 	RegisterVar(v)
 	return BoolVar{getVar(name)}
 }
 
 // RegisterIntVar registers a new integer environment variable.
 func RegisterIntVar(name string, defaultValue int, description string) IntVar {
-	v := Var{Name: name, DefaultValue: strconv.FormatInt(int64(defaultValue), 10), Description: description, Type: INT}
+	v := Var{Name: name, DefaultValue: strconv.FormatInt(int64(defaultValue), 10), Description: description, Type: INT, FeatureStatus: Unknown}
 	RegisterVar(v)
 	return IntVar{getVar(name)}
 }
 
 // RegisterFloatVar registers a new floating-point environment variable.
 func RegisterFloatVar(name string, defaultValue float64, description string) FloatVar {
-	v := Var{Name: name, DefaultValue: strconv.FormatFloat(defaultValue, 'G', -1, 64), Description: description, Type: FLOAT}
+	v := Var{Name: name, DefaultValue: strconv.FormatFloat(defaultValue, 'G', -1, 64), Description: description, Type: FLOAT, FeatureStatus: Unknown}
 	RegisterVar(v)
 	return FloatVar{v}
 }
 
 // RegisterDurationVar registers a new duration environment variable.
 func RegisterDurationVar(name string, defaultValue time.Duration, description string) DurationVar {
-	v := Var{Name: name, DefaultValue: defaultValue.String(), Description: description, Type: DURATION}
+	v := Var{Name: name, DefaultValue: defaultValue.String(), Description: description, Type: DURATION, FeatureStatus: Unknown}
 	RegisterVar(v)
 	return DurationVar{getVar(name)}
+}
+
+func SetVarStatus(v Var, f FeatureStatus) {
+	if val, ok := allVars[v.Name]; ok {
+		val.FeatureStatus = f
+		allVars[v.Name] = val
+	} else {
+		v.FeatureStatus = f
+		RegisterVar(v)
+	}
 }
 
 // RegisterVar registers a generic environment variable.
@@ -167,6 +202,32 @@ func getVar(name string) Var {
 	mutex.Unlock()
 
 	return result
+}
+
+func (v Var) LookupGeneric() (string, bool) {
+	switch v.Type {
+	case STRING:
+		return StringVar{Var: v}.Lookup()
+	case INT:
+		val, found := IntVar{Var: v}.Lookup()
+		return strconv.Itoa(val), found
+	case BOOL:
+		val, found := BoolVar{Var: v}.Lookup()
+		return strconv.FormatBool(val), found
+	case FLOAT:
+		val, found := FloatVar{Var: v}.Lookup()
+		return strconv.FormatFloat(val, 'f', -1, 64), found
+	case DURATION:
+		val, found := DurationVar{Var: v}.Lookup()
+		return val.String(), found
+	default:
+		return fmt.Sprintf("type %T is not recognized", v), false
+	}
+}
+
+func (v Var) GetGeneric() string {
+	val, _ := v.LookupGeneric()
+	return val
 }
 
 // Get retrieves the value of the environment variable.
