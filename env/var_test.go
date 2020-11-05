@@ -332,8 +332,8 @@ func TestDupes(t *testing.T) {
 
 func TestVar_GetGeneric(t *testing.T) {
 	type fields struct {
-		Var          Var
-		Value		 string
+		Var   Var
+		Value string
 	}
 	tests := []struct {
 		name   string
@@ -349,7 +349,7 @@ func TestVar_GetGeneric(t *testing.T) {
 			want: "non-default",
 		},
 	}
-		for _, tt := range tests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Setenv(tt.fields.Var.Name, tt.fields.Value)
 			if got := tt.fields.Var.GetGeneric(); got != tt.want {

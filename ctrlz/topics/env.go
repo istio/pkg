@@ -16,7 +16,6 @@ package topics
 
 import (
 	"html/template"
-	"istio.io/pkg/env"
 	"net/http"
 	"os"
 	"sort"
@@ -24,6 +23,7 @@ import (
 
 	"istio.io/pkg/ctrlz/fw"
 	"istio.io/pkg/ctrlz/topics/assets"
+	"istio.io/pkg/env"
 )
 
 type envTopic struct {
@@ -43,9 +43,9 @@ func (envTopic) Prefix() string {
 }
 
 type envVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-	DefaultValue string `json:"defaultvalue"`
+	Name          string `json:"name"`
+	Value         string `json:"value"`
+	DefaultValue  string `json:"defaultvalue"`
 	FeatureStatus string `json:"featurestatus"`
 }
 
