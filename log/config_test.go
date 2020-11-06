@@ -120,6 +120,18 @@ func TestOverrides(t *testing.T) {
 	}
 }
 
+func TestGrpc(t *testing.T) {
+	resetGlobals()
+
+	o := DefaultOptions()
+	o.outputLevels = "grpc:info"
+	if err := Configure(o); err != nil {
+		t.Errorf("Expecting success, got %v", err)
+	} else if o.LogGrpc != true {
+		t.Errorf("Expecting LogGrpc, got %v", o.LogGrpc)
+	}
+}
+
 func TestOddballs(t *testing.T) {
 	resetGlobals()
 
