@@ -66,8 +66,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// none is used to disable logging output as well as to disable stack tracing.
-const none zapcore.Level = 100
+const (
+	// none is used to disable logging output as well as to disable stack tracing.
+	none          zapcore.Level = 100
+	GrpcScopeName string        = "grpc"
+)
 
 var levelToZap = map[Level]zapcore.Level{
 	DebugLevel: zapcore.DebugLevel,
@@ -92,6 +95,7 @@ var (
 	// controls whether all output is JSON or CLI style. This makes it easier to query how the zap encoder is configured
 	// vs. reading it's internal state.
 	useJSON atomic.Value
+	logGrpc bool
 )
 
 func init() {
@@ -250,6 +254,11 @@ func updateScopes(options *Options) error {
 		}
 	}
 
+	// update LogGrpc if necessary
+	if logGrpc {
+		options.LogGrpc = true
+	}
+
 	return nil
 }
 
@@ -270,6 +279,11 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 			for _, scope := range allScopes {
 				setter(scope, l)
 			}
+			return nil
+		} else if s == GrpcScopeName {
+			grpcScope := RegisterScope(GrpcScopeName, "", 0)
+			logGrpc = true
+			setter(grpcScope, l)
 			return nil
 		} else {
 			return fmt.Errorf("unknown scope '%s' specified", s)
