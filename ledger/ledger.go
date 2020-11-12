@@ -44,11 +44,25 @@ type Ledger interface {
 
 type smtLedger struct {
 	tree *smt
+	history history
 }
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
 func Make(retention time.Duration) Ledger {
-	return smtLedger{tree: newSMT(hasher, nil, retention)}
+	return smtLedger{tree: newSMT(hasher, nil, retention), history: NewHistory()}
+}
+
+func (s smtLedger) EraseRootHash(rootHash string) error {
+	s.history.lock.Lock()
+	defer s.history.lock.Lock()
+	e := s.history.Get(rootHash)
+	//TODO: handle nil
+	prev := e.Prev().Value.(string)
+	next := e.Next().Value.(string)
+	s.tree.erase(prev, rootHash, next)
+	s.history.Remove(e)
+	delete(s.history.index, rootHash)
+	return nil
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
@@ -56,13 +70,19 @@ func Make(retention time.Duration) Ledger {
 func (s smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{coerceKeyToHashLen(key)}, [][]byte{coerceToHashLen(value)})
 	result = string(b)
+	s.history.Put(result)
 	return
 }
 
 // Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
-func (s smtLedger) Delete(key string) (err error) {
-	_, err = s.tree.Update([][]byte{[]byte(key)}, [][]byte{defaultLeaf})
-	return
+func (s smtLedger) Delete(key string) error {
+	b, err := s.tree.Update([][]byte{[]byte(key)}, [][]byte{defaultLeaf})
+	if err != nil {
+		return err
+	}
+	result := string(b)
+	s.history.Put(result)
+	return nil
 }
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.

@@ -31,7 +31,7 @@ const (
 
 type hash [hashLength]byte
 
-func bitIsSet(bits []byte, i int) bool {
+func bitIsSet(bits []byte, i byte) bool {
 	return bits[i/8]&(1<<uint(7-i%8)) != 0
 }
 

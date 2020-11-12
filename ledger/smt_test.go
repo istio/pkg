@@ -234,10 +234,10 @@ func TestSmtRaisesError(t *testing.T) {
 	smt.db.updatedNodes = byteCache{cache: cache.NewTTL(forever, time.Minute)}
 	smt.loadDefaultHashes()
 
-	// Check errors are raised is a keys is not in cache nor db
+	// Check errors are raised is a key is not in cache nor db
 	for _, key := range keys {
 		_, err := smt.Get(key)
-		assert.ErrorContains(t, err, "is unavailable in the disk db",
+		assert.ErrorContains(t, err, "is unknown",
 			"Error not created if database doesnt have a node")
 	}
 
