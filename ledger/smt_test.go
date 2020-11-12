@@ -195,7 +195,8 @@ func TestSmtDelete(t *testing.T) {
 	_, err := smt.Update([][]byte{key0, key1}, [][]byte{defaultLeaf, defaultLeaf})
 	assert.NilError(t, err)
 	if !bytes.Equal(root, smt.root) {
-		t.Fatal("deleting a default key shouldnt' modify the tree")
+		// this is failing due to some sort of interaction between the shortcut and the delete
+		t.Fatal("deleting a default key shouldn't modify the tree")
 	}
 }
 

@@ -77,20 +77,20 @@ func (s *smt) get(root []byte, key []byte, batch [][]byte, iBatch int, height by
 	//var p *page
 	//var n *node
 	//if iBatch != 0 {
-		//p = buildPage(batch, height + (byte(64)-height)%4, s.db, key)
-		//n = p.nodes[iBatch]
-		//if !reflect.DeepEqual(n.left().val, lnode) {
-		//	return nil, fmt.Errorf("left node f*cked up")
-		//}
-		//if !reflect.DeepEqual(n.right().val, rnode) {
-		//	return nil, fmt.Errorf("right node f*cked up")
-		//}
-		//if isShortcut != n.isShortcut() {
-		//	return nil, fmt.Errorf("shortcut f*cked up")
-		//}
-		//if height != n.height() {
-		//	return nil, fmt.Errorf("height f*cked up %d", n.height())
-		//}
+	//p = buildPage(batch, height + (byte(64)-height)%4, s.db, key)
+	//n = p.nodes[iBatch]
+	//if !reflect.DeepEqual(n.left().val, lnode) {
+	//	return nil, fmt.Errorf("left node f*cked up")
+	//}
+	//if !reflect.DeepEqual(n.right().val, rnode) {
+	//	return nil, fmt.Errorf("right node f*cked up")
+	//}
+	//if isShortcut != n.isShortcut() {
+	//	return nil, fmt.Errorf("shortcut f*cked up")
+	//}
+	//if height != n.height() {
+	//	return nil, fmt.Errorf("height f*cked up %d", n.height())
+	//}
 	//}
 	if isShortcut {
 		if bytes.Equal(lnode[:hashLength], key) {
@@ -112,14 +112,14 @@ func (s *smt) DefaultHash(height int) []byte {
 }
 
 type node struct {
-	val []byte
-	index byte
-	page *page  // leaves of a page are roots of the next page.  need to map this somehow...
+	val      []byte
+	index    byte
+	page     *page // leaves of a page are roots of the next page.  need to map this somehow...
 	nextPage *page
 }
 type page struct {
-	root []byte
-	nodes []*node
+	root   []byte
+	nodes  []*node
 	height byte
 	// db holds the cache and related locks
 	db *cacheDB
@@ -158,23 +158,23 @@ func buildRootNode(key []byte, trieHeight byte, db *cacheDB) (*node, error) {
 		}
 	}
 	p0 := page{
-		db: db,
+		db:     db,
 		height: trieHeight + 4, // this virtual page sits 1 level above the root
 	}
 	return &node{
-		page: &p0,
-		index: byte(batchLen-1),
-		val: key,
+		page:     &p0,
+		index:    byte(batchLen - 1),
+		val:      key,
 		nextPage: p1,
 	}, nil
 }
 
 func buildPage(rawPage [][]byte, height byte, db *cacheDB, key []byte) *page {
 	newPage := page{
-		db: db,
-		root: key,
+		db:     db,
+		root:   key,
 		height: height,
-		nodes: make([]*node, batchLen),
+		nodes:  make([]*node, batchLen),
 	}
 	if len(rawPage) == 0 {
 		rawPage = append(rawPage, []byte{0})
@@ -184,9 +184,9 @@ func buildPage(rawPage [][]byte, height byte, db *cacheDB, key []byte) *page {
 			continue
 		}
 		newNode := node{
-			val: rawNode,
+			val:   rawNode,
 			index: byte(i),
-			page: &newPage,
+			page:  &newPage,
 		}
 		newPage.nodes[i] = &newNode
 	}
@@ -218,62 +218,62 @@ func retrieveOrBuildPage(db *cacheDB, Key []byte, height byte) *page {
 
 // this code looks redundant, but this actually is the fastest way to calculate floor(log2(N)) where N <=31
 func heightInPage(i byte) byte {
-	if i > 15 {
+	if i >= 15 {
 		return 4
-	} else if i > 7 {
+	} else if i >= 7 {
 		return 3
-	} else if i > 3 {
+	} else if i >= 3 {
 		return 2
-	} else if i > 0 {
+	} else if i >= 1 {
 		return 1
 	} else {
 		return 0
 	}
 }
 
-func (n *node) height() byte {
+func (N *node) height() byte {
 	// this is mathematically correct but computationally expensive
-	return n.page.height - heightInPage(n.index)
+	return N.page.height - heightInPage(N.index)
 	//return n.page.height - int(math.Floor(math.Log2(float64(n.index+1))))
 }
 
-func (n *node) isShortcut() bool {
-	if n.height()%4!=0 {
-		return len(n.val) != 0 && n.val[hashLength] == 1
+func (N *node) isShortcut() bool {
+	if N.height()%4 != 0 {
+		return len(N.val) != 0 && N.val[hashLength] == 1
 	} else {
-		return n.getNextPage().nodes[0].val[0] == 1
+		return N.getNextPage().nodes[0].val[0] == 1
 	}
 }
 
 // returns true if node is a leaf of the page
-func (n *node) isLeaf() bool {
-	return n.index >= 1<<batchHeight //this is easier than calculating 2^4
+func (N *node) isLeaf() bool {
+	return N.index+1 >= 1<<batchHeight //this is easier than calculating 2^4
 }
 
-func (n *node) getNextPage() *page {
-	if n.nextPage == nil {
-		n.nextPage = retrieveOrBuildPage(n.page.db, n.val, n.height())
+func (N *node) getNextPage() *page {
+	if N.nextPage == nil {
+		N.nextPage = retrieveOrBuildPage(N.page.db, N.val, N.height())
 	}
 	//TODO: handle nil
-	return n.nextPage
+	return N.nextPage
 }
 
-func (n *node) left() *node {
-	if n.isLeaf() {
-		return n.getNextPage().nodes[1]
+func (N *node) left() *node {
+	if N.isLeaf() {
+		return N.getNextPage().nodes[1]
 	}
-	return n.page.nodes[leftIndex(n.index)]
+	return N.page.nodes[leftIndex(N.index)]
 }
 
-func (n *node) right() *node {
-	if n.isLeaf() {
-		return n.getNextPage().nodes[2]
+func (N *node) right() *node {
+	if N.isLeaf() {
+		return N.getNextPage().nodes[2]
 	}
-	return n.page.nodes[rightIndex(n.index)]
+	return N.page.nodes[rightIndex(N.index)]
 }
 
 func leftIndex(i byte) byte {
-	result := 2*i+1
+	result := 2*i + 1
 	if result >= byte(batchLen) {
 		return 1
 	}
@@ -281,59 +281,74 @@ func leftIndex(i byte) byte {
 }
 
 func rightIndex(i byte) byte {
-	result := 2*i+2
+	result := 2*i + 2
 	if result >= byte(batchLen) {
 		return 2
 	}
 	return result
 }
 
-func (n *node) makeShortcut(key []byte, val []byte) {
+func (N *node) makeShortcut(key []byte, val []byte) {
 	// n.left and n.right must be nil
 	// mark n as shortcut node
 	var p *page
-	if n.isLeaf() {
-		p = buildPage([][]byte{}, n.page.height - 4, n.page.db, []byte{})
-		n.nextPage = p
+	if N.isLeaf() {
+		p = buildPage([][]byte{}, N.page.height-4, N.page.db, []byte{})
+		N.nextPage = p
 		p.nodes[0].val = []byte{1}
 		// TODO: store this page (need hasher)
 	} else {
-		n.val = make([]byte, hashLength)
-		n.val = append(n.val, 1)
-		p = n.page
+		N.val = make([]byte, hashLength)
+		N.val = append(N.val, 1)
+		p = N.page
 	}
 	l := node{
-		val:      append(key, 2),
-		index:    leftIndex(n.index),
-		page:     p,
+		val: key,
+		//val:      append(key, 2),
+		index: leftIndex(N.index),
+		page:  p,
 	}
 	r := node{
-		val:      append(val, 2), // I don't know why we put '2' here
-		index:    rightIndex(n.index),
-		page:     p,
+		val: val,
+		//val:      append(val, 2), // I don't know why we put '2' here
+		index: rightIndex(N.index),
+		page:  p,
 	}
-	if !n.isShortcut() {
+	if !N.isShortcut() {
 		// TODO: remove sanity check
-		fmt.Sprintf("%d", n.val[200])
+		fmt.Sprintf("%d", N.val[200])
 	}
 	p.nodes[l.index] = &l
 	p.nodes[r.index] = &r
 }
 
-func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [][]byte) []byte {
+func (N *node) removeShortcut() {
+	if N.isLeaf() {
+		p := N.getNextPage()
+		p.nodes[0].val[0] = 0
+		p.nodes[1] = nil
+		p.nodes[2] = nil
+	} else {
+		N.val[hashLength] = 0
+		N.page.nodes[leftIndex(N.index)] = nil
+		N.page.nodes[rightIndex(N.index)] = nil
+	}
+}
+
+func (N *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [][]byte) []byte {
 	var h []byte
-	if n.left() == nil && n.right() == nil {
+	if (N.left() == nil || len(N.left().val) == 0) && (N.right() == nil || len(N.right().val) == 0) {
 		//s.deleteOldNode(oldRoot) //TODO
 		return nil
-	} else if n.left() == nil {
-		h = hasher(defaultHashes[n.height() -1], n.right().val[:hashLength])
-	} else if n.right() == nil {
-		h = hasher(n.left().val[:hashLength], defaultHashes[n.height() - 1])
+	} else if N.left() == nil || len(N.left().val) == 0 {
+		h = hasher(defaultHashes[N.height()-1], N.right().val[:hashLength])
+	} else if N.right() == nil || len(N.right().val) == 0 {
+		h = hasher(N.left().val[:hashLength], defaultHashes[N.height()-1])
 	} else {
-		h = hasher(n.left().val[:hashLength],  n.right().val[:hashLength])
+		h = hasher(N.left().val[:hashLength], N.right().val[:hashLength])
 	}
 	var sc byte
-	if n.isShortcut() {
+	if N.isShortcut() {
 		sc = 1
 	} else {
 		sc = 0
@@ -343,40 +358,40 @@ func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [
 
 //for leaf shortcut nodes, persists child page
 //for top-level nodes, persists own page
-func (n *node) store()  {
-	if n.isLeaf() && n.nextPage != nil {
-		n.nextPage.root = n.val
-		n.nextPage.store()
+func (N *node) store() {
+	if N.isLeaf() && N.nextPage != nil {
+		N.nextPage.root = N.val
+		N.nextPage.store()
 	}
 }
 
-func (n *node) initLeft() {
-	if !n.isLeaf() && n.left() == nil {
-		i := leftIndex(n.index)
-		n.page.nodes[i] = &node{
-			page: n.page,
+func (N *node) initLeft() {
+	if !N.isLeaf() && N.left() == nil {
+		i := leftIndex(N.index)
+		N.page.nodes[i] = &node{
+			page:  N.page,
 			index: i,
 		}
-	} else if n.left() == nil {
-		i := leftIndex(n.index)
-		p := n.getNextPage()
+	} else if N.left() == nil {
+		i := leftIndex(N.index)
+		p := N.getNextPage()
 		p.nodes[i] = &node{
-			page: p,
+			page:  p,
 			index: i,
 		}
 	}
 }
 
-func (n *node) initRight() {
-	if !n.isLeaf() && n.right() == nil {
-		i := rightIndex(n.index)
-		n.page.nodes[i] = &node{
-			page: n.page,
+func (N *node) initRight() {
+	if !N.isLeaf() && N.right() == nil {
+		i := rightIndex(N.index)
+		N.page.nodes[i] = &node{
+			page:  N.page,
 			index: i,
 		}
-	} else if n.right() == nil {
-		i := rightIndex(n.index)
-		p := n.getNextPage()
+	} else if N.right() == nil {
+		i := rightIndex(N.index)
+		p := N.getNextPage()
 		p.nodes[i] = &node{
 			page:  p,
 			index: i,

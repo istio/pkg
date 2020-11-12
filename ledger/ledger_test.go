@@ -22,10 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/google/uuid"
 	"github.com/spaolacci/murmur3"
+	"golang.org/x/sync/errgroup"
 	"gotest.tools/assert"
 )
 

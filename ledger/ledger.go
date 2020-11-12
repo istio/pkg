@@ -43,7 +43,7 @@ type Ledger interface {
 }
 
 type smtLedger struct {
-	tree *smt
+	tree    *smt
 	history history
 }
 

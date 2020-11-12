@@ -15,7 +15,7 @@ type history struct {
 
 func NewHistory() history {
 	return history{
-		List: list.New(),
+		List:  list.New(),
 		index: make(map[string]*list.Element),
 	}
 }

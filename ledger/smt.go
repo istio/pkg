@@ -127,6 +127,7 @@ func (s *smt) erase(prev, rootHash, next string) {
 	//s.db.updatedNodes.Get()
 	//remove rootHash from db
 }
+
 // Update adds a sorted list of keys and their values to the trie
 // If Update is called multiple times, only the state after the last update
 // is committed.
@@ -176,19 +177,30 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 		return
 	}
 	if node.isShortcut() {
-		keys, values = s.maybeAddShortcutToKV(keys, values, node.left().val[:hashLength], node.right().val[:hashLength])
-		//TODO: when we are updating the shortcut, don't undo the shortcut field
-		// remove shortcut notation
-		if node.isLeaf() {
-			p := node.getNextPage()
-			p.nodes[0].val[0] = 0
-			p.nodes[1] = nil
-			p.nodes[2] = nil
-		} else {
-			node.val[hashLength] = 0
-			node.page.nodes[leftIndex(node.index)] = nil
-			node.page.nodes[rightIndex(node.index)] = nil
+		// if this is a delete operation, we have either arrived at the key to delete, or there is nothing to delete
+		deletes := getDeleteIndices(values)
+		if len(deletes) > 0 {
+			for i := range deletes {
+				if node.left() != nil && bytes.Equal(keys[i], node.left().val[:hashLength]) {
+					node.removeShortcut()
+					node.val = node.calculateHash(s.hash, s.defaultHashes)
+				}
+				keys[i] = nil
+				values[i] = nil
+			}
+			keys = removeNils(keys)
+			values = removeNils(values)
+			if len(keys) == 0 {
+				ch <- result{node.val, nil}
+				return
+			}
 		}
+	}
+	// if node is still a shortcut, proceed as normal
+	if node.isShortcut() {
+		keys, values = s.maybeAddShortcutToKV(keys, values, node.left().val[:hashLength], node.right().val[:hashLength])
+		// remove shortcut notation
+		node.removeShortcut()
 	}
 	// Split the keys array so each branch can be updated in parallel
 	// Does this require that keys are sorted?  Yes, see Update()
@@ -249,6 +261,24 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 	node.val = node.calculateHash(s.hash, s.defaultHashes)
 	node.store()
 	ch <- result{node.val, nil}
+	return
+}
+
+func removeNils(keys [][]byte) (result [][]byte) {
+	for _, k := range keys {
+		if k != nil {
+			result = append(result, k)
+		}
+	}
+	return
+}
+
+func getDeleteIndices(values [][]byte) (result []int) {
+	for i, v := range values {
+		if bytes.Equal(v, defaultLeaf) {
+			result = append(result, i)
+		}
+	}
 	return
 }
 

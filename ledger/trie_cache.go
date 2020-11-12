@@ -15,11 +15,10 @@
 package ledger
 
 import (
+	"sync"
 	"time"
 
 	"istio.io/pkg/cache"
-
-	"sync"
 )
 
 type cacheDB struct {
