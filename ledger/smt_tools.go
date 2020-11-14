@@ -33,13 +33,13 @@ func (s *smt) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.get2(n, key)
+	return s.get(n, key)
 	//return s.get(prevRoot, key, nil, 0, 64)
 }
 
 // get fetches the value of a key given a trie root
-func (s *smt) get2(node *node, key []byte) ([]byte, error) {
-	if len(node.val) == 0 {
+func (s *smt) get(node *node, key []byte) ([]byte, error) {
+	if node == nil || len(node.val) == 0 {
 		return nil, nil
 	}
 	height := node.height()
@@ -55,60 +55,10 @@ func (s *smt) get2(node *node, key []byte) ([]byte, error) {
 	}
 	if bitIsSet(key, s.trieHeight-height) {
 		// visit right node
-		return s.get2(node.right(), key)
+		return s.get(node.right(), key)
 	}
 	// visit left node
-	return s.get2(node.left(), key)
-}
-
-// get fetches the value of a key given a trie root
-func (s *smt) get(root []byte, key []byte, batch [][]byte, iBatch int, height byte) ([]byte, error) {
-	if len(root) == 0 {
-		return nil, nil
-	}
-	if height == 0 { // 0 height nodes are leaves of the tree
-		return root[:hashLength], nil
-	}
-	// Fetch the children of the node
-	batch, iBatch, lnode, rnode, isShortcut, err := s.loadChildren(root, height, iBatch, batch)
-	if err != nil {
-		return nil, err
-	}
-	//var p *page
-	//var n *node
-	//if iBatch != 0 {
-	//p = buildPage(batch, height + (byte(64)-height)%4, s.db, key)
-	//n = p.nodes[iBatch]
-	//if !reflect.DeepEqual(n.left().val, lnode) {
-	//	return nil, fmt.Errorf("left node f*cked up")
-	//}
-	//if !reflect.DeepEqual(n.right().val, rnode) {
-	//	return nil, fmt.Errorf("right node f*cked up")
-	//}
-	//if isShortcut != n.isShortcut() {
-	//	return nil, fmt.Errorf("shortcut f*cked up")
-	//}
-	//if height != n.height() {
-	//	return nil, fmt.Errorf("height f*cked up %d", n.height())
-	//}
-	//}
-	if isShortcut {
-		if bytes.Equal(lnode[:hashLength], key) {
-			return rnode[:hashLength], nil
-		}
-		return nil, nil
-	}
-	if bitIsSet(key, s.trieHeight-height) {
-		// visit right node
-		return s.get(rnode, key, batch, 2*iBatch+2, height-1)
-	}
-	// visit left node
-	return s.get(lnode, key, batch, 2*iBatch+1, height-1)
-}
-
-// DefaultHash is a getter for the defaultHashes array
-func (s *smt) DefaultHash(height int) []byte {
-	return s.defaultHashes[height]
+	return s.get(node.left(), key)
 }
 
 type node struct {
@@ -202,16 +152,16 @@ func copy2d(in [][]byte) [][]byte {
 	return duplicate
 }
 
-func retrieveOrBuildPage(db *cacheDB, Key []byte, height byte) *page {
-	if Key == nil {
+func retrieveOrBuildPage(db *cacheDB, key []byte, height byte) *page {
+	if key == nil {
 		return buildPage(nil, height, db, nil)
 	}
 	var h hash
-	copy(h[:], Key)
+	copy(h[:], key)
 	rawPage, exists := db.updatedNodes.Get(h)
 	rawPage = copy2d(rawPage)
 	if exists {
-		return buildPage(rawPage, height, db, Key)
+		return buildPage(rawPage, height, db, key)
 	}
 	return nil
 }
@@ -362,6 +312,7 @@ func (N *node) store() {
 	if N.isLeaf() && N.nextPage != nil {
 		N.nextPage.root = N.val
 		N.nextPage.store()
+		N.nextPage = nil
 	}
 }
 

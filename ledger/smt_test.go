@@ -42,14 +42,13 @@ func TestSmtUpdateAndGet(t *testing.T) {
 	// Add data to empty trie
 	keys := getFreshData(10)
 	values := getFreshData(10)
-	ch := make(chan result, 1)
-	smt.update(smt.root, keys, values, nil, 0, smt.trieHeight, false, true, ch)
-	res := <-ch
-	root := res.update
+	root, err := smt.Update(keys, values)
+	assert.NilError(t, err)
 
 	// Check all keys have been stored
 	for i, key := range keys {
-		value, _ := smt.get(root, key, nil, 0, smt.trieHeight)
+		value, err := smt.Get(key)
+		assert.NilError(t, err)
 		if !bytes.Equal(values[i], value) {
 			t.Fatal("value not updated")
 		}
@@ -58,22 +57,22 @@ func TestSmtUpdateAndGet(t *testing.T) {
 	// Append to the trie
 	newKeys := getFreshData(5)
 	newValues := getFreshData(5)
-	ch = make(chan result, 1)
-	smt.update(root, newKeys, newValues, nil, 0, smt.trieHeight, false, true, ch)
-	res = <-ch
-	newRoot := res.update
+	newRoot, err := smt.Update(newKeys, newValues)
+	assert.NilError(t, err)
 	if bytes.Equal(root, newRoot) {
 		t.Fatal("trie not updated")
 	}
 	for i, newKey := range newKeys {
-		newValue, _ := smt.get(newRoot, newKey, nil, 0, smt.trieHeight)
+		newValue, err := smt.Get(newKey)
+		assert.NilError(t, err)
 		if !bytes.Equal(newValues[i], newValue) {
 			t.Fatal("failed to get value")
 		}
 	}
 	// Check old keys are still stored
 	for i, key := range keys {
-		value, _ := smt.get(newRoot, key, nil, 0, smt.trieHeight)
+		value, err := smt.Get(key)
+		assert.NilError(t, err)
 		if !bytes.Equal(values[i], value) {
 			t.Fatal("failed to get value")
 		}
@@ -84,13 +83,15 @@ func TestTrieAtomicUpdate(t *testing.T) {
 	smt := newSMT(hasher, nil, time.Minute)
 	keys := getFreshData(10)
 	values := getFreshData(10)
-	root, _ := smt.Update(keys, values)
+	_, err := smt.Update(keys, values)
+	assert.NilError(t, err)
 
 	// check keys of previous atomic update are accessible in
 	// updated nodes with root.
 	smt.atomicUpdate = false
 	for i, key := range keys {
-		value, _ := smt.get(root, key, nil, 0, smt.trieHeight)
+		value, err := smt.Get(key)
+		assert.NilError(t, err)
 		if !bytes.Equal(values[i], value) {
 			t.Fatal("failed to get value")
 		}
@@ -144,31 +145,27 @@ func TestSmtDelete(t *testing.T) {
 	// Add data to empty trie
 	keys := getFreshData(10)
 	values := getFreshData(10)
-	ch := make(chan result, 1)
-	smt.update(smt.root, keys, values, nil, 0, smt.trieHeight, false, true, ch)
-	res := <-ch
-	root := res.update
-	value, _ := smt.get(root, keys[0], nil, 0, smt.trieHeight)
+	_, err := smt.Update(keys, values)
+	assert.NilError(t, err)
+	value, err := smt.Get(keys[0])
+	assert.NilError(t, err)
 	if !bytes.Equal(values[0], value) {
 		t.Fatal("trie not updated")
 	}
 
 	// Delete from trie
 	// To delete a key, just set it's value to Default leaf hash.
-	ch = make(chan result, 1)
-	smt.update(root, keys[0:1], [][]byte{defaultLeaf}, nil, 0, smt.trieHeight, false, true, ch)
-	res = <-ch
-	newRoot := res.update
-	newValue, _ := smt.get(newRoot, keys[0], nil, 0, smt.trieHeight)
+	newRoot, err := smt.Update(keys[0:1], [][]byte{defaultLeaf})
+	assert.NilError(t, err)
+	newValue, err := smt.Get(keys[0])
+	assert.NilError(t, err)
 	if len(newValue) != 0 {
 		t.Fatal("Failed to delete from trie")
 	}
 	// Remove deleted key from keys and check root with a clean trie.
 	smt2 := newSMT(hasher, nil, time.Minute)
-	ch = make(chan result, 1)
-	smt2.update(smt2.root, keys[1:], values[1:], nil, 0, smt.trieHeight, false, true, ch)
-	res = <-ch
-	cleanRoot := res.update
+	cleanRoot, err := smt2.Update( keys[1:], values[1:])
+	assert.NilError(t, err)
 	if !bytes.Equal(newRoot, cleanRoot) {
 		t.Fatal("roots mismatch")
 	}
@@ -178,10 +175,8 @@ func TestSmtDelete(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		newValues = append(newValues, defaultLeaf)
 	}
-	ch = make(chan result, 1)
-	smt.update(root, keys, newValues, nil, 0, smt.trieHeight, false, true, ch)
-	res = <-ch
-	root = res.update
+	root, err := smt.Update(keys, newValues)
+	assert.NilError(t, err)
 	if len(root) != 0 {
 		t.Fatal("empty trie root hash not correct")
 	}
@@ -189,10 +184,11 @@ func TestSmtDelete(t *testing.T) {
 	smt = newSMT(hasher, nil, time.Minute)
 	keys = getFreshData(2)
 	values = getFreshData(2)
-	root, _ = smt.Update(keys, values)
+	root, err = smt.Update(keys, values)
+	assert.NilError(t, err)
 	key0 := make([]byte, 8)
 	key1 := make([]byte, 8)
-	_, err := smt.Update([][]byte{key0, key1}, [][]byte{defaultLeaf, defaultLeaf})
+	_, err = smt.Update([][]byte{key0, key1}, [][]byte{defaultLeaf, defaultLeaf})
 	assert.NilError(t, err)
 	if !bytes.Equal(root, smt.root) {
 		// this is failing due to some sort of interaction between the shortcut and the delete
@@ -207,8 +203,9 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	values := getFreshData(1)
 	root, _ := smt.Update([][]byte{key0}, values)
 	smt.atomicUpdate = false
-	_, _, k, v, isShortcut, _ := smt.loadChildren(root, smt.trieHeight, 0, nil)
-	if !isShortcut || !bytes.Equal(k[:hashLength], key0) || !bytes.Equal(v[:hashLength], values[0]) {
+	node, err := buildRootNode(root, smt.trieHeight, smt.db)
+	assert.NilError(t, err)
+	if !node.isShortcut() || !bytes.Equal(node.left().val[:hashLength], key0) || !bytes.Equal(node.right().val[:hashLength], values[0]) {
 		t.Fatal("leaf shortcut didn'tree move up to root")
 	}
 
@@ -217,7 +214,7 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	bitSet(key1, 63)
 	keys := [][]byte{key0, key1}
 	values = [][]byte{defaultLeaf, getFreshData(1)[0]}
-	_, err := smt.Update(keys, values)
+	_, err = smt.Update(keys, values)
 	assert.NilError(t, err)
 }
 func bitSet(bits []byte, i int) {

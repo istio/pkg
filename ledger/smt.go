@@ -16,8 +16,6 @@ package ledger
 
 import (
 	"bytes"
-	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -115,19 +113,6 @@ func (s *smt) loadDefaultHashes() {
 	}
 }
 
-func (s *smt) erase(prev, rootHash, next string) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	// if rootHash.Left != prev.Left && rootHash.Left != next.Left {
-	//	 erase(prev.Left, rootHash.Left, next.Left)
-	// }
-	// if rootHash.Right != prev.Left && rootHash.Right != next.Right {
-	//	 erase(prev.Right, rootHash.Right, next.Right)
-	// }
-	//s.db.updatedNodes.Get()
-	//remove rootHash from db
-}
-
 // Update adds a sorted list of keys and their values to the trie
 // If Update is called multiple times, only the state after the last update
 // is committed.
@@ -144,7 +129,7 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.update2(n, keys, values, ch)
+	s.update(n, keys, values, ch)
 	result := <-ch
 	if result.err != nil {
 		return nil, result.err
@@ -166,7 +151,7 @@ type result struct {
 	err    error
 }
 
-func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
+func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	if node.height() == 0 {
 		if bytes.Equal(values[0], defaultLeaf) {
 			ch <- result{nil, nil}
@@ -180,6 +165,10 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 		// if this is a delete operation, we have either arrived at the key to delete, or there is nothing to delete
 		deletes := getDeleteIndices(values)
 		if len(deletes) > 0 {
+			// we are about to mutate keys and values
+			// copy to avoid side-effects
+			keys = copy2d(keys)
+			values = copy2d(values)
 			for i := range deletes {
 				if node.left() != nil && bytes.Equal(keys[i], node.left().val[:hashLength]) {
 					node.removeShortcut()
@@ -222,7 +211,7 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 		case len(lkeys) == 0 && len(rkeys) > 0:
 			node.initRight()
 			newch := make(chan result, 1)
-			s.update2(node.right(), rkeys, rvalues, newch)
+			s.update(node.right(), rkeys, rvalues, newch)
 			res := <-newch
 			if res.err != nil {
 				ch <- result{nil, res.err}
@@ -231,7 +220,7 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 		case len(lkeys) > 0 && len(rkeys) == 0:
 			node.initLeft()
 			newch := make(chan result, 1)
-			s.update2(node.left(), lkeys, lvalues, newch)
+			s.update(node.left(), lkeys, lvalues, newch)
 			res := <-newch
 			if res.err != nil {
 				ch <- result{nil, res.err}
@@ -242,10 +231,8 @@ func (s *smt) update2(node *node, keys, values [][]byte, ch chan<- result) {
 			rch := make(chan result, 1)
 			node.initRight()
 			node.initLeft()
-			//go s.update2(node.left(), lkeys, lvalues, lch)
-			//go s.update2(node.right(), rkeys, rvalues, rch)
-			s.update2(node.left(), lkeys, lvalues, lch)
-			s.update2(node.right(), rkeys, rvalues, rch)
+			go s.update(node.left(), lkeys, lvalues, lch)
+			go s.update(node.right(), rkeys, rvalues, rch)
 			lresult := <-lch
 			rresult := <-rch
 			if lresult.err != nil {
@@ -280,116 +267,6 @@ func getDeleteIndices(values [][]byte) (result []int) {
 		}
 	}
 	return
-}
-
-// update adds a sorted list of keys and their values to the trie.
-// It returns the root of the updated tree.
-func (s *smt) update(root []byte, keys, values, batch [][]byte, iBatch int, height byte, shortcut, store bool, ch chan<- result) {
-	if height == 0 {
-		if bytes.Equal(values[0], defaultLeaf) {
-			ch <- result{nil, nil}
-		} else {
-			// at height 0, there can be only one value
-			ch <- result{values[0], nil}
-		}
-		return
-	}
-	batch, iBatch, lnode, rnode, isShortcut, err := s.loadChildren(root, height, iBatch, batch)
-	if err != nil {
-		ch <- result{nil, err}
-		return
-	}
-	if isShortcut {
-		keys, values = s.maybeAddShortcutToKV(keys, values, lnode[:hashLength], rnode[:hashLength])
-		// The shortcut node was added to keys and values so consider this subtree default.
-		lnode, rnode = nil, nil
-		// update in the batch (set key, value to default to the next loadChildren is correct)
-		batch[2*iBatch+1] = nil
-		batch[2*iBatch+2] = nil
-	}
-
-	// Split the keys array so each branch can be updated in parallel
-	// Does this require that keys are sorted?  Yes, see Update()
-	lkeys, rkeys := s.splitKeys(keys, s.trieHeight-height)
-	splitIndex := len(lkeys)
-	lvalues, rvalues := values[:splitIndex], values[splitIndex:]
-
-	if shortcut {
-		store = false    //stop storing only after the shortcut node.
-		shortcut = false // remove shortcut node flag
-	}
-	if len(lnode) == 0 && len(rnode) == 0 && len(keys) == 1 && store {
-		if !bytes.Equal(values[0], defaultLeaf) {
-			// if the subtree contains only one key, store the key/value in a shortcut node
-			shortcut = true
-		} else {
-			// this should only happen on deletes
-			store = false
-		}
-	}
-	switch {
-	case len(lkeys) == 0 && len(rkeys) > 0:
-		s.updateRight(lnode, rnode, root, keys, values, batch, iBatch, height, shortcut, store, ch)
-	case len(lkeys) > 0 && len(rkeys) == 0:
-		s.updateLeft(lnode, rnode, root, keys, values, batch, iBatch, height, shortcut, store, ch)
-	default:
-		s.updateParallel(lnode, rnode, root, keys, values, batch, lkeys, rkeys, lvalues, rvalues, iBatch, height,
-			shortcut, store, ch)
-	}
-}
-
-// updateParallel updates both sides of the trie simultaneously
-func (s *smt) updateParallel(lnode, rnode, root []byte, keys, values, batch, lkeys, rkeys, lvalues, rvalues [][]byte,
-	iBatch int, height byte, shortcut, store bool, ch chan<- result) {
-	// keys are separated between the left and right branches
-	// update the branches in parallel
-	lch := make(chan result, 1)
-	rch := make(chan result, 1)
-	go s.update(lnode, lkeys, lvalues, batch, 2*iBatch+1, height-1, shortcut, store, lch)
-	go s.update(rnode, rkeys, rvalues, batch, 2*iBatch+2, height-1, shortcut, store, rch)
-	lresult := <-lch
-	rresult := <-rch
-	if lresult.err != nil {
-		ch <- result{nil, lresult.err}
-		return
-	}
-	if rresult.err != nil {
-		ch <- result{nil, rresult.err}
-		return
-	}
-	ch <- result{s.interiorHash(lresult.update, rresult.update, height, iBatch, root, shortcut, store, keys,
-		values, batch), nil}
-
-}
-
-// updateRight updates the right side of the tree
-func (s *smt) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch int, height byte, shortcut,
-	store bool, ch chan<- result) {
-	// all the keys go in the right subtree
-	newch := make(chan result, 1)
-	s.update(rnode, keys, values, batch, 2*iBatch+2, height-1, shortcut, store, newch)
-	res := <-newch
-	if res.err != nil {
-		ch <- result{nil, res.err}
-		return
-	}
-	ch <- result{s.interiorHash(lnode, res.update, height, iBatch, root, shortcut, store, keys, values,
-		batch), nil}
-}
-
-// updateLeft updates the left side of the tree
-func (s *smt) updateLeft(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch int, height byte, shortcut,
-	store bool, ch chan<- result) {
-	// all the keys go in the left subtree
-	newch := make(chan result, 1)
-	s.update(lnode, keys, values, batch, 2*iBatch+1, height-1, shortcut, store, newch)
-	res := <-newch
-	if res.err != nil {
-		ch <- result{nil, res.err}
-		return
-	}
-	ch <- result{s.interiorHash(res.update, rnode, height, iBatch, root, shortcut, store, keys, values,
-		batch), nil}
 }
 
 // splitKeys divides the array of keys into 2 so they can update left and right branches in parallel
@@ -446,149 +323,3 @@ func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 
 const batchLen int = 31
 const batchHeight int = 4 // this is log2(batchLen+1)-1
-
-// loadChildren looks for the children of a node.
-// if the node is not stored in batch, it will be loaded from db.
-// iBatch is the index of root in batch
-// returns batch, iBatch, lnode, rnode, isShortcut, err
-func (s *smt) loadChildren(root []byte, height byte, iBatch int, batch [][]byte) ([][]byte, int, []byte, []byte, bool,
-	error) {
-	isShortcut := false
-	if root != nil && batch != nil && !reflect.DeepEqual(root, batch[iBatch]) {
-		return nil, 0, nil, nil, false, fmt.Errorf("something is deeply wrong")
-	}
-	if height%4 == 0 {
-		if len(root) == 0 {
-			// create a new default batch
-			batch = make([][]byte, batchLen)
-			batch[0] = []byte{0}
-		} else {
-			var err error
-			batch, err = s.loadBatch(root[:hashLength])
-			if err != nil {
-				return nil, 0, nil, nil, false, err
-			}
-			//if !reflect.DeepEqual(batch[0], root) {
-			//	return nil, 0, nil, nil, false, fmt.Errorf("something is deeply wrong2")
-			//}
-		}
-		iBatch = 0
-		if batch[0][0] == 1 {
-			isShortcut = true
-		}
-	} else if len(root) != 0 && root[hashLength] == 1 {
-		isShortcut = true
-	}
-	return batch, iBatch, batch[2*iBatch+1], batch[2*iBatch+2], isShortcut, nil
-}
-
-// loadBatch fetches a batch of nodes in cache or db
-func (s *smt) loadBatch(root []byte) ([][]byte, error) {
-	var node hash
-	copy(node[:], root)
-
-	// checking updated nodes is useful if get() or update() is called twice in a row without db commit
-	s.db.updatedMux.RLock()
-	val, exists := s.db.updatedNodes.Get(node)
-	s.db.updatedMux.RUnlock()
-	if exists {
-		if s.atomicUpdate {
-			// Return a copy so that Commit() doesnt have to be called at
-			// each block and still commit every state transition.
-			newVal := make([][]byte, batchLen)
-			copy(newVal, val)
-			return newVal, nil
-		}
-		return val, nil
-	}
-	return nil, fmt.Errorf("the trie node %x is unavailable in the disk db, db may be corrupted", root)
-}
-
-// interiorHash hashes 2 children to get the parent hash and stores it in the updatedNodes and maybe in liveCache.
-// the key is the hash and the value is the appended child nodes or the appended key/value in case of a shortcut.
-// keys of go mappings cannot be byte slices so the hash is copied to a byte array
-func (s *smt) interiorHash(left, right []byte, height byte, iBatch int, oldRoot []byte, shortcut, store bool, keys, values,
-	batch [][]byte) []byte {
-	var h []byte
-	if len(left) == 0 && len(right) == 0 {
-		// if a key was deleted, the node becomes default
-		batch[2*iBatch+1] = left
-		batch[2*iBatch+2] = right
-		s.deleteOldNode(oldRoot)
-		return nil
-	} else if len(left) == 0 {
-		h = s.hash(s.defaultHashes[height-1], right[:hashLength])
-	} else if len(right) == 0 {
-		h = s.hash(left[:hashLength], s.defaultHashes[height-1])
-	} else {
-		h = s.hash(left[:hashLength], right[:hashLength])
-	}
-	if !store {
-		// a shortcut node cannot move up
-		return append(h, 0)
-	}
-	if !shortcut {
-		h = append(h, 0)
-	} else {
-		// store the value at the shortcut node instead of height 0.
-		h = append(h, 1)
-		left = append(keys[0], 2)
-		right = append(values[0], 2)
-	}
-	batch[2*iBatch+2] = right
-	batch[2*iBatch+1] = left
-
-	// maybe store batch node
-	if (height)%4 == 0 {
-		if shortcut {
-			batch[0] = []byte{1}
-		} else {
-			batch[0] = []byte{0}
-		}
-
-		s.storeNode(batch, h, oldRoot)
-	}
-	return h
-}
-
-// storeNode stores a batch and deletes the old node from cache
-//func (s *smt) storePage(p page, h, oldRoot []byte) {
-//	if !bytes.Equal(h, oldRoot) {
-//		var node hash
-//		copy(node[:], h)
-//		// record new node
-//		s.db.updatedMux.Lock()
-//		s.db.updatedNodes.Set(node, batch)
-//		s.db.updatedMux.Unlock()
-//		s.deleteOldNode(oldRoot)
-//	}
-//}
-
-// storeNode stores a batch and deletes the old node from cache
-func (s *smt) storeNode(batch [][]byte, h, oldRoot []byte) {
-	if !bytes.Equal(h, oldRoot) {
-		var node hash
-		copy(node[:], h)
-		// record new node
-		s.db.updatedMux.Lock()
-		s.db.updatedNodes.Set(node, batch)
-		s.db.updatedMux.Unlock()
-		s.deleteOldNode(oldRoot)
-	}
-}
-
-// deleteOldNode deletes an old node that has been updated
-func (s *smt) deleteOldNode(root []byte) {
-	var node hash
-	copy(node[:], root)
-	if !s.atomicUpdate {
-		// dont delete old nodes with atomic updated except when
-		// moving up a shortcut, we dont record every single move
-		s.db.updatedMux.Lock()
-		//mark for expiration?
-		if val, ok := s.db.updatedNodes.Get(node); ok {
-			s.db.updatedNodes.SetWithExpiration(node, val, s.retentionDuration)
-		}
-		s.db.updatedMux.Unlock()
-	}
-}
