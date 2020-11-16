@@ -44,6 +44,15 @@ func hasher(data ...[]byte) []byte {
 	return result
 }
 
+func copy2d(in [][]byte) [][]byte {
+	duplicate := make([][]byte, len(in))
+	for i := range in {
+		duplicate[i] = make([]byte, len(in[i]))
+		copy(duplicate[i], in[i])
+	}
+	return duplicate
+}
+
 // for sorting
 type dataArray [][]byte
 

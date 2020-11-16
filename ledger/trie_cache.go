@@ -59,3 +59,7 @@ func (b *byteCache) Get(key hash) (value [][]byte, ok bool) {
 func (b *byteCache) SetWithExpiration(key hash, value [][]byte, expiration time.Duration) {
 	b.cache.SetWithExpiration(key, value, expiration)
 }
+
+func (b *byteCache) Delete(key []byte) {
+	b.cache.Remove(key)
+}

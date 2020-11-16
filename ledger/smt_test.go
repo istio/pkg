@@ -37,7 +37,6 @@ func TestSmtEmptyTrie(t *testing.T) {
 
 func TestSmtUpdateAndGet(t *testing.T) {
 	smt := newSMT(hasher, nil, time.Minute)
-	smt.atomicUpdate = false
 
 	// Add data to empty trie
 	keys := getFreshData(10)
@@ -88,7 +87,6 @@ func TestTrieAtomicUpdate(t *testing.T) {
 
 	// check keys of previous atomic update are accessible in
 	// updated nodes with root.
-	smt.atomicUpdate = false
 	for i, key := range keys {
 		value, err := smt.Get(key)
 		assert.NilError(t, err)
@@ -164,7 +162,7 @@ func TestSmtDelete(t *testing.T) {
 	}
 	// Remove deleted key from keys and check root with a clean trie.
 	smt2 := newSMT(hasher, nil, time.Minute)
-	cleanRoot, err := smt2.Update( keys[1:], values[1:])
+	cleanRoot, err := smt2.Update(keys[1:], values[1:])
 	assert.NilError(t, err)
 	if !bytes.Equal(newRoot, cleanRoot) {
 		t.Fatal("roots mismatch")
@@ -202,7 +200,6 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	key0 := make([]byte, 8)
 	values := getFreshData(1)
 	root, _ := smt.Update([][]byte{key0}, values)
-	smt.atomicUpdate = false
 	node, err := buildRootNode(root, smt.trieHeight, smt.db)
 	assert.NilError(t, err)
 	if !node.isShortcut() || !bytes.Equal(node.left().val[:hashLength], key0) || !bytes.Equal(node.right().val[:hashLength], values[0]) {

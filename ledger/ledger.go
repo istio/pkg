@@ -59,7 +59,10 @@ func (s smtLedger) EraseRootHash(rootHash string) error {
 	//TODO: handle nil
 	prev := e.Prev().Value.(string)
 	next := e.Next().Value.(string)
-	s.tree.erase(prev, rootHash, next)
+	err := s.tree.Erase(coerceKeyToHashLen(prev), coerceKeyToHashLen(rootHash), coerceKeyToHashLen(next))
+	if err != nil {
+		return err
+	}
 	s.history.Remove(e)
 	delete(s.history.index, rootHash)
 	return nil

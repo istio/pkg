@@ -16,6 +16,7 @@ package ledger
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"time"
 
@@ -69,8 +70,6 @@ type smt struct {
 	retentionDuration time.Duration
 	// lock is for the whole struct
 	lock sync.RWMutex
-	// atomicUpdate, commit all the changes made by intermediate update calls
-	atomicUpdate bool
 }
 
 // this is the closest time.Duration comes to Forever, with a duration of ~145 years
@@ -96,12 +95,6 @@ func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, r
 	return s
 }
 
-func (s *smt) Root() []byte {
-	s.rootMu.RLock()
-	defer s.rootMu.RUnlock()
-	return s.root
-}
-
 // loadDefaultHashes creates the default hashes
 func (s *smt) loadDefaultHashes() {
 	s.defaultHashes = make([][]byte, s.trieHeight+1)
@@ -114,15 +107,9 @@ func (s *smt) loadDefaultHashes() {
 }
 
 // Update adds a sorted list of keys and their values to the trie
-// If Update is called multiple times, only the state after the last update
-// is committed.
-// When calling Update multiple times without commit, make sure the
-// values of different keys are unique(hash contains the key for example)
-// otherwise some subtree may get overwritten with the wrong hash.
 func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.atomicUpdate = true
 	ch := make(chan result, 1)
 	//s.update(s.Root(), keys, values, nil, 0, s.trieHeight, false, true, ch)
 	n, err := buildRootNode(s.Root(), s.trieHeight, s.db)
@@ -154,8 +141,10 @@ type result struct {
 func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	if node.height() == 0 {
 		if bytes.Equal(values[0], defaultLeaf) {
+			// delete this value
 			ch <- result{nil, nil}
 		} else {
+			// update this value
 			node.val = values[0]
 			ch <- result{values[0], nil}
 		}
@@ -163,26 +152,10 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	}
 	if node.isShortcut() {
 		// if this is a delete operation, we have either arrived at the key to delete, or there is nothing to delete
-		deletes := getDeleteIndices(values)
-		if len(deletes) > 0 {
-			// we are about to mutate keys and values
-			// copy to avoid side-effects
-			keys = copy2d(keys)
-			values = copy2d(values)
-			for i := range deletes {
-				if node.left() != nil && bytes.Equal(keys[i], node.left().val[:hashLength]) {
-					node.removeShortcut()
-					node.val = node.calculateHash(s.hash, s.defaultHashes)
-				}
-				keys[i] = nil
-				values[i] = nil
-			}
-			keys = removeNils(keys)
-			values = removeNils(values)
-			if len(keys) == 0 {
-				ch <- result{node.val, nil}
-				return
-			}
+		var done bool
+		values, keys, ch, done = s.maybeDeleteShortcut(node, keys, values, ch)
+		if done {
+			return
 		}
 	}
 	// if node is still a shortcut, proceed as normal
@@ -201,10 +174,6 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 		if !bytes.Equal(values[0], defaultLeaf) {
 			// we can store this as a shortcut
 			node.makeShortcut(keys[0], values[0])
-		} else {
-			// if the subtree contains only one key, store the key/value in a shortcut node
-			// TODO: this
-			//store = false
 		}
 	} else {
 		switch {
@@ -249,6 +218,31 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	node.store()
 	ch <- result{node.val, nil}
 	return
+}
+
+func (s *smt) maybeDeleteShortcut(node *node, keys [][]byte, values [][]byte, ch chan<- result) ([][]byte, [][]byte, chan<- result, bool) {
+	deletes := getDeleteIndices(values)
+	if len(deletes) > 0 {
+		// we are about to mutate keys and values
+		// copy to avoid side-effects
+		keys = copy2d(keys)
+		values = copy2d(values)
+		for i := range deletes {
+			if node.left() != nil && bytes.Equal(keys[i], node.left().val[:hashLength]) {
+				node.removeShortcut()
+				node.val = node.calculateHash(s.hash, s.defaultHashes)
+			}
+			keys[i] = nil
+			values[i] = nil
+		}
+		keys = removeNils(keys)
+		values = removeNils(values)
+		if len(keys) == 0 {
+			ch <- result{node.val, nil}
+			return nil, nil, nil, true
+		}
+	}
+	return values, keys, ch, false
 }
 
 func removeNils(keys [][]byte) (result [][]byte) {
@@ -319,6 +313,48 @@ func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 		}
 	}
 	return newKeys, newVals
+}
+
+// Erase will remove from the cache any pages which do not exist in the next or previous trie.
+func (s *smt) Erase(prev []byte, rootHash []byte, next []byte) error {
+	prevNode, err := buildRootNode(prev, s.trieHeight, s.db)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve previous node: %s", err)
+	}
+	rootNode, err := buildRootNode(rootHash, s.trieHeight, s.db)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve root node: %s", err)
+	}
+	nextNode, err := buildRootNode(next, s.trieHeight, s.db)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve next node: %s", err)
+	}
+	s.eraseRecursive(prevNode, rootNode, nextNode)
+	return nil
+}
+
+func (s *smt) eraseRecursive(prev *node, rootHash *node, next *node) {
+	if rootHash == nil {
+		return
+	}
+	var prevVal []byte
+	if prev != nil {
+		prevVal = prev.val
+	}
+	var nextVal []byte
+	if next != nil {
+		nextVal = next.val
+	}
+	if !bytes.Equal(prevVal, rootHash.val) && bytes.Equal(nextVal, rootHash.val) {
+		// erase this rootHash if it's the root of a page
+		if rootHash.isLeaf() {
+			// populate next page before deleting from the cache
+			rootHash.getNextPage().delete()
+		}
+		// maybe make this parallel?
+		s.eraseRecursive(prev.left(), rootHash.left(), next.left())
+		s.eraseRecursive(prev.right(), rootHash.right(), next.right())
+	}
 }
 
 const batchLen int = 31
