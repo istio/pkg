@@ -20,6 +20,7 @@ package ledger
 
 import (
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/spaolacci/murmur3"
@@ -40,11 +41,13 @@ type Ledger interface {
 	RootHash() string
 	// GetPreviousValue executes a get against a previous version of the ledger, using that version's root hash.
 	GetPreviousValue(previousRootHash, key string) (result string, err error)
+	// EraseRootHash re-claims any memory used by this version of history, preserving bits shared with other versions.
+	EraseRootHash(rootHash string) error
 }
 
 type smtLedger struct {
 	tree    *smt
-	history history
+	history *history
 }
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
@@ -54,16 +57,21 @@ func Make(retention time.Duration) Ledger {
 
 func (s smtLedger) EraseRootHash(rootHash string) error {
 	s.history.lock.Lock()
-	defer s.history.lock.Lock()
+	defer s.history.lock.Unlock()
 	e := s.history.Get(rootHash)
+	if e == nil {
+		return fmt.Errorf("rootHash %s is not present in ledger history", rootHash)
+	}
 	//TODO: handle nil
-	prev := e.Prev().Value.(string)
-	next := e.Next().Value.(string)
-	err := s.tree.Erase(coerceKeyToHashLen(prev), coerceKeyToHashLen(rootHash), coerceKeyToHashLen(next))
+	prev := e.Prev().Value.([]byte)
+	next := e.Next().Value.([]byte)
+	err := s.tree.Erase(prev, e.Value.([]byte), next)
 	if err != nil {
 		return err
 	}
 	s.history.Remove(e)
+	s.history.lock.Lock()
+	defer s.history.lock.Unlock()
 	delete(s.history.index, rootHash)
 	return nil
 }
@@ -72,19 +80,18 @@ func (s smtLedger) EraseRootHash(rootHash string) error {
 // removal after the retention specified in Make()
 func (s smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{coerceKeyToHashLen(key)}, [][]byte{coerceToHashLen(value)})
-	result = string(b)
-	s.history.Put(result)
+	s.history.Put(b)
+	result = s.RootHash()
 	return
 }
 
 // Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
 func (s smtLedger) Delete(key string) error {
-	b, err := s.tree.Update([][]byte{[]byte(key)}, [][]byte{defaultLeaf})
+	b, err := s.tree.Update([][]byte{coerceKeyToHashLen(key)}, [][]byte{defaultLeaf})
 	if err != nil {
 		return err
 	}
-	result := string(b)
-	s.history.Put(result)
+	s.history.Put(b)
 	return nil
 }
 

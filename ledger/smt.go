@@ -345,11 +345,13 @@ func (s *smt) eraseRecursive(prev *node, rootHash *node, next *node) {
 	if next != nil {
 		nextVal = next.val
 	}
-	if !bytes.Equal(prevVal, rootHash.val) && bytes.Equal(nextVal, rootHash.val) {
+	if !bytes.Equal(prevVal, rootHash.val) && !bytes.Equal(nextVal, rootHash.val) {
 		// erase this rootHash if it's the root of a page
 		if rootHash.isLeaf() {
 			// populate next page before deleting from the cache
 			rootHash.getNextPage().delete()
+		} else if rootHash.isShortcut() {
+			return
 		}
 		// maybe make this parallel?
 		s.eraseRecursive(prev.left(), rootHash.left(), next.left())

@@ -15,6 +15,7 @@
 package ledger
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -132,7 +133,7 @@ func BenchmarkScale(b *testing.B) {
 	const configSize = 100
 	b.ReportAllocs()
 	b.SetBytes(8)
-	l := &smtLedger{tree: newSMT(HashCollider, nil, time.Minute), history: NewHistory()}
+	l := Make(time.Minute)
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
@@ -156,4 +157,87 @@ func addConfig(ledger Ledger, b *testing.B) string {
 	_, err := ledger.Put(objectID, fmt.Sprintf("%d", rand.Int()))
 	assert.NilError(b, err)
 	return objectID
+}
+
+func TestParallel(t *testing.T) {
+	l := Make(time.Minute)
+	size := 5000
+	k1, v1 := getFreshEntries(size)
+	k2, v2 := getFreshEntries(size)
+	for i := 0; i < size; i++ {
+		key := k1[i]
+		value := v1[i]
+		go func() {
+			_, err := l.Put(key, value)
+			assert.NilError(t, err)
+		}()
+	}
+	for i := 0; i < size; i++ {
+		key := k2[i]
+		value := v2[i]
+		del := k1[i]
+		go func() {
+			_, err := l.Put(key, value)
+			assert.NilError(t, err)
+			err = l.Delete(del)
+			assert.NilError(t, err)
+		}()
+	}
+}
+
+func getFreshEntries(size int) (keys []string, values []string) {
+	length := 8
+	for i := 0; i < size; i++ {
+		r := make([]byte, 8)
+		_, err := rand.Read(r)
+		if err != nil {
+			panic(err)
+		}
+		keys = append(keys, base64.StdEncoding.EncodeToString(r[:length]))
+		_, err = rand.Read(r)
+		if err != nil {
+			panic(err)
+		}
+		values = append(values, base64.StdEncoding.EncodeToString(r[:length]))
+	}
+	return
+}
+
+func TestEraseRootHash(t *testing.T) {
+	l := Make(time.Minute)
+	_, err := l.Put("One", "1")
+	assert.NilError(t, err)
+	_, err = l.Put("Two", "2")
+	assert.NilError(t, err)
+	_, err = l.Put("Three", "3")
+	assert.NilError(t, err)
+	_, err = l.Put("Four", "4")
+	assert.NilError(t, err)
+	_, err = l.Put("Five", "5")
+	assert.NilError(t, err)
+	six, err := l.Put("Six", "6")
+	assert.NilError(t, err)
+	seven, err := l.Put("Seven", "7")
+	assert.NilError(t, err)
+	err = l.Delete("Six")
+	assert.NilError(t, err)
+	_, err = l.Put("Eight", "8")
+	assert.NilError(t, err)
+	_, err = l.Put("Nine", "9")
+	assert.NilError(t, err)
+	_, err = l.Put("Ten", "10")
+	assert.NilError(t, err)
+	err = l.EraseRootHash(seven)
+	assert.NilError(t, err)
+	val, err := l.GetPreviousValue(six, "Six")
+	assert.NilError(t, err)
+	assert.Equal(t, val, "6")
+	_, err = l.GetPreviousValue(seven, "Six")
+	assert.ErrorContains(t, err, "root node")
+	err = l.EraseRootHash(six)
+	assert.NilError(t, err)
+	_, err = l.GetPreviousValue(six, "Six")
+	assert.ErrorContains(t, err, "root node")
+	err = l.EraseRootHash(seven)
+	assert.ErrorContains(t, err, "rootHash")
 }

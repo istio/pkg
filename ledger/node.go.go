@@ -49,7 +49,9 @@ func (p *page) getRawNodes() [][]byte {
 }
 
 func (p *page) delete() {
-	p.db.updatedNodes.Delete(p.root)
+	var h hash
+	copy(h[:], p.root)
+	p.db.updatedNodes.Delete(h)
 }
 
 func buildRootNode(key []byte, trieHeight byte, db *cacheDB) (*node, error) {
