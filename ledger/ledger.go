@@ -56,8 +56,6 @@ func Make(retention time.Duration) Ledger {
 }
 
 func (s smtLedger) EraseRootHash(rootHash string) error {
-	s.history.lock.Lock()
-	defer s.history.lock.Unlock()
 	e := s.history.Get(rootHash)
 	if e == nil {
 		return fmt.Errorf("rootHash %s is not present in ledger history", rootHash)
@@ -87,7 +85,7 @@ func (s smtLedger) Put(key, value string) (result string, err error) {
 
 // Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
 func (s smtLedger) Delete(key string) error {
-	b, err := s.tree.Update([][]byte{coerceKeyToHashLen(key)}, [][]byte{defaultLeaf})
+	b, err := s.tree.Delete(coerceKeyToHashLen(key))
 	if err != nil {
 		return err
 	}

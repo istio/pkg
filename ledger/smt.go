@@ -98,12 +98,30 @@ func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, r
 // loadDefaultHashes creates the default hashes
 func (s *smt) loadDefaultHashes() {
 	s.defaultHashes = make([][]byte, s.trieHeight+1)
-	s.defaultHashes[0] = defaultLeaf
+	s.defaultHashes[0] = hasher([]byte{0x0})
 	var h []byte
 	for i := byte(1); i <= s.trieHeight; i++ {
 		h = s.hash(s.defaultHashes[i-1], s.defaultHashes[i-1])
 		s.defaultHashes[i] = h
 	}
+}
+
+func (s *smt) Delete(key []byte) ([]byte, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	n, err := buildRootNode(s.Root(), s.trieHeight, s.db)
+	if err != nil {
+		return nil, err
+	}
+	newRoot, _, _ := s.delete(n, key)
+	s.rootMu.Lock()
+	defer s.rootMu.Unlock()
+	if len(newRoot) != 0 {
+		s.root = newRoot
+	} else {
+		s.root = nil
+	}
+	return s.root, nil
 }
 
 // Update adds a sorted list of keys and their values to the trie
@@ -124,12 +142,60 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	s.rootMu.Lock()
 	defer s.rootMu.Unlock()
 	if len(result.update) != 0 {
-		s.root = result.update[:hashLength]
+		s.root = result.update
 	} else {
 		s.root = nil
 	}
 
 	return s.root, nil
+}
+
+func (s *smt) delete(n *node, key []byte) (newVal, reloKey, reloValue []byte) {
+	defer n.store()
+	if n.height() == 0 {
+		n.val = nil
+		return nil, nil, nil
+	}
+	if n.isShortcut() {
+		if n.left() != nil && bytes.Equal(key, n.left().val[:hashLength]) {
+			n.removeShortcut()
+			n.val = nil
+			return nil, nil, nil
+		} else {
+			return n.val, nil, nil
+		}
+	}
+	var keyChild, altChild *node // keyChild is the child n traversed in search of the key
+	// altChild is the n not traveled, important for relocating shortcuts
+	if bitIsSet(key, s.trieHeight-n.height()) {
+		// recurse right
+		keyChild = n.right()
+		altChild = n.left()
+	} else {
+		//recurse left
+		keyChild = n.left()
+		altChild = n.right()
+	}
+	childVal, reloKey, reloValue := s.delete(keyChild, key)
+	if reloKey != nil && altChild != nil {
+		keyChild.makeShortcut(reloKey, reloValue)
+		keyChild.val = keyChild.calculateHash(s.hash, s.defaultHashes)
+		reloKey, reloValue = nil, nil
+		childVal = keyChild.val
+	}
+	if childVal == nil && altChild != nil && altChild.isShortcut() {
+		reloKey = altChild.left().val
+		reloValue = altChild.right().val
+		altChild.removeShortcut()
+		altChild.val = nil
+	}
+	if childVal == nil && altChild == nil {
+		n.val = nil
+	} else {
+		n.val = n.calculateHash(s.hash, s.defaultHashes)
+	}
+	newVal = n.val
+	return
 }
 
 // result is used to contain the result of goroutines and is sent through a channel.
@@ -140,25 +206,12 @@ type result struct {
 
 func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	if node.height() == 0 {
-		if bytes.Equal(values[0], defaultLeaf) {
-			// delete this value
-			ch <- result{nil, nil}
-		} else {
-			// update this value
-			node.val = values[0]
-			ch <- result{values[0], nil}
-		}
+		// update this value
+		node.val = values[0]
+		ch <- result{update: values[0]}
 		return
 	}
-	if node.isShortcut() {
-		// if this is a delete operation, we have either arrived at the key to delete, or there is nothing to delete
-		var done bool
-		values, keys, ch, done = s.maybeDeleteShortcut(node, keys, values, ch)
-		if done {
-			return
-		}
-	}
-	// if node is still a shortcut, proceed as normal
+	// if node a shortcut, it needs to be relocated further down the tree with one of our updated keys
 	if node.isShortcut() {
 		keys, values = s.maybeAddShortcutToKV(keys, values, node.left().val[:hashLength], node.right().val[:hashLength])
 		// remove shortcut notation
@@ -171,10 +224,8 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	lvalues, rvalues := values[:splitIndex], values[splitIndex:]
 
 	if node.left() == nil && node.right() == nil && len(keys) == 1 {
-		if !bytes.Equal(values[0], defaultLeaf) {
-			// we can store this as a shortcut
-			node.makeShortcut(keys[0], values[0])
-		}
+		// we can store this as a shortcut
+		node.makeShortcut(keys[0], values[0])
 	} else {
 		switch {
 		case len(lkeys) == 0 && len(rkeys) > 0:
@@ -183,7 +234,7 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 			s.update(node.right(), rkeys, rvalues, newch)
 			res := <-newch
 			if res.err != nil {
-				ch <- result{nil, res.err}
+				ch <- result{err: res.err}
 				return
 			}
 		case len(lkeys) > 0 && len(rkeys) == 0:
@@ -192,7 +243,7 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 			s.update(node.left(), lkeys, lvalues, newch)
 			res := <-newch
 			if res.err != nil {
-				ch <- result{nil, res.err}
+				ch <- result{err: res.err}
 				return
 			}
 		default:
@@ -200,66 +251,25 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 			rch := make(chan result, 1)
 			node.initRight()
 			node.initLeft()
-			go s.update(node.left(), lkeys, lvalues, lch)
-			go s.update(node.right(), rkeys, rvalues, rch)
+			//go s.update(node.left(), lkeys, lvalues, lch)
+			//go s.update(node.right(), rkeys, rvalues, rch)
+			s.update(node.left(), lkeys, lvalues, lch)
+			s.update(node.right(), rkeys, rvalues, rch)
 			lresult := <-lch
 			rresult := <-rch
 			if lresult.err != nil {
-				ch <- result{nil, lresult.err}
+				ch <- result{err: lresult.err}
 				return
 			}
 			if rresult.err != nil {
-				ch <- result{nil, rresult.err}
+				ch <- result{err: rresult.err}
 				return
 			}
 		}
 	}
 	node.val = node.calculateHash(s.hash, s.defaultHashes)
 	node.store()
-	ch <- result{node.val, nil}
-	return
-}
-
-func (s *smt) maybeDeleteShortcut(node *node, keys [][]byte, values [][]byte, ch chan<- result) ([][]byte, [][]byte, chan<- result, bool) {
-	deletes := getDeleteIndices(values)
-	if len(deletes) > 0 {
-		// we are about to mutate keys and values
-		// copy to avoid side-effects
-		keys = copy2d(keys)
-		values = copy2d(values)
-		for i := range deletes {
-			if node.left() != nil && bytes.Equal(keys[i], node.left().val[:hashLength]) {
-				node.removeShortcut()
-				node.val = node.calculateHash(s.hash, s.defaultHashes)
-			}
-			keys[i] = nil
-			values[i] = nil
-		}
-		keys = removeNils(keys)
-		values = removeNils(values)
-		if len(keys) == 0 {
-			ch <- result{node.val, nil}
-			return nil, nil, nil, true
-		}
-	}
-	return values, keys, ch, false
-}
-
-func removeNils(keys [][]byte) (result [][]byte) {
-	for _, k := range keys {
-		if k != nil {
-			result = append(result, k)
-		}
-	}
-	return
-}
-
-func getDeleteIndices(values [][]byte) (result []int) {
-	for i, v := range values {
-		if bytes.Equal(v, defaultLeaf) {
-			result = append(result, i)
-		}
-	}
+	ch <- result{update: node.val}
 	return
 }
 

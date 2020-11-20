@@ -20,19 +20,18 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-var (
-	// defaultLeaf is the Trie default value : hash of 0x0
-	defaultLeaf = hasher([]byte{0x0})
-)
-
 const (
 	hashLength = 8
 )
 
-type hash [hashLength]byte
+type hash [hashLength + 1]byte
 
 func bitIsSet(bits []byte, i byte) bool {
 	return bits[i/8]&(1<<uint(7-i%8)) != 0
+}
+
+func setBit(bits []byte, i byte) {
+	bits[i/8] |= 1 << uint(7-i%8)
 }
 
 func hasher(data ...[]byte) []byte {

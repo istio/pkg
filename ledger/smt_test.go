@@ -153,7 +153,7 @@ func TestSmtDelete(t *testing.T) {
 
 	// Delete from trie
 	// To delete a key, just set it's value to Default leaf hash.
-	newRoot, err := smt.Update(keys[0:1], [][]byte{defaultLeaf})
+	newRoot, err := smt.Delete(keys[0])
 	assert.NilError(t, err)
 	newValue, err := smt.Get(keys[0])
 	assert.NilError(t, err)
@@ -164,17 +164,22 @@ func TestSmtDelete(t *testing.T) {
 	smt2 := newSMT(hasher, nil, time.Minute)
 	cleanRoot, err := smt2.Update(keys[1:], values[1:])
 	assert.NilError(t, err)
-	if !bytes.Equal(newRoot, cleanRoot) {
-		t.Fatal("roots mismatch")
-	}
+	keys1, values1, err := smt.GetAll()
+	assert.NilError(t, err)
+	keys2, values2, err := smt2.GetAll()
+	equalByteArrays(t, keys1, keys2)
+	equalByteArrays(t, values1, values2)
+	assert.NilError(t, err)
+	// this assertion is probably failing because deleting doesn't restructure dangling shortcuts.  Shouldn't hash(nil, x) = x?
+	assert.Assert(t, bytes.Equal(newRoot, cleanRoot),
+		"identical trees produced different roots! [%v] [%v]", newRoot, cleanRoot)
 
 	//Empty the trie
-	var newValues [][]byte
-	for i := 0; i < 10; i++ {
-		newValues = append(newValues, defaultLeaf)
+	var root []byte
+	for _, k := range keys {
+		root, err = smt.Delete(k)
+		assert.NilError(t, err)
 	}
-	root, err := smt.Update(keys, newValues)
-	assert.NilError(t, err)
 	if len(root) != 0 {
 		t.Fatal("empty trie root hash not correct")
 	}
@@ -186,11 +191,57 @@ func TestSmtDelete(t *testing.T) {
 	assert.NilError(t, err)
 	key0 := make([]byte, 8)
 	key1 := make([]byte, 8)
-	_, err = smt.Update([][]byte{key0, key1}, [][]byte{defaultLeaf, defaultLeaf})
+
+	_, err = smt.Delete(key0)
+	assert.NilError(t, err)
+	_, err = smt.Delete(key1)
 	assert.NilError(t, err)
 	if !bytes.Equal(root, smt.root) {
 		// this is failing due to some sort of interaction between the shortcut and the delete
 		t.Fatal("deleting a default key shouldn't modify the tree")
+	}
+}
+
+func equalByteArrays(t *testing.T, left, right [][]byte) {
+	assert.Equal(t, len(left), len(right), "byte arrays are not of equal lenght")
+	for i, l := range left {
+		assert.Assert(t, bytes.Equal(l, right[i]), "byte array index %d is not equal", i)
+	}
+}
+
+func validate(t *testing.T, s *smt) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	n, err := buildRootNode(s.root, s.trieHeight, s.db)
+	assert.NilError(t, err)
+	validateRecursive(t, n, s.hash, s.defaultHashes)
+}
+
+func validateRecursive(t *testing.T, n *node, hasher func(data ...[]byte) []byte, defaultHashes [][]byte) {
+	nilChildren := func(n *node, expect bool) error {
+		actLeft := n.left() == nil
+		actRight := n.right() == nil
+		if actLeft != expect {
+			return fmt.Errorf("left node == nil should be %v, but is %v", expect, actLeft)
+		}
+		if actRight != expect {
+			return fmt.Errorf("left node == nil should be %v, but is %v", expect, actRight)
+		}
+		return nil
+	}
+	correctVal := n.calculateHash(hasher, defaultHashes)
+	assert.Assert(t, bytes.Equal(n.val, correctVal), "incorrect node value")
+	if n.isShortcut() {
+		assert.NilError(t, nilChildren(n, false), "shortcut children cannot be nil")
+		assert.NilError(t, nilChildren(n.left(), true), "shortcut cannot have grandchildren")
+		assert.NilError(t, nilChildren(n.right(), true), "shortcut cannot have grandchildren")
+	} else {
+		if n.left() != nil {
+			validateRecursive(t, n.left(), hasher, defaultHashes)
+		}
+		if n.right() != nil {
+			validateRecursive(t, n.right(), hasher, defaultHashes)
+		}
 	}
 }
 
@@ -209,9 +260,9 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	key1 := make([]byte, 8)
 	// set the last bit
 	bitSet(key1, 63)
-	keys := [][]byte{key0, key1}
-	values = [][]byte{defaultLeaf, getFreshData(1)[0]}
-	_, err = smt.Update(keys, values)
+	_, err = smt.Delete(key0)
+	assert.NilError(t, err)
+	_, err = smt.Update([][]byte{key1}, getFreshData(1))
 	assert.NilError(t, err)
 }
 func bitSet(bits []byte, i int) {

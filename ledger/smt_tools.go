@@ -16,6 +16,7 @@ package ledger
 
 import (
 	"bytes"
+	"fmt"
 )
 
 func (s *smt) Root() []byte {
@@ -38,7 +39,6 @@ func (s *smt) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return s.get(n, key)
-	//return s.get(prevRoot, key, nil, 0, 64)
 }
 
 // get fetches the value of a key given a trie root
@@ -63,4 +63,68 @@ func (s *smt) get(node *node, key []byte) ([]byte, error) {
 	}
 	// visit left node
 	return s.get(node.left(), key)
+}
+
+func (s *smt) GetAll() (keys, values [][]byte, err error) {
+	return s.GetAllPrevious(s.root)
+}
+
+func (s *smt) GetAllPrevious(prevRoot []byte) (keys, values [][]byte, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	n, err := buildRootNode(prevRoot, s.trieHeight, s.db)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.getAll(n, make([]byte, hashLength), s.trieHeight)
+}
+
+func (s *smt) getAll(n *node, keySoFar []byte, trieHeight byte) (keys, values [][]byte, err error) {
+	if n == nil {
+		return nil, nil, nil
+	} else if n.isShortcut() {
+		return [][]byte{n.left().val}, [][]byte{n.right().val}, nil
+	} else if n.height() == 0 {
+		return [][]byte{keySoFar}, [][]byte{n.val}, nil
+	} else {
+		lkeys, lvalues, err := s.getAll(n.left(), keySoFar, trieHeight)
+		if err != nil {
+			return nil, nil, err
+		}
+		rkey := make([]byte, hashLength)
+		copy(rkey, keySoFar)
+		setBit(rkey, trieHeight-n.height())
+		rkeys, rvalues, err := s.getAll(n.right(), rkey, trieHeight)
+		if err != nil {
+			return nil, nil, err
+		}
+		return append(lkeys, rkeys...), append(lvalues, rvalues...), nil
+	}
+}
+
+func (s *smt) DumpToDOT() string {
+	return s.DumpToDOTPrev(s.root)
+}
+
+func (s *smt) DumpToDOTPrev(prevRoot []byte) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	n, err := buildRootNode(prevRoot, s.trieHeight, s.db)
+	if err != nil {
+		return ""
+	}
+	inn, _ := s.dumpToDOT(n, 0)
+	return fmt.Sprintf("digraph SMT {\nnode [fontname=\"Arial\"];\n%s}", inn)
+}
+
+func (s *smt) dumpToDOT(n *node, nullCounter int) (string, int) {
+	if n == nil {
+		s := fmt.Sprintf("null%d;\nnull%d [shape=point];\n", nullCounter, nullCounter)
+		nullCounter++
+		return s, nullCounter
+	}
+	left, nullCounter := s.dumpToDOT(n.left(), nullCounter)
+	right, nullCounter := s.dumpToDOT(n.right(), nullCounter)
+	me := fmt.Sprintf("%x", n.val) //[len(n.val)*2-8:]
+	return fmt.Sprintf("\"%s\";\n\"%s\"->%s\"%s\"->%s", me, me, left, me, right), nullCounter
 }

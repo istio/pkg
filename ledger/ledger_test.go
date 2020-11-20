@@ -161,7 +161,7 @@ func addConfig(ledger Ledger, b *testing.B) string {
 
 func TestParallel(t *testing.T) {
 	l := Make(time.Minute)
-	size := 5000
+	size := 500
 	k1, v1 := getFreshEntries(size)
 	k2, v2 := getFreshEntries(size)
 	for i := 0; i < size; i++ {

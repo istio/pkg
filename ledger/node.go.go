@@ -156,7 +156,6 @@ func (n *node) getNextPage() *page {
 	if n.nextPage == nil {
 		n.nextPage = retrieveOrBuildPage(n.page.db, n.val, n.height())
 	}
-	//TODO: handle nil
 	return n.nextPage
 }
 
@@ -165,7 +164,11 @@ func (n *node) left() *node {
 		return nil
 	}
 	if n.isLeaf() {
-		return n.getNextPage().nodes[1]
+		np := n.getNextPage()
+		if np == nil {
+			return nil
+		}
+		return np.nodes[1]
 	}
 	return n.page.nodes[leftIndex(n.index)]
 }
@@ -175,7 +178,11 @@ func (n *node) right() *node {
 		return nil
 	}
 	if n.isLeaf() {
-		return n.getNextPage().nodes[2]
+		np := n.getNextPage()
+		if np == nil {
+			return nil
+		}
+		return np.nodes[2]
 	}
 	return n.page.nodes[rightIndex(n.index)]
 }
@@ -204,7 +211,6 @@ func (n *node) makeShortcut(key []byte, val []byte) {
 		p = buildPage([][]byte{}, n.page.height-4, n.page.db, []byte{})
 		n.nextPage = p
 		p.nodes[0].val = []byte{1}
-		// TODO: store this page (need hasher)
 	} else {
 		n.val = make([]byte, hashLength)
 		n.val = append(n.val, 1)
@@ -221,10 +227,6 @@ func (n *node) makeShortcut(key []byte, val []byte) {
 		//val:      append(val, 2), // I don't know why we put '2' here
 		index: rightIndex(n.index),
 		page:  p,
-	}
-	if !n.isShortcut() {
-		// TODO: remove sanity check
-		fmt.Sprintf("%d", n.val[200])
 	}
 	p.nodes[l.index] = &l
 	p.nodes[r.index] = &r
@@ -250,8 +252,10 @@ func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [
 		return nil
 	} else if n.left() == nil || len(n.left().val) == 0 {
 		h = hasher(defaultHashes[n.height()-1], n.right().val[:hashLength])
+		//h = n.right().val[:hashLength]
 	} else if n.right() == nil || len(n.right().val) == 0 {
 		h = hasher(n.left().val[:hashLength], defaultHashes[n.height()-1])
+		//h = n.left().val[:hashLength]
 	} else {
 		h = hasher(n.left().val[:hashLength], n.right().val[:hashLength])
 	}
