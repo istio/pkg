@@ -321,36 +321,39 @@ func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 }
 
 // Erase will remove from the cache any pages which do not exist in the next or previous trie.
-func (s *smt) Erase(prev []byte, rootHash []byte, next []byte) error {
-	prevNode, err := buildRootNode(prev, s.trieHeight, s.db)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve previous node: %s", err)
-	}
+func (s *smt) Erase(rootHash []byte, adjacents [][]byte) error {
 	rootNode, err := buildRootNode(rootHash, s.trieHeight, s.db)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve root node: %s", err)
 	}
-	nextNode, err := buildRootNode(next, s.trieHeight, s.db)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve next node: %s", err)
+	var adjacentNodes []*node
+	for _, n := range adjacents {
+		nextNode, err := buildRootNode(n, s.trieHeight, s.db)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve next node: %s", err)
+		}
+		adjacentNodes = append(adjacentNodes, nextNode)
 	}
-	s.eraseRecursive(prevNode, rootNode, nextNode)
+	s.eraseRecursive(rootNode, adjacentNodes)
 	return nil
 }
 
-func (s *smt) eraseRecursive(prev *node, rootHash *node, next *node) {
+func (s *smt) eraseRecursive(rootHash *node, adjacentNodes []*node) {
 	if rootHash == nil {
 		return
 	}
-	var prevVal []byte
-	if prev != nil {
-		prevVal = prev.val
+	var anyMatch bool
+	var lefts, rights []*node
+	for _, n := range adjacentNodes {
+		if n != nil {
+			lefts = append(lefts, n.left())
+			rights = append(rights, n.right())
+			if bytes.Equal(n.val, rootHash.val) {
+				anyMatch = true
+			}
+		}
 	}
-	var nextVal []byte
-	if next != nil {
-		nextVal = next.val
-	}
-	if !bytes.Equal(prevVal, rootHash.val) && !bytes.Equal(nextVal, rootHash.val) {
+	if !anyMatch {
 		// erase this rootHash if it's the root of a page
 		if rootHash.isLeaf() {
 			// populate next page before deleting from the cache
@@ -359,8 +362,8 @@ func (s *smt) eraseRecursive(prev *node, rootHash *node, next *node) {
 			return
 		}
 		// maybe make this parallel?
-		s.eraseRecursive(prev.left(), rootHash.left(), next.left())
-		s.eraseRecursive(prev.right(), rootHash.right(), next.right())
+		s.eraseRecursive(rootHash.left(), lefts)
+		s.eraseRecursive(rootHash.right(), rights)
 	}
 }
 

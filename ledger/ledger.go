@@ -58,18 +58,22 @@ func Make(_ time.Duration) Ledger {
 }
 
 func (s smtLedger) EraseRootHash(rootHash string) error {
-	e := s.history.Get(rootHash)
-	if e == nil {
+	// occurences is a list of every time in (underased) history when this hash has been observed
+	occurences := s.history.Get(rootHash)
+	if occurences == nil || len(occurences) == 0 {
 		return fmt.Errorf("rootHash %s is not present in ledger history", rootHash)
 	}
-	//TODO: handle nil
-	prev := e.Prev().Value.([]byte)
-	next := e.Next().Value.([]byte)
-	err := s.tree.Erase(prev, e.Value.([]byte), next)
+	var adjacentRoots [][]byte
+	for _, o := range occurences {
+		adjacentRoots = append(adjacentRoots, o.Prev().Value.([]byte), o.Next().Value.([]byte))
+	}
+	err := s.tree.Erase(occurences[0].Value.([]byte), adjacentRoots)
 	if err != nil {
 		return err
 	}
-	s.history.Remove(e)
+	for _, o := range occurences {
+		s.history.Remove(o)
+	}
 	s.history.lock.Lock()
 	defer s.history.lock.Unlock()
 	delete(s.history.index, rootHash)
