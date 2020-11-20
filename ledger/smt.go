@@ -129,7 +129,6 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	ch := make(chan result, 1)
-	//s.update(s.Root(), keys, values, nil, 0, s.trieHeight, false, true, ch)
 	n, err := buildRootNode(s.Root(), s.trieHeight, s.db)
 	if err != nil {
 		return nil, err
@@ -175,7 +174,10 @@ func (s *smt) delete(n *node, key []byte) (newVal, reloKey, reloValue []byte) {
 		keyChild = n.left()
 		altChild = n.right()
 	}
-	childVal, reloKey, reloValue := s.delete(keyChild, key)
+	var childVal []byte
+	if keyChild != nil {
+		childVal, reloKey, reloValue = s.delete(keyChild, key)
+	}
 	if reloKey != nil && altChild != nil {
 		keyChild.makeShortcut(reloKey, reloValue)
 		keyChild.val = keyChild.calculateHash(s.hash, s.defaultHashes)
