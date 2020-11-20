@@ -51,7 +51,7 @@ type smtLedger struct {
 }
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
-// the retention parameter has been deprecated in favor of EraseRootHash, but is left
+// the retention parameter has been removed in favor of EraseRootHash, but is left
 // here for backwards compatibility
 func Make(_ time.Duration) Ledger {
 	return smtLedger{tree: newSMT(hasher, nil), history: newHistory()}
