@@ -66,8 +66,6 @@ type smt struct {
 	hash func(data ...[]byte) []byte
 	// trieHeight is the number if bits in a key
 	trieHeight byte
-	// the minimum length of time old nodes will be retained.
-	retentionDuration time.Duration
 	// lock is for the whole struct
 	lock sync.RWMutex
 }
@@ -79,14 +77,13 @@ const forever time.Duration = 1<<(63-1) - 1
 
 // newSMT creates a new smt given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
 // duration for old nodes.
-func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache, retentionDuration time.Duration) *smt {
+func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache) *smt {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, time.Second)
 	}
 	s := &smt{
-		hash:              hash,
-		trieHeight:        byte(len(hash([]byte("height"))) * 8), // hash any string to get output length
-		retentionDuration: retentionDuration,
+		hash:       hash,
+		trieHeight: byte(len(hash([]byte("height"))) * 8), // hash any string to get output length
 	}
 	s.db = &cacheDB{
 		updatedNodes: byteCache{cache: updateCache},

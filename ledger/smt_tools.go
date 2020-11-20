@@ -113,18 +113,41 @@ func (s *smt) DumpToDOTPrev(prevRoot []byte) string {
 	if err != nil {
 		return ""
 	}
-	inn, _ := s.dumpToDOT(n, 0)
-	return fmt.Sprintf("digraph SMT {\nnode [fontname=\"Arial\"];\n%s}", inn)
+	inn, _ := s.dumpToDOT(n, 0, 0)
+	return fmt.Sprintf("digraph SMT {\nnode [fontname=\"Arial\" style=\"filled\" colorscheme=gnbu3];\n%s\n%s}", legend, inn)
 }
 
-func (s *smt) dumpToDOT(n *node, nullCounter int) (string, int) {
+func (s *smt) dumpToDOT(n *node, nullCounter int, color int) (string, int) {
 	if n == nil {
 		s := fmt.Sprintf("null%d;\nnull%d [shape=point];\n", nullCounter, nullCounter)
 		nullCounter++
 		return s, nullCounter
 	}
-	left, nullCounter := s.dumpToDOT(n.left(), nullCounter)
-	right, nullCounter := s.dumpToDOT(n.right(), nullCounter)
+	var left, right string
+	if color == 0 && n.isShortcut() {
+		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 3)
+		right, nullCounter = s.dumpToDOT(n.right(), nullCounter, 2)
+	} else {
+		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 0)
+		right, nullCounter = s.dumpToDOT(n.right(), nullCounter, 0)
+	}
 	me := fmt.Sprintf("%x", n.val) //[len(n.val)*2-8:]
-	return fmt.Sprintf("\"%s\";\n\"%s\"->%s\"%s\"->%s", me, me, left, me, right), nullCounter
+	result := fmt.Sprintf("\"%s\";\n\"%s\"->%s\"%s\"->%s", me, me, left, me, right)
+	if color > 0 {
+		// color key and value nodes
+		result = fmt.Sprintf("%s\"%s\" [fillcolor=%d]\n", result, me, color)
+	}
+	if n.isLeaf() && color == 0 {
+		// page borders are boxes
+		result = fmt.Sprintf("%s\"%s\" [shape=box]\n", result, me)
+	}
+	return result, nullCounter
 }
+
+const legend = `
+subgraph legend {
+    "shortcut key" [fillcolor=3]
+    "shortcut val"  [fillcolor=2]
+    "page border" [shape=box]
+}
+`
