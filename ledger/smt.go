@@ -161,9 +161,8 @@ func (s *smt) delete(n *node, key []byte) (newVal, reloKey, reloValue []byte) {
 			n.removeShortcut()
 			n.val = nil
 			return nil, nil, nil
-		} else {
-			return n.val, nil, nil
 		}
+		return n.val, nil, nil
 	}
 	var keyChild, altChild *node // keyChild is the child n traversed in search of the key
 	// altChild is the n not traveled, important for relocating shortcuts
@@ -251,10 +250,8 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 			rch := make(chan result, 1)
 			node.initRight()
 			node.initLeft()
-			//go s.update(node.left(), lkeys, lvalues, lch)
-			//go s.update(node.right(), rkeys, rvalues, rch)
-			s.update(node.left(), lkeys, lvalues, lch)
-			s.update(node.right(), rkeys, rvalues, rch)
+			go s.update(node.left(), lkeys, lvalues, lch)
+			go s.update(node.right(), rkeys, rvalues, rch)
 			lresult := <-lch
 			rresult := <-rch
 			if lresult.err != nil {
@@ -270,7 +267,6 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	node.val = node.calculateHash(s.hash, s.defaultHashes)
 	node.store()
 	ch <- result{update: node.val}
-	return
 }
 
 // splitKeys divides the array of keys into 2 so they can update left and right branches in parallel

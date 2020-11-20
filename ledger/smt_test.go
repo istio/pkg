@@ -155,6 +155,7 @@ func TestSmtDelete(t *testing.T) {
 	// To delete a key, just set it's value to Default leaf hash.
 	newRoot, err := smt.Delete(keys[0])
 	assert.NilError(t, err)
+	validate(t, smt)
 	newValue, err := smt.Get(keys[0])
 	assert.NilError(t, err)
 	if len(newValue) != 0 {
@@ -203,7 +204,7 @@ func TestSmtDelete(t *testing.T) {
 }
 
 func equalByteArrays(t *testing.T, left, right [][]byte) {
-	assert.Equal(t, len(left), len(right), "byte arrays are not of equal lenght")
+	assert.Equal(t, len(left), len(right), "byte arrays are not of equal length")
 	for i, l := range left {
 		assert.Assert(t, bytes.Equal(l, right[i]), "byte array index %d is not equal", i)
 	}

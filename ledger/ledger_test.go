@@ -31,7 +31,7 @@ import (
 
 func TestLongKeys(t *testing.T) {
 	longKey := "virtual-service/frontend/default"
-	l := smtLedger{tree: newSMT(hasher, nil, time.Minute), history: NewHistory()}
+	l := smtLedger{tree: newSMT(hasher, nil, time.Minute), history: newHistory()}
 	_, err := l.Put(longKey+"1", "1")
 	assert.NilError(t, err)
 	_, err = l.Put(longKey+"2", "2")
@@ -48,7 +48,7 @@ func TestLongKeys(t *testing.T) {
 }
 
 func TestGetAndPrevious(t *testing.T) {
-	l := smtLedger{tree: newSMT(hasher, nil, time.Minute), history: NewHistory()}
+	l := smtLedger{tree: newSMT(hasher, nil, time.Minute), history: newHistory()}
 	resultHashes := map[string]bool{}
 	l.Put("foo", "bar")
 	firstHash := l.RootHash()
@@ -73,7 +73,7 @@ func TestGetAndPrevious(t *testing.T) {
 }
 
 func TestOrderAgnosticism(t *testing.T) {
-	l := smtLedger{tree: newSMT(MyHasher, nil, time.Minute), history: NewHistory()}
+	l := smtLedger{tree: newSMT(MyHasher, nil, time.Minute), history: newHistory()}
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	firstHash, err := l.Put("second", "value")
@@ -113,7 +113,7 @@ func TestCollision(t *testing.T) {
 		}
 		return MyHasher(data...)
 	}
-	l := smtLedger{tree: newSMT(HashCollider, nil, time.Minute), history: NewHistory()}
+	l := smtLedger{tree: newSMT(HashCollider, nil, time.Minute), history: newHistory()}
 	hit = true
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
@@ -161,7 +161,7 @@ func addConfig(ledger Ledger, b *testing.B) string {
 
 func TestParallel(t *testing.T) {
 	l := Make(time.Minute)
-	size := 500
+	size := 100
 	k1, v1 := getFreshEntries(size)
 	k2, v2 := getFreshEntries(size)
 	for i := 0; i < size; i++ {

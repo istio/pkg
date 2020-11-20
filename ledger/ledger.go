@@ -52,7 +52,7 @@ type smtLedger struct {
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
 func Make(retention time.Duration) Ledger {
-	return smtLedger{tree: newSMT(hasher, nil, retention), history: NewHistory()}
+	return smtLedger{tree: newSMT(hasher, nil, retention), history: newHistory()}
 }
 
 func (s smtLedger) EraseRootHash(rootHash string) error {

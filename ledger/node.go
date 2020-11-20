@@ -136,15 +136,13 @@ func heightInPage(i byte) byte {
 func (n *node) height() byte {
 	// this is mathematically correct but computationally expensive
 	return n.page.height - heightInPage(n.index)
-	//return n.page.height - int(math.Floor(math.Log2(float64(n.index+1))))
 }
 
 func (n *node) isShortcut() bool {
 	if n.height()%4 != 0 {
 		return len(n.val) != 0 && n.val[hashLength] == 1
-	} else {
-		return n.getNextPage().nodes[0].val[0] == 1
 	}
+	return n.getNextPage().nodes[0].val[0] == 1
 }
 
 // returns true if node is a leaf of the page
@@ -217,14 +215,12 @@ func (n *node) makeShortcut(key []byte, val []byte) {
 		p = n.page
 	}
 	l := node{
-		val: key,
-		//val:      append(key, 2),
+		val:   key,
 		index: leftIndex(n.index),
 		page:  p,
 	}
 	r := node{
-		val: val,
-		//val:      append(val, 2), // I don't know why we put '2' here
+		val:   val,
 		index: rightIndex(n.index),
 		page:  p,
 	}
@@ -252,10 +248,8 @@ func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [
 		return nil
 	} else if n.left() == nil || len(n.left().val) == 0 {
 		h = hasher(defaultHashes[n.height()-1], n.right().val[:hashLength])
-		//h = n.right().val[:hashLength]
 	} else if n.right() == nil || len(n.right().val) == 0 {
 		h = hasher(n.left().val[:hashLength], defaultHashes[n.height()-1])
-		//h = n.left().val[:hashLength]
 	} else {
 		h = hasher(n.left().val[:hashLength], n.right().val[:hashLength])
 	}

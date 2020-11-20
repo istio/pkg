@@ -28,7 +28,7 @@ type history struct {
 	lock sync.RWMutex
 }
 
-func NewHistory() *history {
+func newHistory() *history {
 	return &history{
 		List:  list.New(),
 		index: make(map[string]*list.Element),
