@@ -265,8 +265,6 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = smt.Update([][]byte{key1}, getFreshData(1))
 	assert.NilError(t, err)
-	x := smt.DumpToDOT()
-	fmt.Sprintf(x)
 }
 func bitSet(bits []byte, i int) {
 	bits[i/8] |= 1 << uint(7-i%8)

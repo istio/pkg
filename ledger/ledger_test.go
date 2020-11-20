@@ -221,8 +221,6 @@ func TestEraseRootHash(t *testing.T) {
 	assert.NilError(t, err)
 	err = l.Delete("Six")
 	assert.NilError(t, err)
-	x := l.(smtLedger).tree.DumpToDOT()
-	fmt.Sprintf(x)
 	_, err = l.Put("Eight", "8")
 	assert.NilError(t, err)
 	_, err = l.Put("Nine", "9")
