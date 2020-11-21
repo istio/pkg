@@ -63,3 +63,7 @@ func (b *byteCache) SetWithExpiration(key hash, value [][]byte, expiration time.
 func (b *byteCache) Delete(key hash) {
 	b.cache.Remove(key)
 }
+
+func (c *cacheDB) Stats() cache.Stats {
+	return c.updatedNodes.cache.Stats()
+}

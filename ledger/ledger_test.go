@@ -240,4 +240,5 @@ func TestEraseRootHash(t *testing.T) {
 	assert.ErrorContains(t, err, "root node")
 	err = l.EraseRootHash(seven)
 	assert.ErrorContains(t, err, "rootHash")
+	assert.Equal(t, l.Stats().Misses, 2)
 }

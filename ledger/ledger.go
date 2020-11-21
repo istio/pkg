@@ -21,6 +21,7 @@ package ledger
 import (
 	"encoding/base64"
 	"fmt"
+	"istio.io/pkg/cache"
 	"time"
 
 	"github.com/spaolacci/murmur3"
@@ -43,6 +44,8 @@ type Ledger interface {
 	GetPreviousValue(previousRootHash, key string) (result string, err error)
 	// EraseRootHash re-claims any memory used by this version of history, preserving bits shared with other versions.
 	EraseRootHash(rootHash string) error
+	// Stats gives basic storage info regarding the ledger's underlying cache
+	Stats() cache.Stats
 }
 
 type smtLedger struct {
@@ -143,4 +146,8 @@ func coerceToHashLen(val string) []byte {
 		byteVal = append(zerofill[:hashLen/8-len(byteVal)], byteVal...)
 	}
 	return byteVal[:hashLen/8]
+}
+
+func (s smtLedger) Stats() cache.Stats {
+	return s.tree.Stats()
 }

@@ -17,6 +17,7 @@ package ledger
 import (
 	"bytes"
 	"fmt"
+	"istio.io/pkg/cache"
 )
 
 func (s *smt) Root() []byte {
@@ -67,6 +68,10 @@ func (s *smt) get(node *node, key []byte) ([]byte, error) {
 
 func (s *smt) GetAll() (keys, values [][]byte, err error) {
 	return s.GetAllPrevious(s.root)
+}
+
+func (s *smt) Stats() cache.Stats {
+	return s.db.Stats()
 }
 
 func (s *smt) GetAllPrevious(prevRoot []byte) (keys, values [][]byte, err error) {
