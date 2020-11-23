@@ -17,39 +17,123 @@ package ledger
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/onsi/gomega/types"
+	"istio.io/pkg/cache"
 	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
+	. "github.com/onsi/gomega"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/sync/errgroup"
-	"gotest.tools/assert"
 )
 
+type testLedger struct {
+	s *smtLedger
+	g *GomegaWithT
+}
+
+type validTreeMatcher struct {}
+
+func (matcher *validTreeMatcher) FailureMessage(actual interface{}) (message string) {
+	panic("implement me")
+}
+
+func (matcher *validTreeMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	panic("implement me")
+}
+
+func (matcher *validTreeMatcher) Match(actual interface{}) (success bool, err error) {
+	tree, ok := actual.(*smtLedger)
+	if !ok {
+		return false, fmt.Errorf("validTreeMatch matcher expects an smtLedger")
+	}
+	return validate(tree.tree)
+}
+
+func beValidTree() types.GomegaMatcher {
+	return &validTreeMatcher{}
+}
+
+func (tl *testLedger) Delete(key string) error {
+	err := tl.s.Delete(key)
+	tl.g.Expect(tl.s).To(beValidTree())
+	return err
+}
+
+func (tl *testLedger) Get(key string) (string, error) {
+	return tl.s.Get(key)
+}
+
+func (tl *testLedger) RootHash() string {
+	return tl.s.RootHash()
+}
+
+func (tl *testLedger) GetPreviousValue(previousRootHash, key string) (result string, err error) {
+	return tl.s.GetPreviousValue(previousRootHash, key)
+}
+
+func (tl *testLedger) EraseRootHash(rootHash string) error {
+	err := tl.s.EraseRootHash(rootHash)
+	tl.g.Expect(tl.s).To(beValidTree())
+	return err
+}
+
+func (tl *testLedger) Stats() cache.Stats {
+	return tl.s.Stats()
+}
+
+func (tl *testLedger) GetAll() (map[string]string, error) {
+	return tl.s.GetAll()
+}
+
+func (tl *testLedger) GetAllPrevious(s string) (map[string]string, error) {
+	return tl.s.GetAllPrevious(s)
+}
+
+func (tl *testLedger) Put(key, value string) (result string, err error) {
+	result, err = tl.s.Put(key, value)
+	tl.g.Expect(tl.s).To(beValidTree())
+	return
+}
+
+func MakeTest(g *GomegaWithT) Ledger {
+	s := Make(1).(*smtLedger)
+	RegisterFailHandler(func(message string, callerSkip ...int){
+		fmt.Printf("Failure detected.  Graphviz of failing ledger:\n%s", s.tree.DumpToDOT())
+	})
+	return &testLedger{
+		s: s,
+		g: g,
+	}
+}
+
 func TestLongKeys(t *testing.T) {
+	g := NewGomegaWithT(t)
 	longKey := "virtual-service/frontend/default"
-	l := Make(1)
+	l := MakeTest(g)
 	_, err := l.Put(longKey+"1", "1")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put(longKey+"2", "2")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	res, err := l.Get(longKey + "1")
-	assert.NilError(t, err)
-	assert.Equal(t, res, "1")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(res).To(Equal("1"))
 	res, err = l.Get(longKey + "2")
-	assert.NilError(t, err)
-	assert.Equal(t, res, "2")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(res).To(Equal("2"))
 	res, err = l.Get(longKey)
-	assert.NilError(t, err)
-	assert.Equal(t, res, "")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(res).To(Equal(""))
+
 }
 
 func TestGetAndPrevious(t *testing.T) {
-	l := Make(1)
+	g := NewGomegaWithT(t)
+	l := MakeTest(g)
 	resultHashes := map[string]bool{}
 	l.Put("foo", "bar")
 	firstHash := l.RootHash()
@@ -60,31 +144,31 @@ func TestGetAndPrevious(t *testing.T) {
 	l.Put("second", "value")
 	resultHashes[l.RootHash()] = true
 	getResult, err := l.Get("foo")
-	assert.NilError(t, err)
-	assert.Equal(t, getResult, "baz")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(getResult).To(Equal("baz"))
 	getResult, err = l.Get("second")
-	assert.NilError(t, err)
-	assert.Equal(t, getResult, "value")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(getResult).To(Equal("value"))
 	getResult, err = l.GetPreviousValue(firstHash, "foo")
-	assert.NilError(t, err)
-	assert.Equal(t, getResult, "bar")
-	if len(resultHashes) != 3 {
-		t.Fatal("Encountered has collision")
-	}
+	g.Expect(err).NotTo(HaveOccurred())
+	getResult, err = l.GetPreviousValue(firstHash, "foo")
+	g.Expect(getResult).To(Equal("bar"))
+	g.Expect(resultHashes).To(HaveLen(3))
 }
 
 func TestOrderAgnosticism(t *testing.T) {
-	l := Make(1)
+	g := NewGomegaWithT(t)
+	l := MakeTest(g)
 	_, err := l.Put("foo", "bar")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	firstHash, err := l.Put("second", "value")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	secondHash, err := l.Put("foo", "baz")
-	assert.NilError(t, err)
-	assert.Assert(t, firstHash != secondHash)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(firstHash).NotTo(Equal(secondHash))
 	lastHash, err := l.Put("foo", "bar")
-	assert.NilError(t, err)
-	assert.Equal(t, firstHash, lastHash)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(firstHash).To(Equal(lastHash))
 }
 
 func MyHasher(data ...[]byte) (result []byte) {
@@ -98,6 +182,7 @@ func MyHasher(data ...[]byte) (result []byte) {
 }
 
 func TestCollision(t *testing.T) {
+	g := NewGomegaWithT(t)
 	hit := false
 	HashCollider := func(data ...[]byte) []byte {
 		if hit {
@@ -114,16 +199,16 @@ func TestCollision(t *testing.T) {
 		}
 		return MyHasher(data...)
 	}
-	l := Make(1)
-	l.(*smtLedger).tree.hash = HashCollider
+	l := MakeTest(g)
+	l.(*testLedger).s.tree.hash = HashCollider
 	hit = true
 	_, err := l.Put("foo", "bar")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("fhgwgads", "shouldcollide")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	value, err := l.Get("foo")
-	assert.NilError(t, err)
-	assert.Equal(t, value, "bar")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(value).To(Equal("bar"))
 
 }
 
@@ -132,14 +217,15 @@ func HashCollider(data ...[]byte) []byte {
 }
 
 func BenchmarkScale(b *testing.B) {
+	g := NewGomegaWithT(b)
 	const configSize = 100
 	b.ReportAllocs()
 	b.SetBytes(8)
-	l := Make(time.Minute)
+	l := Make(1)
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
-		ids = append(ids, addConfig(l, b))
+		ids = append(ids, addConfig(l, g))
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -154,15 +240,16 @@ func BenchmarkScale(b *testing.B) {
 	}
 	b.StopTimer()
 }
-func addConfig(ledger Ledger, b *testing.B) string {
+func addConfig(ledger Ledger, g *GomegaWithT) string {
 	objectID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := ledger.Put(objectID, fmt.Sprintf("%d", rand.Int()))
-	assert.NilError(b, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	return objectID
 }
 
 func TestParallel(t *testing.T) {
-	l := Make(time.Minute)
+	g := NewGomegaWithT(t)
+	l := MakeTest(g)
 	size := 100
 	k1, v1 := getFreshEntries(size)
 	k2, v2 := getFreshEntries(size)
@@ -173,14 +260,11 @@ func TestParallel(t *testing.T) {
 		value := v1[i]
 		go func() {
 			_, err := l.Put(key, value)
-			assert.NilError(t, err)
+			g.Expect(err).NotTo(HaveOccurred())
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	var graphs []string
-	graphs = append(graphs, l.(*smtLedger).tree.DumpToDOT())
-	validate(t, l.(*smtLedger).tree)
 	wg = sync.WaitGroup{}
 	wg.Add(size)
 	for i := 0; i < size; i++ {
@@ -189,22 +273,18 @@ func TestParallel(t *testing.T) {
 		del := k1[i]
 		go func() {
 			_, err := l.Put(key, value)
-			assert.NilError(t, err)
+			g.Expect(err).NotTo(HaveOccurred())
 			err = l.Delete(del)
-			assert.NilError(t, err)
-			validate(t, l.(*smtLedger).tree)
+			g.Expect(err).NotTo(HaveOccurred())
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	dot := l.(*smtLedger).tree.DumpToDOT()
-	fmt.Sprintf(dot)
 	all, err := l.GetAll()
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(all).To(HaveLen(size))
 	for i := range k2 {
-		val, ok := all[k2[i]]
-		assert.Assert(t, ok, "ledger missing key %s", k2[i])
-		assert.Equal(t, v2[i], val)
+		g.Expect(all).To(HaveKeyWithValue(k2[i], v2[i]))
 	}
 }
 
@@ -227,49 +307,47 @@ func getFreshEntries(size int) (keys []string, values []string) {
 }
 
 func TestEraseRootHash(t *testing.T) {
-	l := Make(time.Minute)
+	g := NewGomegaWithT(t)
+	l := MakeTest(g)
 	_, err := l.Put("One", "1")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Two", "2")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Three", "3")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Four", "4")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Five", "5")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	six, err := l.Put("Six", "6")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	seven, err := l.Put("Seven", "7")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	err = l.Delete("Six")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	err = l.Delete("Six")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Eight", "8")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Nine", "9")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Ten", "10")
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	err = l.EraseRootHash(seven)
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	val, err := l.GetPreviousValue(six, "Six")
-	assert.NilError(t, err)
-	assert.Equal(t, val, "6")
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(val).To(Equal("6"))
 	_, err = l.GetPreviousValue(seven, "Six")
-	assert.ErrorContains(t, err, "root node")
+	g.Expect(err).To(MatchError(ContainSubstring("root node")))
 	err = l.EraseRootHash(six)
-	assert.NilError(t, err)
+	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.GetPreviousValue(six, "Six")
-	assert.ErrorContains(t, err, "root node")
+	g.Expect(err).To(MatchError(ContainSubstring("root node")))
 	err = l.EraseRootHash(seven)
-	assert.ErrorContains(t, err, "rootHash")
-	assert.Equal(t, l.Stats().Misses, uint64(2))
+	g.Expect(err).To(MatchError(ContainSubstring("rootHash")))
+	g.Expect(l.Stats().Misses).To(Equal( uint64(2)))
 	all, err := l.GetAll()
-	assert.NilError(t, err)
-	val, ok := all["One"]
-	assert.Assert(t, ok, "ledger missing key %s", "One")
-	assert.Equal(t, "1", val)
-
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(all).To(HaveKeyWithValue("One", "1"))
 }

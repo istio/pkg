@@ -31,8 +31,8 @@ import (
 
 // Ledger exposes a modified map with three unique characteristics:
 // 1. every unique state of the map is given a unique hash
-// 2. prior states of the map are retained for a fixed period of time
-// 2. given a previous hash, we can retrieve a previous state from the map, if it is still retained.
+// 2. prior states of the map are retained until erased
+// 3. given a previous hash, we can retrieve a previous state from the map, if it is still retained.
 type Ledger interface {
 	// Put adds or overwrites a key in the Ledger
 	Put(key, value string) (string, error)
@@ -48,7 +48,9 @@ type Ledger interface {
 	EraseRootHash(rootHash string) error
 	// Stats gives basic storage info regarding the ledger's underlying cache
 	Stats() cache.Stats
+	// GetAll returns the entire state of the ledger
 	GetAll() (map[string]string, error)
+	// GetAllPrevious returns the entire state of the ledger at an arbitrary version
 	GetAllPrevious(string) (map[string]string, error)
 }
 
@@ -97,7 +99,7 @@ func (s *smtLedger) EraseRootHash(rootHash string) error {
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
 // removal after the retention specified in Make()
 func (s *smtLedger) Put(key, value string) (result string, err error) {
-	b, err := s.tree.Update([][]byte{s.coerceKeyToHashLen(key)}, [][]byte{coerceValToHashLen(value)})
+	b, err := s.tree.Update([][]byte{s.coerceKeyToHashLen(key)}, [][]byte{stringToBytes(value)})
 	s.history.Put(b)
 	result = s.RootHash()
 	return
@@ -140,20 +142,11 @@ func (s *smtLedger) coerceKeyToHashLen(val string) []byte {
 	result := hasher.Sum(nil)
 	var h hash
 	copy(h[:], result)
-	s.keyCache.Set(h, [][]byte{coerceValToHashLen(val)})
+	s.keyCache.Set(h, [][]byte{stringToBytes(val)})
 	return result
 }
 
-func coerceValToHashLen(val string) []byte {
-	// hash length is fixed at 64 bits until generic support is added
-	// TODO: can we eliminate the limit on value length?
-	//byteVal := []byte(val)
-	//if len(byteVal) < hashLength {
-	//	// zero fill the left side of the slice
-	//	zerofill := make([]byte, hashLength)
-	//	byteVal = append(zerofill[:hashLength-len(byteVal)], byteVal...)
-	//}
-	//return byteVal[:hashLength]
+func stringToBytes(val string) []byte {
 	return []byte(val)
 }
 

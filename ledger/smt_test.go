@@ -17,6 +17,7 @@ package ledger
 import (
 	"bytes"
 	"fmt"
+	"github.com/onsi/gomega"
 	"math/rand"
 	"runtime"
 	"sort"
@@ -155,7 +156,8 @@ func TestSmtDelete(t *testing.T) {
 	// To delete a key, just set it's value to Default leaf hash.
 	newRoot, err := smt.Delete(keys[0])
 	assert.NilError(t, err)
-	validate(t, smt)
+	g := gomega.NewGomegaWithT(t)
+	g.Expect(smt).To(beValidTree())
 	newValue, err := smt.Get(keys[0])
 	assert.NilError(t, err)
 	if len(newValue) != 0 {
@@ -210,15 +212,17 @@ func equalByteArrays(t *testing.T, left, right [][]byte) {
 	}
 }
 
-func validate(t *testing.T, s *smt) {
+func validate(s *smt) (bool, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	n, err := buildRootNode(s.root, s.trieHeight, s.db)
-	assert.NilError(t, err)
-	validateRecursive(t, n, s.hash, s.defaultHashes)
+	if err != nil {
+		return false, err
+	}
+	return validateRecursive(n, s.hash, s.defaultHashes)
 }
 
-func validateRecursive(t *testing.T, n *node, hasher func(data ...[]byte) []byte, defaultHashes [][]byte) {
+func validateRecursive(n *node, hasher func(data ...[]byte) []byte, defaultHashes [][]byte) (bool, error) {
 	nilChildren := func(n *node, expect bool) error {
 		actLeft := n.left() == nil
 		actRight := n.right() == nil
@@ -231,19 +235,28 @@ func validateRecursive(t *testing.T, n *node, hasher func(data ...[]byte) []byte
 		return nil
 	}
 	correctVal := n.calculateHash(hasher, defaultHashes)
-	assert.Assert(t, bytes.Equal(n.val, correctVal), "incorrect node value")
+	if !bytes.Equal(n.val, correctVal) {
+		return false, fmt.Errorf("incorrect node value, expected '%x', but got '%x'", correctVal, n.val)
+	}
 	if n.isShortcut() {
-		assert.NilError(t, nilChildren(n, false), "shortcut children cannot be nil")
-		assert.NilError(t, nilChildren(n.left(), true), "shortcut cannot have grandchildren")
-		assert.NilError(t, nilChildren(n.right(), true), "shortcut cannot have grandchildren")
+		if err := nilChildren(n, false); err != nil {
+			return false, fmt.Errorf("shortcut children cannot be nil: %s", err)
+		}
+		if err := nilChildren(n.left(), true); err != nil {
+			return false, fmt.Errorf("shortcut cannot have grandchildren: %s", err)
+		}
+		if err := nilChildren(n.right(), true); err != nil {
+			return false, fmt.Errorf("shortcut cannot have grandchildren: %s", err)
+		}
 	} else {
 		if n.left() != nil {
-			validateRecursive(t, n.left(), hasher, defaultHashes)
+			return validateRecursive(n.left(), hasher, defaultHashes)
 		}
 		if n.right() != nil {
-			validateRecursive(t, n.right(), hasher, defaultHashes)
+			return validateRecursive(n.right(), hasher, defaultHashes)
 		}
 	}
+	return true, nil
 }
 
 // test updating and deleting at the same time
