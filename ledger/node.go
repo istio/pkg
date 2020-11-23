@@ -247,11 +247,11 @@ func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [
 		//s.deleteOldNode(oldRoot) //TODO
 		return nil
 	} else if n.left() == nil || len(n.left().val) == 0 {
-		h = hasher(defaultHashes[n.height()-1], n.right().val[:hashLength])
+		h = hasher(defaultHashes[n.height()-1], n.right().val)
 	} else if n.right() == nil || len(n.right().val) == 0 {
 		h = hasher(n.left().val[:hashLength], defaultHashes[n.height()-1])
 	} else {
-		h = hasher(n.left().val[:hashLength], n.right().val[:hashLength])
+		h = hasher(n.left().val[:hashLength], n.right().val)
 	}
 	var sc byte
 	if n.isShortcut() {

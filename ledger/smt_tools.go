@@ -54,7 +54,7 @@ func (s *smt) get(node *node, key []byte) ([]byte, error) {
 	if node.isShortcut() {
 		// shortcuts store their key on left, and value on right
 		if bytes.Equal(node.left().val[:hashLength], key) {
-			return node.right().val[:hashLength], nil
+			return node.right().val, nil
 		}
 		return nil, nil
 	}
@@ -128,6 +128,7 @@ func (s *smt) dumpToDOT(n *node, nullCounter int, color int) (string, int) {
 		nullCounter++
 		return s, nullCounter
 	}
+	me := fmt.Sprintf("%x", n.val) //[len(n.val)*2-8:]
 	var left, right string
 	if color == 0 && n.isShortcut() {
 		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 3)
@@ -136,7 +137,6 @@ func (s *smt) dumpToDOT(n *node, nullCounter int, color int) (string, int) {
 		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 0)
 		right, nullCounter = s.dumpToDOT(n.right(), nullCounter, 0)
 	}
-	me := fmt.Sprintf("%x", n.val) //[len(n.val)*2-8:]
 	result := fmt.Sprintf("\"%s\";\n\"%s\"->%s\"%s\"->%s", me, me, left, me, right)
 	if color > 0 {
 		// color key and value nodes

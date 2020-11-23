@@ -180,6 +180,7 @@ func (s *smt) delete(n *node, key []byte) (newVal, reloKey, reloValue []byte) {
 		keyChild.val = keyChild.calculateHash(s.hash, s.defaultHashes)
 		reloKey, reloValue = nil, nil
 		childVal = keyChild.val
+		keyChild.store()
 	}
 	if childVal == nil && altChild != nil && altChild.isShortcut() {
 		reloKey = altChild.left().val
@@ -211,7 +212,7 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	}
 	// if node a shortcut, it needs to be relocated further down the tree with one of our updated keys
 	if node.isShortcut() {
-		keys, values = s.maybeAddShortcutToKV(keys, values, node.left().val[:hashLength], node.right().val[:hashLength])
+		keys, values = s.maybeAddShortcutToKV(keys, values, node.left().val[:hashLength], node.right().val)
 		// remove shortcut notation
 		node.removeShortcut()
 	}

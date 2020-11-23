@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 
 func TestLongKeys(t *testing.T) {
 	longKey := "virtual-service/frontend/default"
-	l := smtLedger{tree: newSMT(hasher, nil), history: newHistory()}
+	l := Make(1)
 	_, err := l.Put(longKey+"1", "1")
 	assert.NilError(t, err)
 	_, err = l.Put(longKey+"2", "2")
@@ -48,7 +49,7 @@ func TestLongKeys(t *testing.T) {
 }
 
 func TestGetAndPrevious(t *testing.T) {
-	l := smtLedger{tree: newSMT(hasher, nil), history: newHistory()}
+	l := Make(1)
 	resultHashes := map[string]bool{}
 	l.Put("foo", "bar")
 	firstHash := l.RootHash()
@@ -73,7 +74,7 @@ func TestGetAndPrevious(t *testing.T) {
 }
 
 func TestOrderAgnosticism(t *testing.T) {
-	l := smtLedger{tree: newSMT(MyHasher, nil), history: newHistory()}
+	l := Make(1)
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
 	firstHash, err := l.Put("second", "value")
@@ -113,7 +114,8 @@ func TestCollision(t *testing.T) {
 		}
 		return MyHasher(data...)
 	}
-	l := smtLedger{tree: newSMT(HashCollider, nil), history: newHistory()}
+	l := Make(1)
+	l.(*smtLedger).tree.hash = HashCollider
 	hit = true
 	_, err := l.Put("foo", "bar")
 	assert.NilError(t, err)
@@ -164,14 +166,23 @@ func TestParallel(t *testing.T) {
 	size := 100
 	k1, v1 := getFreshEntries(size)
 	k2, v2 := getFreshEntries(size)
+	wg := sync.WaitGroup{}
+	wg.Add(size)
 	for i := 0; i < size; i++ {
 		key := k1[i]
 		value := v1[i]
 		go func() {
 			_, err := l.Put(key, value)
 			assert.NilError(t, err)
+			wg.Done()
 		}()
 	}
+	wg.Wait()
+	var graphs []string
+	graphs = append(graphs, l.(*smtLedger).tree.DumpToDOT())
+	validate(t, l.(*smtLedger).tree)
+	wg = sync.WaitGroup{}
+	wg.Add(size)
 	for i := 0; i < size; i++ {
 		key := k2[i]
 		value := v2[i]
@@ -181,7 +192,19 @@ func TestParallel(t *testing.T) {
 			assert.NilError(t, err)
 			err = l.Delete(del)
 			assert.NilError(t, err)
+			validate(t, l.(*smtLedger).tree)
+			wg.Done()
 		}()
+	}
+	wg.Wait()
+	dot := l.(*smtLedger).tree.DumpToDOT()
+	fmt.Sprintf(dot)
+	all, err := l.GetAll()
+	assert.NilError(t, err)
+	for i := range k2 {
+		val, ok := all[k2[i]]
+		assert.Assert(t, ok, "ledger missing key %s", k2[i])
+		assert.Equal(t, v2[i], val)
 	}
 }
 
@@ -221,6 +244,8 @@ func TestEraseRootHash(t *testing.T) {
 	assert.NilError(t, err)
 	err = l.Delete("Six")
 	assert.NilError(t, err)
+	err = l.Delete("Six")
+	assert.NilError(t, err)
 	_, err = l.Put("Eight", "8")
 	assert.NilError(t, err)
 	_, err = l.Put("Nine", "9")
@@ -240,5 +265,11 @@ func TestEraseRootHash(t *testing.T) {
 	assert.ErrorContains(t, err, "root node")
 	err = l.EraseRootHash(seven)
 	assert.ErrorContains(t, err, "rootHash")
-	assert.Equal(t, l.Stats().Misses, 2)
+	assert.Equal(t, l.Stats().Misses, uint64(2))
+	all, err := l.GetAll()
+	assert.NilError(t, err)
+	val, ok := all["One"]
+	assert.Assert(t, ok, "ledger missing key %s", "One")
+	assert.Equal(t, "1", val)
+
 }

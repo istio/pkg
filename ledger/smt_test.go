@@ -254,7 +254,7 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	root, _ := smt.Update([][]byte{key0}, values)
 	node, err := buildRootNode(root, smt.trieHeight, smt.db)
 	assert.NilError(t, err)
-	if !node.isShortcut() || !bytes.Equal(node.left().val[:hashLength], key0) || !bytes.Equal(node.right().val[:hashLength], values[0]) {
+	if !node.isShortcut() || !bytes.Equal(node.left().val[:hashLength], key0) || !bytes.Equal(node.right().val, values[0]) {
 		t.Fatal("leaf shortcut didn'tree move up to root")
 	}
 
