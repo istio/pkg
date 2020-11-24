@@ -17,13 +17,13 @@ package ledger
 import (
 	"bytes"
 	"fmt"
-	"github.com/onsi/gomega"
 	"math/rand"
 	"runtime"
 	"sort"
 	"testing"
 	"time"
 
+	"github.com/onsi/gomega"
 	"gotest.tools/assert"
 
 	"istio.io/pkg/cache"

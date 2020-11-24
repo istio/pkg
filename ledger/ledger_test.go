@@ -17,8 +17,6 @@ package ledger
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/onsi/gomega/types"
-	"istio.io/pkg/cache"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -27,8 +25,11 @@ import (
 
 	"github.com/google/uuid"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/sync/errgroup"
+
+	"istio.io/pkg/cache"
 )
 
 type testLedger struct {
@@ -36,7 +37,7 @@ type testLedger struct {
 	g *GomegaWithT
 }
 
-type validTreeMatcher struct {}
+type validTreeMatcher struct{}
 
 func (matcher *validTreeMatcher) FailureMessage(actual interface{}) (message string) {
 	panic("implement me")
@@ -102,7 +103,7 @@ func (tl *testLedger) Put(key, value string) (result string, err error) {
 
 func MakeTest(g *GomegaWithT) Ledger {
 	s := Make(1).(*smtLedger)
-	RegisterFailHandler(func(message string, callerSkip ...int){
+	RegisterFailHandler(func(message string, callerSkip ...int) {
 		fmt.Printf("Failure detected.  Graphviz of failing ledger:\n%s", s.tree.DumpToDOT())
 	})
 	return &testLedger{
@@ -151,7 +152,6 @@ func TestGetAndPrevious(t *testing.T) {
 	g.Expect(getResult).To(Equal("value"))
 	getResult, err = l.GetPreviousValue(firstHash, "foo")
 	g.Expect(err).NotTo(HaveOccurred())
-	getResult, err = l.GetPreviousValue(firstHash, "foo")
 	g.Expect(getResult).To(Equal("bar"))
 	g.Expect(resultHashes).To(HaveLen(3))
 }
@@ -346,7 +346,7 @@ func TestEraseRootHash(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("root node")))
 	err = l.EraseRootHash(seven)
 	g.Expect(err).To(MatchError(ContainSubstring("rootHash")))
-	g.Expect(l.Stats().Misses).To(Equal( uint64(2)))
+	g.Expect(l.Stats().Misses).To(Equal(uint64(2)))
 	all, err := l.GetAll()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(all).To(HaveKeyWithValue("One", "1"))

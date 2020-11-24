@@ -15,8 +15,9 @@
 package ledger
 
 import (
-	"istio.io/pkg/cache"
 	"sync"
+
+	"istio.io/pkg/cache"
 )
 
 type cacheDB struct {

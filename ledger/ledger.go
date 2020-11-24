@@ -21,12 +21,13 @@ package ledger
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
-	"istio.io/pkg/cache"
 	"math"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/spaolacci/murmur3"
+
+	"istio.io/pkg/cache"
 )
 
 // Ledger exposes a modified map with three unique characteristics:
@@ -66,7 +67,7 @@ type smtLedger struct {
 // here for backwards compatibility
 func Make(_ time.Duration) Ledger {
 	return &smtLedger{
-		tree: newSMT(hasher, nil),
+		tree:    newSMT(hasher, nil),
 		history: newHistory(),
 		// keyCache should have ~512kB memory max, each entry is 128 bits = 2^23/2^7 = 2^16
 		keyCache: byteCache{cache: cache.NewLRU(forever, time.Minute, math.MaxUint16)},
@@ -74,20 +75,20 @@ func Make(_ time.Duration) Ledger {
 }
 
 func (s *smtLedger) EraseRootHash(rootHash string) error {
-	// occurences is a list of every time in (underased) history when this hash has been observed
-	occurences := s.history.Get(rootHash)
-	if occurences == nil || len(occurences) == 0 {
+	// occurrences is a list of every time in (underased) history when this hash has been observed
+	occurrences := s.history.Get(rootHash)
+	if len(occurrences) == 0 {
 		return fmt.Errorf("rootHash %s is not present in ledger history", rootHash)
 	}
 	var adjacentRoots [][]byte
-	for _, o := range occurences {
+	for _, o := range occurrences {
 		adjacentRoots = append(adjacentRoots, o.Prev().Value.([]byte), o.Next().Value.([]byte))
 	}
-	err := s.tree.Erase(occurences[0].Value.([]byte), adjacentRoots)
+	err := s.tree.Erase(occurrences[0].Value.([]byte), adjacentRoots)
 	if err != nil {
 		return err
 	}
-	for _, o := range occurences {
+	for _, o := range occurrences {
 		s.history.Remove(o)
 	}
 	s.history.lock.Lock()
