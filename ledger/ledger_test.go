@@ -48,11 +48,15 @@ func (matcher *validTreeMatcher) NegatedFailureMessage(actual interface{}) (mess
 }
 
 func (matcher *validTreeMatcher) Match(actual interface{}) (success bool, err error) {
-	tree, ok := actual.(*smtLedger)
-	if !ok {
-		return false, fmt.Errorf("validTreeMatch matcher expects an smtLedger")
+	var tree *smt
+	if sl, ok := actual.(*smtLedger); !ok {
+		if tree, ok = actual.(*smt); !ok {
+			return false, fmt.Errorf("validTreeMatch matcher expects an smtLedger or smt")
+		}
+	} else {
+		tree = sl.tree
 	}
-	return validate(tree.tree)
+	return validate(tree)
 }
 
 func beValidTree() types.GomegaMatcher {
