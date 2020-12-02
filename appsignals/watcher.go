@@ -83,7 +83,7 @@ func FileTrigger(path string, signal os.Signal, shutdown chan os.Signal) error {
 
 	go func() {
 		defer watcher.Close()
-		for  {
+		for {
 			select {
 			case _, ok := <-watcher.Events:
 				if ok {
