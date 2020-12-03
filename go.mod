@@ -19,7 +19,6 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/howeyc/fsnotify v0.9.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible

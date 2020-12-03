@@ -20,7 +20,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/fsnotify/fsnotify"
 
 	"istio.io/pkg/log"
 )
@@ -77,32 +77,28 @@ func FileTrigger(path string, signal os.Signal, shutdown chan os.Signal) error {
 	if err != nil {
 		return err
 	}
-	if err = watcher.Watch(path); err != nil {
+	if err = watcher.Add(path); err != nil {
 		return err
 	}
 
 	go func() {
-		loop := true
-		for loop {
+		defer watcher.Close()
+		for {
 			select {
-			case _, ok := <-watcher.Event:
+			case _, ok := <-watcher.Events:
 				if ok {
 					log.Warnf("File watch triggered: %v", path)
 					Notify(path, signal)
 				} else {
-					loop = false
+					return
 				}
-			case err := <-watcher.Error:
+			case err := <-watcher.Errors:
 				log.Warnf("Error watching file trigger: %v %v", path, err)
-				loop = false
+				return
 			case signal := <-shutdown:
 				log.Infof("Shutting down file watcher: %v %v", path, signal)
-				loop = false
+				return
 			}
-		}
-		err = watcher.Close()
-		if err != nil {
-			log.Warnf("Error stopping file watcher: %v %v", path, err)
 		}
 	}()
 	return nil
