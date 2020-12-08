@@ -244,7 +244,6 @@ func (n *node) removeShortcut() {
 func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [][]byte) []byte {
 	var h []byte
 	if (n.left() == nil || len(n.left().val) == 0) && (n.right() == nil || len(n.right().val) == 0) {
-		//s.deleteOldNode(oldRoot) //TODO
 		return nil
 	} else if n.left() == nil || len(n.left().val) == 0 {
 		h = hasher(defaultHashes[n.height()-1], n.right().val)

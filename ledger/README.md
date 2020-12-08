@@ -1,6 +1,6 @@
-# Legend Package Overview
+# Ledger Package Overview
 
-The legend package exposes the Legend interface, a key value store which provides a unique and reproducible version identifier for every combination of keys and values it has seen.  This history is stored efficiently, using a byte cache, a sparse merkle tree, and a few helper lists and maps.  By default, history is retained indefinitely, but unnecessary versions can be removed from the history using Erase().  Use of the merkle tree for efficient storage also means that keys must be exactly 8 bytes in length, and mumur64 hashing is used to ensure this constraint, meaning keys cannot be retrieved from the trie, only their hashes.  If keys need to be reconstructed, a helper map can track the input key to it's hash.
+The ledger package exposes the Ledger interface, a key value store which provides a unique and reproducible version identifier for every combination of keys and values it has seen.  This history is stored efficiently, using a byte cache, a sparse merkle tree, and a few helper lists and maps.  By default, history is retained indefinitely, but unnecessary versions can be removed from the history using Erase().  Use of the merkle tree for efficient storage also means that keys must be exactly 8 bytes in length, and mumur64 hashing is used to ensure this constraint, meaning keys cannot be retrieved from the trie, only their hashes.  If keys need to be reconstructed, a helper map can track the input key to it's hash.
 
 ## Sparse Merkle Trees
 
@@ -10,9 +10,9 @@ Sparse Merkle Trees improve upon this design by allowing shortcuts.  Nodes which
 
 In our implementation, nodes are grouped into pages for persistence into the ByteCache, which helps with efficiency.  Each page contains up to 31 nodes, representing four layers of the tree, and the values of the bottom layer of the page are they keys that can be used to retrieve the next page from the ByteCache.  Because page leaves are the implicit root of the subsequent page, the page root node value includes only the shortcut indicator bit, and the left and right children of a leaf node are stored at index 1 and 2 of the next page, respectively.  Effectively, leaf nodes and root nodes overlap.
 
-To ease visualizing and troubleshooting these trees, the DumpToDOT function returns a graphviz representation of the tree, complete with legend.  The diagram differentiates between shortcut keys, shortcut values, and page borders for help in diagnosing issues.  A small tree diagram is included below to illustrate the concept.
+To ease visualizing and troubleshooting these trees, the DumpToDOT function returns a graphviz representation of the tree, complete with ledgend.  The diagram differentiates between shortcut keys, shortcut values, and page borders for help in diagnosing issues.  A small tree diagram is included below to illustrate the concept.
 
-![smt diagram](https://github.com/istio/pkg/blob/master/legend/diagram.svg?raw=true)
+![smt diagram](https://github.com/istio/pkg/blob/master/ledger/diagram.svg?raw=true)
 
 ## ByteCache
 
