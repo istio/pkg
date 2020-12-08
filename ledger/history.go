@@ -49,3 +49,9 @@ func (h *history) Put(key []byte) *list.Element {
 	h.index[encodedKey] = append(h.index[encodedKey], result)
 	return result
 }
+
+func (h *history) Delete(key string) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	delete(h.index, key)
+}

@@ -91,9 +91,7 @@ func (s *smtLedger) EraseRootHash(rootHash string) error {
 	for _, o := range occurrences {
 		s.history.Remove(o)
 	}
-	s.history.lock.Lock()
-	defer s.history.lock.Unlock()
-	delete(s.history.index, rootHash)
+	s.history.Delete(rootHash)
 	return nil
 }
 

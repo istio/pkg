@@ -79,7 +79,7 @@ const forever time.Duration = 1<<(63-1) - 1
 // duration for old nodes.
 func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache) *smt {
 	if updateCache == nil {
-		updateCache = cache.NewTTL(forever, time.Second)
+		updateCache = cache.NewTTL(forever, 0)
 	}
 	s := &smt{
 		hash:       hash,
