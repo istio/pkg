@@ -208,7 +208,7 @@ func TestSmtDelete(t *testing.T) {
 func equalByteArrays(t *testing.T, left, right [][]byte) {
 	assert.Equal(t, len(left), len(right), "byte arrays are not of equal length")
 	for i, l := range left {
-		assert.Assert(t, bytes.Equal(l, right[i]), "byte array index %d is not equal", i)
+		assert.Assert(t, bytes.Equal(l, right[i]), "byte array index %d is not equal, left=%v, right=%v", i, left[i], right[i])
 	}
 }
 
@@ -349,4 +349,43 @@ func benchmark10MAccounts10Ktps(smt *smt, b *testing.B) {
 func BenchmarkCacheHeightLimit(b *testing.B) {
 	smt := newSMT(hasher, cache.NewTTL(forever, time.Minute))
 	benchmark10MAccounts10Ktps(smt, b)
+}
+
+func TestRecursiveSubtree(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+	smt := newSMT(hasher, cache.NewTTL(forever, time.Minute))
+	keys := getFreshData(2)
+	values := getFreshData(5)
+	k1 := [][]byte{keys[0]}
+	_, err := smt.Update(k1, [][]byte{values[0]})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	k2 := [][]byte{keys[1]}
+	k2[0][7] = 0
+	v2, err := smt.Update(k2, [][]byte{values[1]})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	// we need three nodes in the same subtree, using adjacent keys
+	k2[0][7] = 1
+	g.Expect(smt).To(beValidTree())
+	v3, err := smt.Update(k2, [][]byte{values[2]})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	k2[0][7] = 2
+	g.Expect(smt).To(beValidTree())
+	v4, err := smt.Update(k2, [][]byte{values[3]})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(smt).To(beValidTree())
+	_, err = smt.Update(k1, [][]byte{values[4]})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	// delete the key added in v4
+	_, err = smt.Delete(k2[0])
+	k2[0][7] = 1
+	out2, err := smt.Get(k2[0])
+	fmt.Printf("%v", out2)
+	// erase v4
+	err = smt.Erase(v3, [][]byte{v2, v4})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	// if recursive subtrees are not considered adjacent, the head of the tree will be corrupt
+	k2[0][7] = 1
+	out, err := smt.Get(k2[0])
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	equalByteArrays(t, [][]byte{out}, [][]byte{values[2]})
 }

@@ -56,10 +56,12 @@ type Ledger interface {
 }
 
 type smtLedger struct {
-	tree    *smt
+	tree *smt
+	// history tracks the sequence of versions of the ledger for use while erasing
 	history *history
-	// this map will grow forever.  how do we limit it?
-	keyCache byteCache
+	// keys in smt are hashed.  this cache allows us to reverse the hash and reconstruct the keys
+	keyCache      byteCache
+	firstObserved map[string][]byte
 }
 
 // Make returns a Ledger which will retain previous nodes after they are deleted.
@@ -70,12 +72,13 @@ func Make(_ time.Duration) Ledger {
 		tree:    newSMT(hasher, nil),
 		history: newHistory(),
 		// keyCache should have ~512kB memory max, each entry is 128 bits = 2^23/2^7 = 2^16
-		keyCache: byteCache{cache: cache.NewLRU(forever, time.Minute, math.MaxUint16)},
+		keyCache:      byteCache{cache: cache.NewLRU(forever, time.Minute, math.MaxUint16)},
+		firstObserved: make(map[string][]byte),
 	}
 }
 
 func (s *smtLedger) EraseRootHash(rootHash string) error {
-	// occurrences is a list of every time in (underased) history when this hash has been observed
+	// occurrences is a list of every time in (unerased) history when this hash has been observed
 	occurrences := s.history.Get(rootHash)
 	if len(occurrences) == 0 {
 		return fmt.Errorf("rootHash %s is not present in ledger history", rootHash)
@@ -96,16 +99,26 @@ func (s *smtLedger) EraseRootHash(rootHash string) error {
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
-// removal after the retention specified in Make()
+// removal after the retention specified in Make().  The implementation of Erase depends on
+// the value for each key never regressing to old states.
 func (s *smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{s.coerceKeyToHashLen(key)}, [][]byte{stringToBytes(value)})
 	s.history.Put(b)
+	s.maybeUpdateFirstObserved(key, b)
 	result = s.RootHash()
 	return
 }
 
+func (s *smtLedger) maybeUpdateFirstObserved(key string, hash []byte) {
+	// todo: lock?
+	if _, ok := s.firstObserved[key]; !ok {
+		s.firstObserved[key] = hash
+	}
+}
+
 // Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
 func (s *smtLedger) Delete(key string) error {
+	// deletes are the only case where a tree or sub-tree can revert to a previous state.
 	b, err := s.tree.Delete(s.coerceKeyToHashLen(key))
 	if err != nil {
 		return err

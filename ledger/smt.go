@@ -77,16 +77,17 @@ const forever time.Duration = 1<<(63-1) - 1
 
 // newSMT creates a new smt given a keySize, hash function, cache (nil will be defaulted to TTLCache), and retention
 // duration for old nodes.
-func newSMT(hash func(data ...[]byte) []byte, updateCache cache.ExpiringCache) *smt {
+func newSMT(hasher func(data ...[]byte) []byte, updateCache cache.ExpiringCache) *smt {
 	if updateCache == nil {
 		updateCache = cache.NewTTL(forever, 0)
 	}
 	s := &smt{
-		hash:       hash,
-		trieHeight: byte(len(hash([]byte("height"))) * 8), // hash any string to get output length
+		hash:       hasher,
+		trieHeight: byte(len(hasher([]byte("height"))) * 8), // hasher any string to get output length
 	}
 	s.db = &cacheDB{
 		updatedNodes: byteCache{cache: updateCache},
+		dupCount:     sync.Map{},
 	}
 	s.loadDefaultHashes()
 	return s
@@ -130,7 +131,10 @@ func (s *smt) Update(keys, values [][]byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.update(n, keys, values, ch)
+	// don't leak references to keys and values
+	kc := copy2d(keys)
+	vc := copy2d(values)
+	s.update(n, kc, vc, ch)
 	result := <-ch
 	if result.err != nil {
 		return nil, result.err
@@ -321,7 +325,7 @@ func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 	return newKeys, newVals
 }
 
-// Erase will remove from the cache any pages which do not exist in the next or previous trie.
+// Erase will remove from the cache any pages which do not exist in the adjacent tries.
 func (s *smt) Erase(rootHash []byte, adjacents [][]byte) error {
 	rootNode, err := buildRootNode(rootHash, s.trieHeight, s.db)
 	if err != nil {
@@ -351,8 +355,21 @@ func (s *smt) eraseRecursive(rootHash *node, adjacentNodes []*node) {
 			rights = append(rights, n.right())
 			if bytes.Equal(n.val, rootHash.val) {
 				anyMatch = true
+				break
 			}
 		}
+	}
+	// check the dups
+	var h hash
+	copy(h[:], rootHash.val)
+	if idups, ok := rootHash.page.db.dupCount.Load(h); ok {
+		dups := idups.(int) - 1
+		if dups < 2 {
+			rootHash.page.db.dupCount.Delete(h)
+		} else {
+			rootHash.page.db.dupCount.Store(h, dups)
+		}
+		anyMatch = true
 	}
 	if !anyMatch {
 		// erase this rootHash if it's the root of a page

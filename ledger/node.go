@@ -33,9 +33,13 @@ type page struct {
 func (p *page) store() {
 	var h hash
 	copy(h[:], p.root)
-	p.db.updatedMux.Lock()
+	if _, ok := p.db.updatedNodes.Get(h); ok {
+		if icurr, ok2 := p.db.dupCount.LoadOrStore(h, 2); ok2 {
+			curr := icurr.(int)
+			p.db.dupCount.Store(h, curr+1)
+		}
+	}
 	p.db.updatedNodes.Set(h, p.getRawNodes())
-	p.db.updatedMux.Unlock()
 }
 
 func (p *page) getRawNodes() [][]byte {
@@ -134,13 +138,15 @@ func heightInPage(i byte) byte {
 }
 
 func (n *node) height() byte {
-	// this is mathematically correct but computationally expensive
 	return n.page.height - heightInPage(n.index)
 }
 
 func (n *node) isShortcut() bool {
-	if n.height()%4 != 0 {
+	height := n.height()
+	if height%4 != 0 {
 		return len(n.val) != 0 && n.val[hashLength] == 1
+	} else if height == 0 {
+		return false
 	}
 	return n.getNextPage().nodes[0].val[0] == 1
 }

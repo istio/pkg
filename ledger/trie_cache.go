@@ -23,8 +23,8 @@ import (
 type cacheDB struct {
 	// updatedNodes that have will be flushed to disk
 	updatedNodes byteCache
-	// updatedMux is a lock for updatedNodes
-	updatedMux sync.RWMutex
+	// dupCount includes a count of occurrences of all hashes occurring more than once
+	dupCount sync.Map
 }
 
 // byteCache implements a modified ExpiringCache interface, returning byte arrays
