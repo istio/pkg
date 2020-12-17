@@ -66,7 +66,7 @@ func buildRootNode(key []byte, trieHeight byte, db *cacheDB) (*node, error) {
 	} else {
 		p1 = retrieveOrBuildPage(db, key, trieHeight)
 		if p1 == nil {
-			return nil, fmt.Errorf("root node [%s] is unknown", key)
+			return nil, fmt.Errorf("root node [%s] is unknown", hashToString(key))
 		}
 		if len(p1.nodes) < 2 {
 			return nil, fmt.Errorf("root node [%s] is empty, this should never happen", key)

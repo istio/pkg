@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -38,7 +39,7 @@ type Ledger interface {
 	// Put adds or overwrites a key in the Ledger
 	Put(key, value string) (string, error)
 	// Delete removes a key from the Ledger, which may still be read using GetPreviousValue
-	Delete(key string) error
+	Delete(key string) (string, error)
 	// Get returns a the value of the key from the Ledger's current state
 	Get(key string) (string, error)
 	// RootHash is the hash of all keys and values currently in the Ledger
@@ -62,12 +63,25 @@ type smtLedger struct {
 	// keys in smt are hashed.  this cache allows us to reverse the hash and reconstruct the keys
 	keyCache      byteCache
 	firstObserved map[string][]byte
+	eraselock     sync.Mutex
 }
 
-// Make returns a Ledger which will retain previous nodes after they are deleted.
+func Make() Ledger {
+	return &gcledger{
+		inner: &smtLedger{
+			tree:    newSMT(hasher, nil),
+			history: newHistory(),
+			// keyCache should have ~512kB memory max, each entry is 128 bits = 2^23/2^7 = 2^16
+			keyCache:      byteCache{cache: cache.NewLRU(forever, time.Minute, math.MaxUint16)},
+			firstObserved: make(map[string][]byte),
+		},
+	}
+}
+
+// make_old returns a Ledger which will retain previous nodes after they are deleted.
 // the retention parameter has been removed in favor of EraseRootHash, but is left
 // here for backwards compatibility
-func Make(_ time.Duration) Ledger {
+func make_old(_ time.Duration) Ledger {
 	return &smtLedger{
 		tree:    newSMT(hasher, nil),
 		history: newHistory(),
@@ -78,6 +92,8 @@ func Make(_ time.Duration) Ledger {
 }
 
 func (s *smtLedger) EraseRootHash(rootHash string) error {
+	s.eraselock.Lock()
+	defer s.eraselock.Unlock()
 	// occurrences is a list of every time in (unerased) history when this hash has been observed
 	occurrences := s.history.Get(rootHash)
 	if len(occurrences) == 0 {
@@ -85,46 +101,50 @@ func (s *smtLedger) EraseRootHash(rootHash string) error {
 	}
 	var adjacentRoots [][]byte
 	for _, o := range occurrences {
-		adjacentRoots = append(adjacentRoots, o.Prev().Value.([]byte), o.Next().Value.([]byte))
+		if o.Next() == nil {
+			return fmt.Errorf("cannot erase current rootHash")
+		}
+		var prevVal []byte
+		if o.Prev() != nil {
+			prevVal = o.Prev().Value.([]byte)
+		}
+		adjacentRoots = append(adjacentRoots, prevVal, o.Next().Value.([]byte))
 	}
 	err := s.tree.Erase(occurrences[0].Value.([]byte), adjacentRoots)
 	if err != nil {
 		return err
 	}
+	s.history.lock.Lock()
 	for _, o := range occurrences {
 		s.history.Remove(o)
 	}
+	s.history.lock.Unlock()
 	s.history.Delete(rootHash)
 	return nil
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
-// removal after the retention specified in Make().  The implementation of Erase depends on
+// removal after the retention specified in make_old().  The implementation of Erase depends on
 // the value for each key never regressing to old states.
 func (s *smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{s.coerceKeyToHashLen(key)}, [][]byte{stringToBytes(value)})
-	s.history.Put(b)
-	s.maybeUpdateFirstObserved(key, b)
-	result = s.RootHash()
+	if err != nil {
+		return
+	}
+	_, result = s.history.Put(b)
 	return
 }
 
-func (s *smtLedger) maybeUpdateFirstObserved(key string, hash []byte) {
-	// todo: lock?
-	if _, ok := s.firstObserved[key]; !ok {
-		s.firstObserved[key] = hash
-	}
-}
-
-// Delete removes a key value pair from the ledger, marking it for removal after the retention specified in Make()
-func (s *smtLedger) Delete(key string) error {
+// Delete removes a key value pair from the ledger, marking it for removal after the retention specified in make_old()
+func (s *smtLedger) Delete(key string) (string, error) {
 	// deletes are the only case where a tree or sub-tree can revert to a previous state.
 	b, err := s.tree.Delete(s.coerceKeyToHashLen(key))
 	if err != nil {
-		return err
+		return "", err
 	}
-	s.history.Put(b)
-	return nil
+	_, res := s.history.Put(b)
+	//fmt.Printf("ldelete results in root %s\n", b)
+	return res, nil
 }
 
 // GetPreviousValue returns the value of key when the ledger's RootHash was previousHash, if it is still retained.
@@ -145,7 +165,11 @@ func (s *smtLedger) Get(key string) (result string, err error) {
 
 // RootHash represents the hash of the current state of the ledger.
 func (s *smtLedger) RootHash() string {
-	return base64.StdEncoding.EncodeToString(s.tree.Root())
+	return hashToString(s.tree.Root())
+}
+
+func hashToString(h []byte) string {
+	return base64.StdEncoding.EncodeToString(h)
 }
 
 func (s *smtLedger) coerceKeyToHashLen(val string) []byte {

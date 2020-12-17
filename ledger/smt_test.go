@@ -294,7 +294,7 @@ func TestSmtRaisesError(t *testing.T) {
 	smt.db.updatedNodes = byteCache{cache: cache.NewTTL(forever, time.Minute)}
 	smt.loadDefaultHashes()
 
-	// Check errors are raised is a key is not in cache nor db
+	// Check errors are raised is a key is not in cache
 	for _, key := range keys {
 		_, err := smt.Get(key)
 		assert.ErrorContains(t, err, "is unknown",
@@ -351,6 +351,9 @@ func BenchmarkCacheHeightLimit(b *testing.B) {
 	benchmark10MAccounts10Ktps(smt, b)
 }
 
+// in earlier versions of the tree without dupCount, subtrees could repeat prior states in non-adjacent versions
+// due to deletes, which could cause those subtrees to be prematurely deleted on erase, corrupting the tree.
+// this tests for that exact scenario, and this tests passes only after adding the dupCount functionality.
 func TestRecursiveSubtree(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	smt := newSMT(hasher, cache.NewTTL(forever, time.Minute))
@@ -378,8 +381,8 @@ func TestRecursiveSubtree(t *testing.T) {
 	// delete the key added in v4
 	_, err = smt.Delete(k2[0])
 	k2[0][7] = 1
-	out2, err := smt.Get(k2[0])
-	fmt.Printf("%v", out2)
+	_, err = smt.Get(k2[0])
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 	// erase v4
 	err = smt.Erase(v3, [][]byte{v2, v4})
 	g.Expect(err).NotTo(gomega.HaveOccurred())

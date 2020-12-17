@@ -63,10 +63,10 @@ func beValidTree() types.GomegaMatcher {
 	return &validTreeMatcher{}
 }
 
-func (tl *testLedger) Delete(key string) error {
-	err := tl.s.Delete(key)
+func (tl *testLedger) Delete(key string) (string, error) {
+	res, err := tl.s.Delete(key)
 	tl.g.Expect(tl.s).To(beValidTree())
-	return err
+	return res, err
 }
 
 func (tl *testLedger) Get(key string) (string, error) {
@@ -106,7 +106,7 @@ func (tl *testLedger) Put(key, value string) (result string, err error) {
 }
 
 func MakeTest(g *GomegaWithT) Ledger {
-	s := Make(1).(*smtLedger)
+	s := make_old(1).(*smtLedger)
 	RegisterFailHandler(func(message string, callerSkip ...int) {
 		fmt.Printf("Failure detected.  Graphviz of failing ledger:\n%s", s.tree.DumpToDOT())
 	})
@@ -225,7 +225,7 @@ func BenchmarkScale(b *testing.B) {
 	const configSize = 100
 	b.ReportAllocs()
 	b.SetBytes(8)
-	l := Make(1)
+	l := make_old(1)
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
@@ -257,14 +257,29 @@ func TestParallel(t *testing.T) {
 	size := 100
 	k1, v1 := getFreshEntries(size)
 	k2, v2 := getFreshEntries(size)
+	versions := make(chan string, 1)
+	oldversions := make(chan string, size*3)
+	// write version to old version once it's non-current
+	go func() {
+		var prev string
+		for v := range versions {
+			if len(prev) > 0 {
+				oldversions <- prev
+			}
+			prev = v
+		}
+		close(oldversions)
+	}()
 	wg := sync.WaitGroup{}
 	wg.Add(size)
 	for i := 0; i < size; i++ {
 		key := k1[i]
 		value := v1[i]
 		go func() {
-			_, err := l.Put(key, value)
+			v, err := l.Put(key, value)
+			versions <- v
 			g.Expect(err).NotTo(HaveOccurred())
+			//fmt.Printf("putting %s->%s results in %s\n", key, value, v)
 			wg.Done()
 		}()
 	}
@@ -276,14 +291,37 @@ func TestParallel(t *testing.T) {
 		value := v2[i]
 		del := k1[i]
 		go func() {
-			_, err := l.Put(key, value)
+			defer wg.Done()
+			_, err := l.Delete(del)
 			g.Expect(err).NotTo(HaveOccurred())
-			err = l.Delete(del)
+			x, err := l.Put(key, value)
 			g.Expect(err).NotTo(HaveOccurred())
-			wg.Done()
+			versions <- x
 		}()
 	}
-	wg.Wait()
+	// when the above loop completes, close the channels
+	go func() {
+		wg.Wait()
+		close(versions)
+	}()
+	wg2 := sync.WaitGroup{}
+	wg2.Add(size*2 - 1)
+	for v := range oldversions {
+		go func(b string) {
+			if rand.Intn(10) == 1 {
+				err := l.EraseRootHash(b)
+				g.Expect(err).NotTo(HaveOccurred())
+			} else {
+				_, err := l.GetAllPrevious(b)
+				g.Expect(err).NotTo(HaveOccurred())
+				if err == nil {
+					//fmt.Println("get success")
+				}
+			}
+			wg2.Done()
+		}(v)
+	}
+	wg2.Wait()
 	all, err := l.GetAll()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(all).To(HaveLen(size))
@@ -327,9 +365,9 @@ func TestEraseRootHash(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	seven, err := l.Put("Seven", "7")
 	g.Expect(err).NotTo(HaveOccurred())
-	err = l.Delete("Six")
+	_, err = l.Delete("Six")
 	g.Expect(err).NotTo(HaveOccurred())
-	err = l.Delete("Six")
+	_, err = l.Delete("Six")
 	g.Expect(err).NotTo(HaveOccurred())
 	_, err = l.Put("Eight", "8")
 	g.Expect(err).NotTo(HaveOccurred())
@@ -350,7 +388,7 @@ func TestEraseRootHash(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("root node")))
 	err = l.EraseRootHash(seven)
 	g.Expect(err).To(MatchError(ContainSubstring("rootHash")))
-	g.Expect(l.Stats().Misses).To(Equal(uint64(2)))
+	// cache misses now occur on every non-duplicat write, so they are less meaningful...
 	all, err := l.GetAll()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(all).To(HaveKeyWithValue("One", "1"))

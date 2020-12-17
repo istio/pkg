@@ -16,7 +16,6 @@ package ledger
 
 import (
 	"container/list"
-	"encoding/base64"
 	"sync"
 )
 
@@ -41,13 +40,13 @@ func (h *history) Get(hash string) []*list.Element {
 	return h.index[hash]
 }
 
-func (h *history) Put(key []byte) *list.Element {
+func (h *history) Put(key []byte) (*list.Element, string) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	result := h.PushBack(key)
-	encodedKey := base64.StdEncoding.EncodeToString(key)
+	encodedKey := hashToString(key)
 	h.index[encodedKey] = append(h.index[encodedKey], result)
-	return result
+	return result, encodedKey
 }
 
 func (h *history) Delete(key string) {

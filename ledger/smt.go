@@ -23,35 +23,7 @@ import (
 	"istio.io/pkg/cache"
 )
 
-// The smt is derived from https://github.com/aergoio/SMT with modifications
-// to remove unneeded features, and to support retention of old nodes for a fixed time.
-// The aergoio smt license is as follows:
-/*
-MIT License
-
-Copyright (c) 2018 aergo
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-© 2019 GitHub, Inc.
-*/
-
-// TODO when using the smt, make sure keys and values are same length as hash
+// The smt was built with inspiration from https://github.com/aergoio/SMT
 
 // smt is a sparse Merkle tree.
 type smt struct {
@@ -327,6 +299,8 @@ func (s *smt) maybeAddShortcutToKV(keys, values [][]byte, shortcutKey, shortcutV
 
 // Erase will remove from the cache any pages which do not exist in the adjacent tries.
 func (s *smt) Erase(rootHash []byte, adjacents [][]byte) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	rootNode, err := buildRootNode(rootHash, s.trieHeight, s.db)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve root node: %s", err)
@@ -335,7 +309,7 @@ func (s *smt) Erase(rootHash []byte, adjacents [][]byte) error {
 	for _, n := range adjacents {
 		nextNode, err := buildRootNode(n, s.trieHeight, s.db)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve next node: %s", err)
+			return fmt.Errorf("failed to retrieve adjacent node: %s", err)
 		}
 		adjacentNodes = append(adjacentNodes, nextNode)
 	}
@@ -376,7 +350,8 @@ func (s *smt) eraseRecursive(rootHash *node, adjacentNodes []*node) {
 		if rootHash.isLeaf() {
 			// populate next page before deleting from the cache
 			rootHash.getNextPage().delete()
-		} else if rootHash.isShortcut() {
+		}
+		if rootHash.isShortcut() {
 			return
 		}
 		// maybe make this parallel?
