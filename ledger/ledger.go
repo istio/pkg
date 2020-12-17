@@ -78,10 +78,10 @@ func Make() Ledger {
 	}
 }
 
-// make_old returns a Ledger which will retain previous nodes after they are deleted.
+// makeOld returns a Ledger which will retain previous nodes after they are deleted.
 // the retention parameter has been removed in favor of EraseRootHash, but is left
 // here for backwards compatibility
-func make_old(_ time.Duration) Ledger {
+func makeOld(_ time.Duration) Ledger {
 	return &smtLedger{
 		tree:    newSMT(hasher, nil),
 		history: newHistory(),
@@ -124,7 +124,7 @@ func (s *smtLedger) EraseRootHash(rootHash string) error {
 }
 
 // Put adds a key value pair to the ledger, overwriting previous values and marking them for
-// removal after the retention specified in make_old().  The implementation of Erase depends on
+// removal after the retention specified in makeOld().  The implementation of Erase depends on
 // the value for each key never regressing to old states.
 func (s *smtLedger) Put(key, value string) (result string, err error) {
 	b, err := s.tree.Update([][]byte{s.coerceKeyToHashLen(key)}, [][]byte{stringToBytes(value)})
@@ -135,7 +135,7 @@ func (s *smtLedger) Put(key, value string) (result string, err error) {
 	return
 }
 
-// Delete removes a key value pair from the ledger, marking it for removal after the retention specified in make_old()
+// Delete removes a key value pair from the ledger, marking it for removal after the retention specified in makeOld()
 func (s *smtLedger) Delete(key string) (string, error) {
 	// deletes are the only case where a tree or sub-tree can revert to a previous state.
 	b, err := s.tree.Delete(s.coerceKeyToHashLen(key))
@@ -143,7 +143,6 @@ func (s *smtLedger) Delete(key string) (string, error) {
 		return "", err
 	}
 	_, res := s.history.Put(b)
-	//fmt.Printf("ldelete results in root %s\n", b)
 	return res, nil
 }
 

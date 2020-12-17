@@ -380,6 +380,7 @@ func TestRecursiveSubtree(t *testing.T) {
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	// delete the key added in v4
 	_, err = smt.Delete(k2[0])
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 	k2[0][7] = 1
 	_, err = smt.Get(k2[0])
 	g.Expect(err).NotTo(gomega.HaveOccurred())

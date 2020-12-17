@@ -106,7 +106,7 @@ func (tl *testLedger) Put(key, value string) (result string, err error) {
 }
 
 func MakeTest(g *GomegaWithT) Ledger {
-	s := make_old(1).(*smtLedger)
+	s := makeOld(1).(*smtLedger)
 	RegisterFailHandler(func(message string, callerSkip ...int) {
 		fmt.Printf("Failure detected.  Graphviz of failing ledger:\n%s", s.tree.DumpToDOT())
 	})
@@ -225,7 +225,7 @@ func BenchmarkScale(b *testing.B) {
 	const configSize = 100
 	b.ReportAllocs()
 	b.SetBytes(8)
-	l := make_old(1)
+	l := makeOld(1)
 	var eg errgroup.Group
 	ids := make([]string, configSize)
 	for i := 0; i < configSize; i++ {
@@ -279,7 +279,6 @@ func TestParallel(t *testing.T) {
 			v, err := l.Put(key, value)
 			versions <- v
 			g.Expect(err).NotTo(HaveOccurred())
-			//fmt.Printf("putting %s->%s results in %s\n", key, value, v)
 			wg.Done()
 		}()
 	}
@@ -314,9 +313,6 @@ func TestParallel(t *testing.T) {
 			} else {
 				_, err := l.GetAllPrevious(b)
 				g.Expect(err).NotTo(HaveOccurred())
-				if err == nil {
-					//fmt.Println("get success")
-				}
 			}
 			wg2.Done()
 		}(v)
