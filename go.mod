@@ -46,5 +46,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.7
 	gotest.tools v2.2.0+incompatible
 	istio.io/api v0.0.0-20190515205759-982e5c3888c6
-	k8s.io/klog/v2 v2.3.0
+	k8s.io/klog/v2 v2.4.0
 )
