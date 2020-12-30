@@ -81,7 +81,7 @@ func TestKlog(t *testing.T) {
 			"error\tklog\tmy error: info\tkey=1",
 		},
 	}
-	for _, tt := range cases[6:] {
+	for _, tt := range cases {
 		t.Run(tt.expected, func(t *testing.T) {
 			lines := runTest(t, tt.log)
 			mustMatchLength(t, 1, lines)
