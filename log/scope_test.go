@@ -23,9 +23,72 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/klog/v2"
 
 	"istio.io/pkg/structured"
 )
+
+func runTest(t *testing.T, f func()) []string {
+	lines, err := captureStdout(func() {
+		Configure(DefaultOptions())
+		f()
+		_ = Sync()
+	})
+	if err != nil {
+		t.Fatalf("Got error '%v', expected success", err)
+	}
+	if lines[len(lines)-1] == "" {
+		return lines[:len(lines)-1]
+	}
+	return lines
+}
+
+func TestKlog(t *testing.T) {
+	cases := []struct {
+		log      func()
+		expected string
+	}{
+		{
+			func() { klog.Error("foo") },
+			"error\tklog\tfoo$",
+		},
+		{
+			func() { klog.Error("foo") },
+			"foo$",
+		},
+		{
+			func() { klog.Errorf("fmt %v", "item") },
+			"fmt item$",
+		},
+		{
+			func() { klog.Errorf("fmt %v", "item") },
+			"fmt item$",
+		},
+		{
+			func() { klog.ErrorS(errors.New("my error"), "info") },
+			"error\tklog\tmy error: info",
+		},
+		{
+			func() { klog.Info("a", "b") },
+			"info\tklog\tab",
+		},
+		{
+			func() { klog.InfoS("msg", "key", 1) },
+			"info\tklog\tmsg\tkey=1",
+		},
+		{
+			func() { klog.ErrorS(errors.New("my error"), "info", "key", 1) },
+			"error\tklog\tmy error: info\tkey=1",
+		},
+	}
+	for _, tt := range cases[6:] {
+		t.Run(tt.expected, func(t *testing.T) {
+			lines := runTest(t, tt.log)
+			mustMatchLength(t, 1, lines)
+			mustRegexMatchString(t, lines[0], tt.expected)
+		})
+	}
+}
 
 func TestBasicScopes(t *testing.T) {
 	s := RegisterScope("testScope", "z", 0)

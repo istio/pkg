@@ -60,18 +60,18 @@ func trimNewline(msg string) string {
 
 func (zl *zapLogger) Info(msg string, keysAndVals ...interface{}) {
 	if zl.lvlSet && zl.lvl > debugLevelThreshold {
-		zl.l.Debug(trimNewline(msg), keysAndVals)
+		zl.l.WithLabels(keysAndVals...).Debug(trimNewline(msg))
 	} else {
-		zl.l.Info(trimNewline(msg), keysAndVals)
+		zl.l.WithLabels(keysAndVals...).Info(trimNewline(msg))
 	}
 }
 
 func (zl *zapLogger) Error(err error, msg string, keysAndVals ...interface{}) {
 	if zl.l.ErrorEnabled() {
 		if err == nil {
-			zl.l.Error(trimNewline(msg), keysAndVals)
+			zl.l.WithLabels(keysAndVals...).Error(trimNewline(msg))
 		} else {
-			zl.l.Error(fmt.Sprintf("%v: %s", err.Error(), msg), keysAndVals)
+			zl.l.WithLabels(keysAndVals...).Error(fmt.Sprintf("%v: %s", err.Error(), msg))
 		}
 	}
 }
