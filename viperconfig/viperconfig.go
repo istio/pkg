@@ -18,10 +18,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/viper"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 // AddConfigFlag appends a persistent flag for retrieving Viper config, as well as an initializer

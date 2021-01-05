@@ -239,6 +239,8 @@ var _templatesEnvHtml = []byte(`{{ define "content" }}
     <tr>
         <th>Name</th>
         <th>Value</th>
+        <th>Default</th>
+        <th>Status</th>
     </tr>
     </thead>
 
@@ -247,6 +249,8 @@ var _templatesEnvHtml = []byte(`{{ define "content" }}
             <tr>
                 <td>{{.Name}}</td>
                 <td>{{.Value}}</td>
+                <td>{{.DefaultValue}}</td>
+                <td>{{.FeatureStatus}}</td>
             </tr>
         {{ end }}
     </tbody>
