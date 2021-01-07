@@ -16,7 +16,16 @@ package ledger
 
 import (
 	"bytes"
+	"fmt"
+
+	"istio.io/pkg/cache"
 )
+
+func (s *smt) Root() []byte {
+	s.rootMu.RLock()
+	defer s.rootMu.RUnlock()
+	return s.root
+}
 
 // Get fetches the value of a key by going down the current trie root.
 func (s *smt) Get(key []byte) ([]byte, error) {
@@ -27,38 +36,124 @@ func (s *smt) Get(key []byte) ([]byte, error) {
 func (s *smt) GetPreviousValue(prevRoot []byte, key []byte) ([]byte, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	s.atomicUpdate = false
-	return s.get(prevRoot, key, nil, 0, s.trieHeight)
-}
-
-// get fetches the value of a key given a trie root
-func (s *smt) get(root []byte, key []byte, batch [][]byte, iBatch, height int) ([]byte, error) {
-	if len(root) == 0 {
-		return nil, nil
-	}
-	if height == 0 {
-		return root[:hashLength], nil
-	}
-	// Fetch the children of the node
-	batch, iBatch, lnode, rnode, isShortcut, err := s.loadChildren(root, height, iBatch, batch)
+	n, err := buildRootNode(prevRoot, s.trieHeight, s.db)
 	if err != nil {
 		return nil, err
 	}
-	if isShortcut {
-		if bytes.Equal(lnode[:hashLength], key) {
-			return rnode[:hashLength], nil
+	return s.get(n, key)
+}
+
+// get fetches the value of a key given a trie root
+func (s *smt) get(node *node, key []byte) ([]byte, error) {
+	if node == nil || len(node.val) == 0 {
+		return nil, nil
+	}
+	height := node.height()
+	if height == 0 {
+		return node.val[:hashLength], nil
+	}
+	if node.isShortcut() {
+		// shortcuts store their key on left, and value on right
+		if bytes.Equal(node.left().val[:hashLength], key) {
+			return node.right().val, nil
 		}
 		return nil, nil
 	}
 	if bitIsSet(key, s.trieHeight-height) {
 		// visit right node
-		return s.get(rnode, key, batch, 2*iBatch+2, height-1)
+		return s.get(node.right(), key)
 	}
 	// visit left node
-	return s.get(lnode, key, batch, 2*iBatch+1, height-1)
+	return s.get(node.left(), key)
 }
 
-// DefaultHash is a getter for the defaultHashes array
-func (s *smt) DefaultHash(height int) []byte {
-	return s.defaultHashes[height]
+func (s *smt) GetAll() (keys, values [][]byte, err error) {
+	return s.GetAllPrevious(s.root)
 }
+
+func (s *smt) Stats() cache.Stats {
+	return s.db.Stats()
+}
+
+func (s *smt) GetAllPrevious(prevRoot []byte) (keys, values [][]byte, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	n, err := buildRootNode(prevRoot, s.trieHeight, s.db)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.getAll(n, make([]byte, hashLength), s.trieHeight)
+}
+
+func (s *smt) getAll(n *node, keySoFar []byte, trieHeight byte) (keys, values [][]byte, err error) {
+	if n == nil {
+		return nil, nil, nil
+	} else if n.isShortcut() {
+		return [][]byte{n.left().val}, [][]byte{n.right().val}, nil
+	} else if n.height() == 0 {
+		return [][]byte{keySoFar}, [][]byte{n.val}, nil
+	} else {
+		lkeys, lvalues, err := s.getAll(n.left(), keySoFar, trieHeight)
+		if err != nil {
+			return nil, nil, err
+		}
+		rkey := make([]byte, hashLength)
+		copy(rkey, keySoFar)
+		setBit(rkey, trieHeight-n.height())
+		rkeys, rvalues, err := s.getAll(n.right(), rkey, trieHeight)
+		if err != nil {
+			return nil, nil, err
+		}
+		return append(lkeys, rkeys...), append(lvalues, rvalues...), nil
+	}
+}
+
+func (s *smt) DumpToDOT() string {
+	return s.DumpToDOTPrev(s.root)
+}
+
+func (s *smt) DumpToDOTPrev(prevRoot []byte) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	n, err := buildRootNode(prevRoot, s.trieHeight, s.db)
+	if err != nil {
+		return ""
+	}
+	inn, _ := s.dumpToDOT(n, 0, 0)
+	return fmt.Sprintf("digraph SMT {\nnode [fontname=\"Arial\" style=\"filled\" colorscheme=gnbu3];\n%s\n%s}", legend, inn)
+}
+
+func (s *smt) dumpToDOT(n *node, nullCounter int, color int) (string, int) {
+	if n == nil {
+		s := fmt.Sprintf("null%d;\nnull%d [shape=point];\n", nullCounter, nullCounter)
+		nullCounter++
+		return s, nullCounter
+	}
+	me := fmt.Sprintf("%x", n.val) //[len(n.val)*2-8:]
+	var left, right string
+	if color == 0 && n.isShortcut() {
+		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 3)
+		right, nullCounter = s.dumpToDOT(n.right(), nullCounter, 2)
+	} else {
+		left, nullCounter = s.dumpToDOT(n.left(), nullCounter, 0)
+		right, nullCounter = s.dumpToDOT(n.right(), nullCounter, 0)
+	}
+	result := fmt.Sprintf("\"%s\";\n\"%s\"->%s\"%s\"->%s", me, me, left, me, right)
+	if color > 0 {
+		// color key and value nodes
+		result = fmt.Sprintf("%s\"%s\" [fillcolor=%d]\n", result, me, color)
+	}
+	if n.isLeaf() && color == 0 {
+		// page borders are boxes
+		result = fmt.Sprintf("%s\"%s\" [shape=box]\n", result, me)
+	}
+	return result, nullCounter
+}
+
+const legend = `
+subgraph legend {
+    "shortcut key" [fillcolor=3]
+    "shortcut val"  [fillcolor=2]
+    "page border" [shape=box]
+}
+`
