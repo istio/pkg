@@ -105,27 +105,45 @@ func init() {
 
 // prepZap is a utility function used by the Configure function.
 func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer, error) {
-	encCfg := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "scope",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stack",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-		EncodeDuration: zapcore.StringDurationEncoder,
-		EncodeTime:     formatDate,
-	}
-
 	var enc zapcore.Encoder
-	if options.JSONEncoding {
+	if options.useStackdriverFormat {
+		encCfg := zapcore.EncoderConfig{
+			TimeKey:        "timestamp",
+			LevelKey:       "severity",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			MessageKey:     "message",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    encodeStackdriverLevel,
+			EncodeTime:     zapcore.RFC3339NanoTimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		}
 		enc = zapcore.NewJSONEncoder(encCfg)
 		useJSON.Store(true)
 	} else {
-		enc = zapcore.NewConsoleEncoder(encCfg)
-		useJSON.Store(false)
+		encCfg := zapcore.EncoderConfig{
+			TimeKey:        "time",
+			LevelKey:       "level",
+			NameKey:        "scope",
+			CallerKey:      "caller",
+			MessageKey:     "msg",
+			StacktraceKey:  "stack",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+			EncodeTime:     formatDate,
+		}
+
+		if options.JSONEncoding {
+			enc = zapcore.NewJSONEncoder(encCfg)
+			useJSON.Store(true)
+		} else {
+			enc = zapcore.NewConsoleEncoder(encCfg)
+			useJSON.Store(false)
+		}
 	}
 
 	var rotaterSink zapcore.WriteSyncer
@@ -308,6 +326,18 @@ func Configure(options *Options) error {
 
 	if err = updateScopes(options); err != nil {
 		return err
+	}
+
+	if options.teeToStackdriver {
+		// build stackdriver core.
+		core, err = teeToStackdriver(core, options.stackdriverTargetProject, options.stackdriverLogName, options.stackdriverResource)
+		if err != nil {
+			return err
+		}
+		captureCore, err = teeToStackdriver(captureCore, options.stackdriverTargetProject, options.stackdriverLogName, options.stackdriverResource)
+		if err != nil {
+			return err
+		}
 	}
 
 	pt := patchTable{

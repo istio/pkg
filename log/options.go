@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
 const (
@@ -119,20 +120,42 @@ type Options struct {
 	outputLevels     string
 	logCallers       string
 	stackTraceLevels string
+
+	// experimental: stackdriver support
+	useStackdriverFormat     bool
+	teeToStackdriver         bool
+	stackdriverTargetProject string
+	stackdriverLogName       string
+	stackdriverResource      *monitoredres.MonitoredResource
 }
 
 // DefaultOptions returns a new set of options, initialized to the defaults
 func DefaultOptions() *Options {
 	return &Options{
-		OutputPaths:        []string{defaultOutputPath},
-		ErrorOutputPaths:   []string{defaultErrorOutputPath},
-		RotationMaxSize:    defaultRotationMaxSize,
-		RotationMaxAge:     defaultRotationMaxAge,
-		RotationMaxBackups: defaultRotationMaxBackups,
-		outputLevels:       DefaultScopeName + ":" + levelToString[defaultOutputLevel],
-		stackTraceLevels:   DefaultScopeName + ":" + levelToString[defaultStackTraceLevel],
-		LogGrpc:            false,
+		OutputPaths:          []string{defaultOutputPath},
+		ErrorOutputPaths:     []string{defaultErrorOutputPath},
+		RotationMaxSize:      defaultRotationMaxSize,
+		RotationMaxAge:       defaultRotationMaxAge,
+		RotationMaxBackups:   defaultRotationMaxBackups,
+		outputLevels:         DefaultScopeName + ":" + levelToString[defaultOutputLevel],
+		stackTraceLevels:     DefaultScopeName + ":" + levelToString[defaultStackTraceLevel],
+		LogGrpc:              false,
+		useStackdriverFormat: false,
 	}
+}
+
+// WithStackdriverLoggingFormat configures logging output to match Stackdriver structured logging conventions.
+func (o *Options) WithStackdriverLoggingFormat() *Options {
+	o.useStackdriverFormat = true
+	return o
+}
+
+// WithTeeToStackdriver configures a parallel logging pipeline that writes logs to the Google Cloud Logging API.
+func (o *Options) WithTeeToStackdriver(project, logName string, mr *monitoredres.MonitoredResource) *Options {
+	o.stackdriverTargetProject = project
+	o.stackdriverLogName = logName
+	o.stackdriverResource = mr
+	return o
 }
 
 // SetOutputLevel sets the minimum log output level for a given scope.
