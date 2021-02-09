@@ -107,6 +107,7 @@ func init() {
 func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer, error) {
 	var enc zapcore.Encoder
 	if options.useStackdriverFormat {
+		// See also: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry
 		encCfg := zapcore.EncoderConfig{
 			TimeKey:        "timestamp",
 			LevelKey:       "severity",
