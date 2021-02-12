@@ -53,9 +53,11 @@ var coreTopics = []fw.Topic{
 	topics.SignalsTopic(),
 }
 
-var allTopics []fw.Topic
-var topicMutex sync.Mutex
-var listeningTestProbe func()
+var (
+	allTopics          []fw.Topic
+	topicMutex         sync.Mutex
+	listeningTestProbe func()
+)
 
 // Server represents a running ControlZ instance.
 type Server struct {

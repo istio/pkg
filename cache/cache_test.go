@@ -159,7 +159,6 @@ func testCacheConcurrent(c Cache, t *testing.T) {
 	if stats.Writes != uint64(workers*numIters) {
 		t.Errorf("Got %d writes, expecting %d", stats.Writes, workers*numIters*2)
 	}
-
 }
 
 // WARNING: This test expects the cache to have been created with no automatic eviction.

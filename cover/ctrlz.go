@@ -44,7 +44,6 @@ func (t *topic) Prefix() string {
 
 // Activate triggers a topic to register itself to receive traffic.
 func (t *topic) Activate(ctx fw.TopicContext) {
-
 	l := template.Must(ctx.Layout().Clone())
 	t.tmpl = template.Must(l.Parse(string(assets.MustAsset("templates/index.html"))))
 
@@ -77,7 +76,6 @@ func (t *topic) Activate(ctx fw.TopicContext) {
 		Path("/snapshot").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			GetRegistry().Snapshot()
-
 		})
 
 	_ = ctx.JSONRouter().

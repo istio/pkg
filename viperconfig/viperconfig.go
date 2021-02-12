@@ -77,7 +77,7 @@ func subCommandPreRun(cmd *cobra.Command, viper *viper.Viper) {
 	}
 }
 
-//ViperizeRootCmdDefault calls ViperizeRootCmd using viper.GetViper()
+// ViperizeRootCmdDefault calls ViperizeRootCmd using viper.GetViper()
 func ViperizeRootCmdDefault(cmd *cobra.Command) {
 	ViperizeRootCmd(cmd, viper.GetViper())
 }

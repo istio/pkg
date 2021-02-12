@@ -22,6 +22,7 @@ type node struct {
 	page     *page // leaves of a page are roots of the next page.  need to map this somehow...
 	nextPage *page
 }
+
 type page struct {
 	root   []byte
 	nodes  []*node
@@ -153,7 +154,7 @@ func (n *node) isShortcut() bool {
 
 // returns true if node is a leaf of the page
 func (n *node) isLeaf() bool {
-	return n.index+1 >= 1<<batchHeight //this is easier than calculating 2^4
+	return n.index+1 >= 1<<batchHeight // this is easier than calculating 2^4
 }
 
 func (n *node) getNextPage() *page {
@@ -267,8 +268,8 @@ func (n *node) calculateHash(hasher func(data ...[]byte) []byte, defaultHashes [
 	return append(h, sc)
 }
 
-//for leaf shortcut nodes, persists child page
-//for top-level nodes, persists own page
+// for leaf shortcut nodes, persists child page
+// for top-level nodes, persists own page
 func (n *node) store() {
 	if n.isLeaf() && n.nextPage != nil {
 		n.nextPage.root = n.val

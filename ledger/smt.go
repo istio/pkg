@@ -143,7 +143,7 @@ func (s *smt) delete(n *node, key []byte) (newVal, reloKey, reloValue []byte) {
 		keyChild = n.right()
 		altChild = n.left()
 	} else {
-		//recurse left
+		// recurse left
 		keyChild = n.left()
 		altChild = n.right()
 	}
@@ -194,7 +194,7 @@ func (s *smt) update(node *node, keys, values [][]byte, ch chan<- result) {
 	}
 	// Split the keys array so each branch can be updated in parallel
 	// Does this require that keys are sorted?  Yes, see Update()
-	lkeys, rkeys := s.splitKeys(keys, s.trieHeight-node.height()) //off by one?
+	lkeys, rkeys := s.splitKeys(keys, s.trieHeight-node.height()) // off by one?
 	splitIndex := len(lkeys)
 	lvalues, rvalues := values[:splitIndex], values[splitIndex:]
 
@@ -360,5 +360,7 @@ func (s *smt) eraseRecursive(rootHash *node, adjacentNodes []*node) {
 	}
 }
 
-const batchLen int = 31
-const batchHeight int = 4 // this is log2(batchLen+1)-1
+const (
+	batchLen    int = 31
+	batchHeight int = 4 // this is log2(batchLen+1)-1
+)

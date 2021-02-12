@@ -36,11 +36,9 @@ func TestExportedMetrics(t *testing.T) {
 		1*time.Second,
 		10*time.Millisecond,
 	)
-
 	if err != nil {
 		t.Errorf("failure exporting metrics: %v", err)
 	}
-
 }
 
 var (
@@ -107,7 +105,6 @@ func init() {
 		RuleErrs,
 		AdapterInfosTotal,
 	)
-
 }
 
 // because OC uses goroutines to async export, validating proper export

@@ -29,12 +29,15 @@ func TestRecordComponentBuildTag(t *testing.T) {
 		in      BuildInfo
 		wantTag string
 	}{
-		{"record", BuildInfo{
-			Version:       "VER",
-			GitRevision:   "GITREV",
-			GolangVersion: "GOLANGVER",
-			BuildStatus:   "STATUS",
-			GitTag:        "1.0.5-test"},
+		{
+			"record",
+			BuildInfo{
+				Version:       "VER",
+				GitRevision:   "GITREV",
+				GolangVersion: "GOLANGVER",
+				BuildStatus:   "STATUS",
+				GitTag:        "1.0.5-test",
+			},
 			"1.0.5-test",
 		},
 	}
@@ -88,19 +91,21 @@ func TestRegisterStatsPanics(t *testing.T) {
 		name        string
 		newTagKeyFn func(string) (tag.Key, error)
 	}{
-		{"tag", func(n string) (tag.Key, error) {
-			if n == "tag" {
-				return tag.Key{}, errors.New("failure")
-			}
-			return tag.NewKey(n)
+		{
+			"tag", func(n string) (tag.Key, error) {
+				if n == "tag" {
+					return tag.Key{}, errors.New("failure")
+				}
+				return tag.NewKey(n)
+			},
 		},
-		},
-		{"component", func(n string) (tag.Key, error) {
-			if n == "component" {
-				return tag.Key{}, errors.New("failure")
-			}
-			return tag.NewKey(n)
-		},
+		{
+			"component", func(n string) (tag.Key, error) {
+				if n == "component" {
+					return tag.Key{}, errors.New("failure")
+				}
+				return tag.NewKey(n)
+			},
 		},
 		{"duplicate registration", tag.NewKey},
 	}

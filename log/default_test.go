@@ -232,7 +232,6 @@ func TestErrorDictionary(t *testing.T) {
 		Infoa(ie, "Hello")
 		_ = Sync()
 	})
-
 	if err != nil {
 		t.Errorf("Got error '%v', expected success", err)
 	}

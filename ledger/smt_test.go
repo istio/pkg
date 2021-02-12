@@ -177,7 +177,7 @@ func TestSmtDelete(t *testing.T) {
 	assert.Assert(t, bytes.Equal(newRoot, cleanRoot),
 		"identical trees produced different roots! [%v] [%v]", newRoot, cleanRoot)
 
-	//Empty the trie
+	// Empty the trie
 	var root []byte
 	for _, k := range keys {
 		root, err = smt.Delete(k)
@@ -279,12 +279,12 @@ func TestTrieUpdateAndDelete(t *testing.T) {
 	_, err = smt.Update([][]byte{key1}, getFreshData(1))
 	assert.NilError(t, err)
 }
+
 func bitSet(bits []byte, i int) {
 	bits[i/8] |= 1 << uint(7-i%8)
 }
 
 func TestSmtRaisesError(t *testing.T) {
-
 	smt := newSMT(hasher, nil)
 	// Add data to empty trie
 	keys := getFreshData(10)
@@ -300,7 +300,6 @@ func TestSmtRaisesError(t *testing.T) {
 		assert.ErrorContains(t, err, "is unknown",
 			"Error not created if database doesnt have a node")
 	}
-
 }
 
 func getFreshData(size int) [][]byte {
@@ -345,7 +344,7 @@ func benchmark10MAccounts10Ktps(smt *smt, b *testing.B) {
 	}
 }
 
-//go test -run=xxx -bench=. -benchmem -test.benchtime=20s
+// go test -run=xxx -bench=. -benchmem -test.benchtime=20s
 func BenchmarkCacheHeightLimit(b *testing.B) {
 	smt := newSMT(hasher, cache.NewTTL(forever, time.Minute))
 	benchmark10MAccounts10Ktps(smt, b)

@@ -59,7 +59,6 @@ func (c *collectionTopic) Prefix() string {
 
 // Activate is implementation of Topic.Activate.
 func (c *collectionTopic) Activate(context fw.TopicContext) {
-
 	l := template.Must(context.Layout().Clone())
 	c.mainTmpl = template.Must(l.Parse(string(assets.MustAsset("templates/collection/main.html"))))
 
@@ -75,7 +74,6 @@ func (c *collectionTopic) Activate(context fw.TopicContext) {
 		PathPrefix("/").
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
 			parts := strings.SplitN(req.URL.Path, "/", 4)
 			parts = parts[2:] // Skip the empty and title parts.
 

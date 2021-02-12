@@ -88,8 +88,10 @@ type DurationVar struct {
 	Var
 }
 
-var allVars = make(map[string]Var)
-var mutex sync.Mutex
+var (
+	allVars = make(map[string]Var)
+	mutex   sync.Mutex
+)
 
 // VarDescriptions returns a description of this process' environment variables, sorted by name.
 func VarDescriptions() []Var {
