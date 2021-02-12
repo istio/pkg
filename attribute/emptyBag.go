@@ -18,8 +18,10 @@ package attribute
 // chain of bags
 type emptyBag struct{}
 
-var empty = &emptyBag{}
-var emptySlice = []string{}
+var (
+	empty      = &emptyBag{}
+	emptySlice = []string{}
+)
 
 func (eb *emptyBag) Get(name string) (interface{}, bool) { return nil, false }
 func (eb *emptyBag) Names() []string                     { return emptySlice }

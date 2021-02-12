@@ -312,7 +312,6 @@ func TestDesc(t *testing.T) {
 }
 
 func TestDupes(t *testing.T) {
-
 	// make sure var without a description doesn't overwrite one with
 	reset()
 	_ = RegisterStringVar(testVar, "123", "XYZ")

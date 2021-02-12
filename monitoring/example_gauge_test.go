@@ -16,12 +16,10 @@ package monitoring_test
 
 import "istio.io/pkg/monitoring"
 
-var (
-	pushLatency = monitoring.NewGauge(
-		"push_latency_seconds",
-		"Duration, measured in seconds, of the last push",
-		monitoring.WithUnit(monitoring.Seconds),
-	)
+var pushLatency = monitoring.NewGauge(
+	"push_latency_seconds",
+	"Duration, measured in seconds, of the last push",
+	monitoring.WithUnit(monitoring.Seconds),
 )
 
 func init() {

@@ -188,7 +188,7 @@ func TestOddballs(t *testing.T) {
 	}
 
 	o = DefaultOptions()
-	//using invalid filename
+	// using invalid filename
 	o.OutputPaths = []string{"//"}
 	err = Configure(o)
 	if err == nil {

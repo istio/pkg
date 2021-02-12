@@ -33,8 +33,10 @@ type Version struct {
 
 // GetRemoteVersionFunc is the function protoype to be passed to CobraOptions so that it is
 // called when invoking `cmd version`
-type GetRemoteVersionFunc func() (*MeshInfo, error)
-type GetProxyVersionFunc func() (*[]ProxyInfo, error)
+type (
+	GetRemoteVersionFunc func() (*MeshInfo, error)
+	GetProxyVersionFunc  func() (*[]ProxyInfo, error)
+)
 
 // CobraOptions holds options to be passed to `CobraCommandWithOptions`
 type CobraOptions struct {

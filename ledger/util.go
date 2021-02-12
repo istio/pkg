@@ -35,7 +35,7 @@ func setBit(bits []byte, i byte) {
 }
 
 func hasher(data ...[]byte) []byte {
-	var hasher = murmur3.New64()
+	hasher := murmur3.New64()
 	for i := 0; i < len(data); i++ {
 		_, _ = hasher.Write(data[i])
 	}
@@ -58,9 +58,11 @@ type dataArray [][]byte
 func (d dataArray) Len() int {
 	return len(d)
 }
+
 func (d dataArray) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
+
 func (d dataArray) Less(i, j int) bool {
 	return bytes.Compare(d[i], d[j]) == -1
 }

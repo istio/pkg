@@ -32,7 +32,6 @@ func TestTimeout(t *testing.T) {
 func TestNoTimeout(t *testing.T) {
 	err := WithTimeout(func() {
 	}, time.Hour*256)
-
 	if err != nil {
 		t.Errorf("Expecting no timeout, but get one: %v", err)
 	}

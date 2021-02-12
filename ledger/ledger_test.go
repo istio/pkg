@@ -133,7 +133,6 @@ func TestLongKeys(t *testing.T) {
 	res, err = l.Get(longKey)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(res).To(Equal(""))
-
 }
 
 func TestGetAndPrevious(t *testing.T) {
@@ -176,7 +175,7 @@ func TestOrderAgnosticism(t *testing.T) {
 }
 
 func MyHasher(data ...[]byte) (result []byte) {
-	var hasher = murmur3.New64()
+	hasher := murmur3.New64()
 	for i := 0; i < len(data); i++ {
 		hasher.Write(data[i])
 	}
@@ -213,7 +212,6 @@ func TestCollision(t *testing.T) {
 	value, err := l.Get("foo")
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(value).To(Equal("bar"))
-
 }
 
 func HashCollider(data ...[]byte) []byte {
@@ -244,6 +242,7 @@ func BenchmarkScale(b *testing.B) {
 	}
 	b.StopTimer()
 }
+
 func addConfig(ledger Ledger, g *GomegaWithT) string {
 	objectID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := ledger.Put(objectID, fmt.Sprintf("%d", rand.Int()))

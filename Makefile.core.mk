@@ -17,7 +17,7 @@ export ARTIFACTS ?= "/tmp"
 gen-go:
 	@go generate ./...
 
-gen: gen-go tidy-go mirror-licenses
+gen: gen-go fmt mirror-licenses
 
 gen-check: gen check-clean-repo
 

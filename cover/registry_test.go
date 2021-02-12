@@ -124,7 +124,6 @@ foo.go:47.49,48.0 39 19`
 	if strings.TrimSpace(prof) != strings.TrimSpace(expected) {
 		t.Fatalf("Prof mismatch. Actual:\n%s\nExpected:\n%s\n", prof, expected)
 	}
-
 }
 
 type testCovVar struct {
@@ -166,7 +165,6 @@ func (v *testCovVar) clearCount() {
 }
 
 func (v *testCovVar) initSampleData() {
-
 	for i := 0; i < len(v.count); i++ {
 		v.count[i] = uint32(i + 10)
 	}
@@ -178,5 +176,4 @@ func (v *testCovVar) initSampleData() {
 	for i := 0; i < len(v.stmt); i++ {
 		v.stmt[i] = uint16(i + 30)
 	}
-
 }

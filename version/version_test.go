@@ -36,11 +36,13 @@ BuildStatus: Clean
 GitTag: tag
 `,
 			false,
-			BuildInfo{Version: "1.0.0",
+			BuildInfo{
+				Version:       "1.0.0",
 				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
 				GolangVersion: "go1.10.1",
 				BuildStatus:   "Clean",
-				GitTag:        "tag"},
+				GitTag:        "tag",
+			},
 		},
 		{
 			"Legacy input 1",
@@ -54,11 +56,13 @@ BuildStatus: Clean
 GitTag: tag
 `,
 			false,
-			BuildInfo{Version: "1.0.0",
+			BuildInfo{
+				Version:       "1.0.0",
 				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
 				GolangVersion: "go1.10.1",
 				BuildStatus:   "Clean",
-				GitTag:        "tag"},
+				GitTag:        "tag",
+			},
 		},
 		{
 			"Invalid input 1",
@@ -102,17 +106,22 @@ func TestBuildInfo(t *testing.T) {
 		want     string
 		longWant string
 	}{
-		{"all specified", BuildInfo{
-			Version:       "VER",
-			GitRevision:   "GITREV",
-			GolangVersion: "GOLANGVER",
-			BuildStatus:   "STATUS",
-			GitTag:        "TAG"},
+		{
+			"all specified",
+			BuildInfo{
+				Version:       "VER",
+				GitRevision:   "GITREV",
+				GolangVersion: "GOLANGVER",
+				BuildStatus:   "STATUS",
+				GitTag:        "TAG",
+			},
 			"VER-GITREV-STATUS",
 			`version.BuildInfo{Version:"VER", GitRevision:"GITREV", GolangVersion:"GOLANGVER", ` +
-				`BuildStatus:"STATUS", GitTag:"TAG"}`},
+				`BuildStatus:"STATUS", GitTag:"TAG"}`,
+		},
 
-		{"init", Info, "unknown-unknown-unknown", versionedString}}
+		{"init", Info, "unknown-unknown-unknown", versionedString},
+	}
 
 	for _, v := range cases {
 		t.Run(v.name, func(t *testing.T) {

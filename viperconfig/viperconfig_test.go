@@ -26,10 +26,11 @@ func TestViperConfig(t *testing.T) {
 	v := viper.GetViper()
 	var foo string
 	hasRun := false
-	c := cobra.Command{Run: func(c *cobra.Command, args []string) {
-		assert.Equal(t, foo, "somethingelse")
-		hasRun = true
-	},
+	c := cobra.Command{
+		Run: func(c *cobra.Command, args []string) {
+			assert.Equal(t, foo, "somethingelse")
+			hasRun = true
+		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			v.BindPFlags(cmd.Flags())
 		},

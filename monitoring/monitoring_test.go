@@ -110,7 +110,6 @@ func TestSum(t *testing.T) {
 			return nil
 		},
 	)
-
 	if err != nil {
 		t.Errorf("failure recording sum values: %v", err)
 	}
@@ -146,7 +145,6 @@ func TestGauge(t *testing.T) {
 			return nil
 		},
 	)
-
 	if err != nil {
 		t.Errorf("failure recording gauge values: %v", err)
 	}
@@ -205,7 +203,6 @@ func TestDistribution(t *testing.T) {
 			return nil
 		},
 	)
-
 	if err != nil {
 		t.Errorf("failure recording distribution values: %v", err)
 	}
@@ -254,11 +251,9 @@ func TestViewExport(t *testing.T) {
 			return nil
 		},
 	)
-
 	if err != nil {
 		t.Errorf("failure with view export: %v", err)
 	}
-
 }
 
 func TestRecordHook(t *testing.T) {
@@ -301,7 +296,6 @@ func TestRecordHook(t *testing.T) {
 			return nil
 		},
 	)
-
 	if err != nil {
 		t.Errorf("failure recording sum values with record hook: %v", err)
 	}
