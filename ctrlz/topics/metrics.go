@@ -29,8 +29,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type metricsTopic struct {
-}
+type metricsTopic struct{}
 
 // MetricsTopic returns a ControlZ topic that allows visualization of process metrics.
 func MetricsTopic() fw.Topic {

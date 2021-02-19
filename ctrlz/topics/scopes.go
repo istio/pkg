@@ -28,8 +28,7 @@ import (
 	"istio.io/pkg/log"
 )
 
-type scopeTopic struct {
-}
+type scopeTopic struct{}
 
 type scopeInfo struct {
 	Name            string `json:"name"`

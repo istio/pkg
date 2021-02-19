@@ -23,8 +23,7 @@ import (
 	"istio.io/pkg/version"
 )
 
-type versionTopic struct {
-}
+type versionTopic struct{}
 
 // VersionTopic returns a ControlZ topic that allows visualization of versioning info.
 func VersionTopic() fw.Topic {

@@ -24,8 +24,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type procTopic struct {
-}
+type procTopic struct{}
 
 // ProcTopic returns a ControlZ topic that allows visualization of process state.
 func ProcTopic() fw.Topic {

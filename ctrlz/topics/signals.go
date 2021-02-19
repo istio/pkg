@@ -25,8 +25,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type signalsTopic struct {
-}
+type signalsTopic struct{}
 
 // SignalsTopic returns a ControlZ topic that sends command signals to the process
 func SignalsTopic() fw.Topic {

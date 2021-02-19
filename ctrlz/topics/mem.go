@@ -24,8 +24,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type memTopic struct {
-}
+type memTopic struct{}
 
 // MemTopic returns a ControlZ topic that allows visualization of process memory usage.
 func MemTopic() fw.Topic {
