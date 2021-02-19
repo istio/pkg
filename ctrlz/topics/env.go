@@ -25,8 +25,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type envTopic struct {
-}
+type envTopic struct{}
 
 // EnvTopic returns a ControlZ topic that allows visualization of process environment variables.
 func EnvTopic() fw.Topic {

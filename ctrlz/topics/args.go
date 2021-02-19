@@ -23,8 +23,7 @@ import (
 	"istio.io/pkg/ctrlz/topics/assets"
 )
 
-type argsTopic struct {
-}
+type argsTopic struct{}
 
 // ArgsTopic returns a ControlZ topic that allows visualization of process command-line arguments.
 func ArgsTopic() fw.Topic {
