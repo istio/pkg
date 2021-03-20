@@ -152,6 +152,7 @@ func (o *Options) WithStackdriverLoggingFormat() *Options {
 
 // WithTeeToStackdriver configures a parallel logging pipeline that writes logs to the Google Cloud Logging API.
 func (o *Options) WithTeeToStackdriver(project, logName string, mr *monitoredres.MonitoredResource) *Options {
+	o.teeToStackdriver = true
 	o.stackdriverTargetProject = project
 	o.stackdriverLogName = logName
 	o.stackdriverResource = mr
