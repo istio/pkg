@@ -20,9 +20,11 @@ import (
 	"regexp"
 	"strconv"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/time/rate"
 	"k8s.io/klog/v2"
 
 	"istio.io/pkg/structured"
@@ -330,6 +332,46 @@ func TestScopeWithLabel(t *testing.T) {
 
 	mustRegexMatchString(t, lines[0], `Hello	foo=bar baz=123 qux=0.123`)
 	mustRegexMatchString(t, lines[1], "Hello$")
+}
+
+func TestScopeWithRateLimitSampling(t *testing.T) {
+	cases := []struct {
+		name      string
+		limit     rate.Limit
+		burst     int
+		msgs      []string
+		wantCount int
+	}{
+		{name: "inf limit", limit: rate.Inf, burst: 0, msgs: []string{"test", "test", "test"}, wantCount: 3},
+		{name: "one per hour", limit: rate.Every(1 * time.Hour), burst: 0, msgs: []string{"test", "test", "test"}, wantCount: 1},
+		{name: "one per hour with burst", limit: rate.Every(1 * time.Hour), burst: 2, msgs: []string{"test", "test", "test"}, wantCount: 2},
+		{name: "no duplicate message", limit: rate.Every(1 * time.Hour), burst: 0, msgs: []string{"test", "foo", "bar"}, wantCount: 3},
+		{name: "multiple duplicates", limit: rate.Every(1 * time.Hour), burst: 0, msgs: []string{"test", "foo", "bar", "test", "foo"}, wantCount: 3},
+	}
+
+	s := RegisterScope("rate-limited", "", 0)
+	s.SetOutputLevel(DebugLevel)
+
+	for _, v := range cases {
+		t.Run(v.name, func(tt *testing.T) {
+			lines, err := captureStdout(func() {
+				Configure(DefaultOptions())
+				funcs.Store(funcs.Load().(patchTable))
+				s2 := s.WithRateSampling(v.limit, v.burst)
+				for _, msg := range v.msgs {
+					s2.Infof(msg)
+				}
+			})
+
+			if err != nil {
+				tt.Fatalf("Unexpected error running test: %v", err)
+			}
+			got := len(lines) - 1 // ignore final empty newline
+			if got != v.wantCount {
+				tt.Errorf("Wrong number of logging messages; got %d, want %d;\nlines: %v", got, v.wantCount, lines)
+			}
+		})
+	}
 }
 
 func TestScopeJSON(t *testing.T) {

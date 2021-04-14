@@ -20,6 +20,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"golang.org/x/time/rate"
 	"istio.io/pkg/structured"
 )
 
@@ -58,6 +59,12 @@ type Scope struct {
 	// labels data - key slice to preserve ordering
 	labelKeys []string
 	labels    map[string]interface{}
+
+	// sampling
+	sample bool
+	limit  rate.Limit
+	burst  int
+	limits sync.Map
 }
 
 var (
@@ -302,6 +309,9 @@ func (s *Scope) Debugf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
+		if !s.isSampled(msg) {
+			return
+		}
 		s.callHandlers(DebugLevel, s, ie, msg)
 	}
 }
@@ -387,12 +397,37 @@ func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
 	return out
 }
 
+func (s *Scope) WithRateSampling(limit rate.Limit, burst int) *Scope {
+	out := s.copy()
+	out.sample = true
+	out.limit = limit
+	out.burst = burst
+	return out
+}
+
+func (s *Scope) isSampled(msg string) bool {
+	if !s.sample {
+		return true
+	}
+	limit, ok := s.limits.Load(msg)
+	if !ok {
+		l := rate.NewLimiter(s.limit, s.burst)
+		l.Allow()
+		s.limits.Store(msg, l)
+		return true
+	}
+	return limit.(*rate.Limiter).Allow()
+}
+
 // callHandlers calls all handlers registered to s.
 func (s *Scope) callHandlers(
 	severity Level,
 	scope *Scope,
 	ie *structured.Error,
 	msg string) {
+	if !s.isSampled(msg) {
+		return
+	}
 	defaultHandlersMu.RLock()
 	defer defaultHandlersMu.RUnlock()
 	for _, h := range defaultHandlers {
