@@ -310,9 +310,6 @@ func (s *Scope) Debugf(args ...interface{}) {
 		if len(args) > 1 {
 			msg = fmt.Sprintf(msg, args[firstIdx+1:]...)
 		}
-		if !s.isSampled(msg) {
-			return
-		}
 		s.callHandlers(DebugLevel, s, ie, msg)
 	}
 }
@@ -370,7 +367,23 @@ func (s *Scope) GetLogCallers() bool {
 
 // copy makes a copy of s and returns a pointer to it.
 func (s *Scope) copy() *Scope {
-	out := *s
+	out := Scope{
+		name:            s.name,
+		nameToEmit:      s.nameToEmit,
+		description:     s.description,
+		callerSkip:      s.callerSkip,
+		outputLevel:     s.outputLevel,
+		stackTraceLevel: s.stackTraceLevel,
+		logCallers:      s.logCallers,
+		labelKeys:       s.labelKeys,
+		sample:          s.sample,
+		limit:           s.limit,
+		burst:           s.burst,
+	}
+	s.limits.Range(func(k, v interface{}) bool {
+		out.limits.Store(k, v)
+		return true
+	})
 	out.labels = copyStringInterfaceMap(s.labels)
 	return &out
 }
@@ -398,8 +411,16 @@ func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
 	return out
 }
 
+// With RateSampling sets up a rate limit on the number of repeated messages that
+// will be emitted by the scope. Repeated log messages above the limit will be
+// dropped (no blocking). All messages within a scope will have the same limit
+// applied.
 func (s *Scope) WithRateSampling(limit rate.Limit, burst int) *Scope {
 	out := s.copy()
+	// if a new sampling rate is applied, remove prior limits.
+	if limit != s.limit && s.burst != burst {
+		out.limits = sync.Map{}
+	}
 	out.sample = true
 	out.limit = limit
 	out.burst = burst
