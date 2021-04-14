@@ -362,7 +362,6 @@ func TestScopeWithRateLimitSampling(t *testing.T) {
 					s2.Infof(msg)
 				}
 			})
-
 			if err != nil {
 				tt.Fatalf("Unexpected error running test: %v", err)
 			}

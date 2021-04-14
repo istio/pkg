@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"golang.org/x/time/rate"
+
 	"istio.io/pkg/structured"
 )
 
