@@ -55,6 +55,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -312,7 +313,10 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 	return nil
 }
 
-var KlogScope = RegisterScope("klog", "", 0)
+var (
+	KlogScope     = RegisterScope("klog", "", 0)
+	configureKlog = sync.Once{}
+)
 
 // Configure initializes Istio's logging subsystem.
 //
@@ -384,8 +388,9 @@ func Configure(options *Options) error {
 	}
 
 	// capture klog (Kubernetes logging) through our logging
-	klog.SetLogger(newLogrAdapter(KlogScope))
-
+	configureKlog.Do(func() {
+		klog.SetLogger(newLogrAdapter(KlogScope))
+	})
 	return nil
 }
 
