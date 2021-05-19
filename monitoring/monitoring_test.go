@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opencensus.io/metric/metricdata"
+	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -147,6 +149,46 @@ func TestGauge(t *testing.T) {
 	)
 	if err != nil {
 		t.Errorf("failure recording gauge values: %v", err)
+	}
+}
+
+func TestDerivedGauge(t *testing.T) {
+	testDerivedGauge := monitoring.NewDerivedGauge(
+		"test_derived_gauge",
+		"Testing derived gauae functionality",
+		func() float64 {
+			return 17.76
+		},
+	)
+	exp := &testExporter{rows: make(map[string][]*view.Row), metrics: make(map[string][]*metricdata.TimeSeries)}
+
+	reader := metricexport.NewReader()
+
+	err := retry(
+		func() error {
+			reader.ReadAndExport(exp)
+
+			if len(exp.metrics[testDerivedGauge.Name()]) < 1 {
+				return errors.New("no values recorded for gauge, want 1")
+			}
+
+			found := false
+			for _, ts := range exp.metrics[testDerivedGauge.Name()] {
+				for _, point := range ts.Points {
+					if got, want := point.Value.(float64), 17.76; got != want {
+						return fmt.Errorf("unexpected value for gauge %q found; got %f; expected %f", testDerivedGauge.Name(), got, want)
+					}
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf("expected value for gauge %q not found; expected 17.76", testDerivedGauge.Name())
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Errorf("failure recording derived gauge values: %v", err)
 	}
 }
 
@@ -313,6 +355,7 @@ type testExporter struct {
 	sync.Mutex
 
 	rows        map[string][]*view.Row
+	metrics     map[string][]*metricdata.TimeSeries
 	invalidTags bool
 }
 
@@ -325,6 +368,13 @@ func (t *testExporter) ExportView(d *view.Data) {
 	}
 	t.rows[d.View.Name] = append(t.rows[d.View.Name], d.Rows...)
 	t.Unlock()
+}
+
+func (t *testExporter) ExportMetrics(ctx context.Context, data []*metricdata.Metric) error {
+	for _, m := range data {
+		t.metrics[m.Descriptor.Name] = append(t.metrics[m.Descriptor.Name], m.TimeSeries...)
+	}
+	return nil
 }
 
 func findTagWithValue(key, value string, tags []tag.Tag) bool {

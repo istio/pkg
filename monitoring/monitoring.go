@@ -19,9 +19,14 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opencensus.io/metric"
+	"go.opencensus.io/metric/metricdata"
+	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+
+	"istio.io/pkg/log"
 )
 
 type (
@@ -56,6 +61,19 @@ type (
 		Register() error
 	}
 
+	// DerivedMetrics can be used to supply values that dynamically derive from internal
+	// state, but are not updated based on any specific event. Their value will be calculated
+	// based on a value func that executes when the metrics are exported.
+	//
+	// At the moment, only a Gauge type is supported.
+	DerivedMetric interface {
+		// Name returns the name value of a DerivedMetric.
+		Name() string
+
+		// Register handles any required setup to ensure metric export.
+		Register() error
+	}
+
 	// Options encode changes to the options passed to a Metric at creation time.
 	Options func(*options)
 
@@ -80,10 +98,14 @@ type (
 var (
 	recordHooks     map[string]RecordHook
 	recordHookMutex sync.RWMutex
+
+	derivedRegistry = metric.NewRegistry()
 )
 
 func init() {
 	recordHooks = make(map[string]RecordHook)
+	// ensures exporters can see any derived metrics
+	metricproducer.GlobalManager().AddProducer(derivedRegistry)
 }
 
 // RegisterRecordHook adds a RecordHook for a given measure.
@@ -146,6 +168,22 @@ func NewGauge(name, description string, opts ...Options) Metric {
 	return newMetric(name, description, view.LastValue(), opts...)
 }
 
+// NewDerivedGauge creates a new Metric with an aggregation type of LastValue that generates the value
+// dynamically according to the provided function. This can be used for values based on querying some
+// state within a system (when event-driven recording is not appropriate).
+// NOTE: Labels not currently supported.
+func NewDerivedGauge(name, description string, valueFn func() float64) DerivedMetric {
+	m, err := derivedRegistry.AddFloat64DerivedGauge(name, metric.WithDescription(description), metric.WithUnit(metricdata.UnitDimensionless))
+	if err != nil {
+		log.Warnf("failed to add metric %q: %v", name, err)
+	}
+	err = m.UpsertEntry(valueFn)
+	if err != nil {
+		log.Warnf("failed to upsert entry for %q: %v", name, err)
+	}
+	return &derivedFloat64Metric{m, name}
+}
+
 // NewDistribution creates a new Metric with an aggregration type of Distribution. This means that the
 // data collected by the Metric will be collected and exported as a histogram, with the specified bounds.
 func NewDistribution(name, description string, bounds []float64, opts ...Options) Metric {
@@ -154,6 +192,21 @@ func NewDistribution(name, description string, bounds []float64, opts ...Options
 
 func newMetric(name, description string, aggregation *view.Aggregation, opts ...Options) Metric {
 	return newFloat64Metric(name, description, aggregation, opts...)
+}
+
+type derivedFloat64Metric struct {
+	*metric.Float64DerivedGauge
+
+	name string
+}
+
+func (d *derivedFloat64Metric) Name() string {
+	return d.name
+}
+
+// no-op
+func (d *derivedFloat64Metric) Register() error {
+	return nil
 }
 
 type float64Metric struct {
