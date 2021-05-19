@@ -29,7 +29,6 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 
-	"istio.io/pkg/log"
 	"istio.io/pkg/monitoring"
 )
 
@@ -373,7 +372,6 @@ func (t *testExporter) ExportView(d *view.Data) {
 
 func (t *testExporter) ExportMetrics(ctx context.Context, data []*metricdata.Metric) error {
 	for _, m := range data {
-		log.Infof("add data: %q; %#v\n", m.Descriptor.Name, m.TimeSeries)
 		t.metrics[m.Descriptor.Name] = append(t.metrics[m.Descriptor.Name], m.TimeSeries...)
 	}
 	return nil
