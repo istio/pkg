@@ -160,7 +160,7 @@ func TestDerivedGauge(t *testing.T) {
 			return 17.76
 		},
 	)
-	exp := &testExporter{rows: make(map[string][]*view.Row), metrics: make(map[string][]*metricdata.TimeSeries)}
+	exp := &testExporter{rows: make(map[string][]*view.Row), metrics: make(map[string][]*metricdata.Metric)}
 
 	reader := metricexport.NewReader()
 
@@ -173,12 +173,14 @@ func TestDerivedGauge(t *testing.T) {
 			}
 
 			found := false
-			for _, ts := range exp.metrics[testDerivedGauge.Name()] {
-				for _, point := range ts.Points {
-					if got, want := point.Value.(float64), 17.76; got != want {
-						return fmt.Errorf("unexpected value for gauge %q found; got %f; expected %f", testDerivedGauge.Name(), got, want)
+			for _, metric := range exp.metrics[testDerivedGauge.Name()] {
+				for _, ts := range metric.TimeSeries {
+					for _, point := range ts.Points {
+						if got, want := point.Value.(float64), 17.76; got != want {
+							return fmt.Errorf("unexpected value for gauge %q found; got %f; expected %f", testDerivedGauge.Name(), got, want)
+						}
+						found = true
 					}
-					found = true
 				}
 			}
 			if !found {
@@ -355,7 +357,7 @@ type testExporter struct {
 	sync.Mutex
 
 	rows        map[string][]*view.Row
-	metrics     map[string][]*metricdata.TimeSeries
+	metrics     map[string][]*metricdata.Metric
 	invalidTags bool
 }
 
@@ -372,7 +374,7 @@ func (t *testExporter) ExportView(d *view.Data) {
 
 func (t *testExporter) ExportMetrics(ctx context.Context, data []*metricdata.Metric) error {
 	for _, m := range data {
-		t.metrics[m.Descriptor.Name] = append(t.metrics[m.Descriptor.Name], m.TimeSeries...)
+		t.metrics[m.Descriptor.Name] = append(t.metrics[m.Descriptor.Name], m)
 	}
 	return nil
 }
