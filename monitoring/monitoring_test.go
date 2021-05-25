@@ -50,6 +50,13 @@ var (
 		monitoring.WithLabels(name),
 	)
 
+	int64Sum = monitoring.NewSum(
+		"int64_sum",
+		"Number of events (int values)",
+		monitoring.WithLabels(name, kind),
+		monitoring.WithInt64Values(),
+	)
+
 	testDistribution = monitoring.NewDistribution(
 		"test_buckets",
 		"Testing distribution functionality",
@@ -65,7 +72,7 @@ var (
 )
 
 func init() {
-	monitoring.MustRegister(testSum, hookSum, testDistribution, testGauge)
+	monitoring.MustRegister(testSum, hookSum, int64Sum, testDistribution, testGauge)
 }
 
 func TestSum(t *testing.T) {
@@ -76,6 +83,10 @@ func TestSum(t *testing.T) {
 	testSum.With(name.Value("foo"), kind.Value("bar")).Increment()
 	goofySum.With(name.Value("baz")).Record(45)
 	goofySum.With(name.Value("baz")).Decrement()
+
+	int64Sum.With(name.Value("foo"), kind.Value("bar")).Increment()
+	int64Sum.With(name.Value("foo"), kind.Value("bar")).RecordInt(10)
+	int64Sum.With(name.Value("foo"), kind.Value("bar")).Record(10.75) // should use floor, so this will be counted as 10
 
 	err := retry(
 		func() error {
@@ -108,6 +119,19 @@ func TestSum(t *testing.T) {
 			}
 			if got, want := testSumVal, 1.0; got != want {
 				return fmt.Errorf("bad value for %q: %f, want %f", testSum.Name(), got, want)
+			}
+			int64SumVal := int64(0)
+			for _, r := range exp.rows[int64Sum.Name()] {
+				if findTagWithValue("kind", "bar", r.Tags) {
+					if sd, ok := r.Data.(*view.SumData); ok {
+						int64SumVal = int64(sd.Value)
+					}
+				} else {
+					return fmt.Errorf("unknown row in results: %v", r)
+				}
+			}
+			if got, want := int64SumVal, int64(21); got != want {
+				return fmt.Errorf("bad value for %q: %d, want %d", int64Sum.Name(), got, want)
 			}
 			return nil
 		},
@@ -408,6 +432,9 @@ func retry(fn func() error) error {
 }
 
 type testRecordHook struct{}
+
+func (r *testRecordHook) OnRecordInt64Measure(i *stats.Int64Measure, tags []tag.Mutator, value int64) {
+}
 
 func (r *testRecordHook) OnRecordFloat64Measure(f *stats.Float64Measure, tags []tag.Mutator, value float64) {
 	// Check if this is `events_total` metric.
