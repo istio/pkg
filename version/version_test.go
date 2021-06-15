@@ -29,37 +29,39 @@ func TestNewBuildInfoFromOldString(t *testing.T) {
 	}{
 		{
 			"Correct input 1",
-			`Version: 1.0.0
+			`Version: 1.11.6
 GitRevision: 3a136c90ec5e308f236e0d7ebb5c4c5e405217f4
-GolangVersion: go1.10.1
+GolangVersion: go1.16.1
+VendorVersion: 1.10.0
 BuildStatus: Clean
 GitTag: tag
 `,
 			false,
-			BuildInfo{
-				Version:       "1.0.0",
+			BuildInfo{Version: "1.11.6",
 				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
-				GolangVersion: "go1.10.1",
+				GolangVersion: "go1.16.1",
+				VendorVersion: "1.10.0",
 				BuildStatus:   "Clean",
 				GitTag:        "tag",
 			},
 		},
 		{
 			"Legacy input 1",
-			`Version: 1.0.0
+			`Version: 1.11.6
 GitRevision: 3a136c90ec5e308f236e0d7ebb5c4c5e405217f4
 User: root@71a9470ea93c
 Host: foo
 Hub: docker.io/istio
-GolangVersion: go1.10.1
+GolangVersion: go1.16.1
+VendorVersion: 1.10.0
 BuildStatus: Clean
 GitTag: tag
 `,
 			false,
-			BuildInfo{
-				Version:       "1.0.0",
+			BuildInfo{Version: "1.11.6",
 				GitRevision:   "3a136c90ec5e308f236e0d7ebb5c4c5e405217f4",
-				GolangVersion: "go1.10.1",
+				GolangVersion: "go1.16.1",
+				VendorVersion: "1.10.0",
 				BuildStatus:   "Clean",
 				GitTag:        "tag",
 			},
@@ -97,7 +99,7 @@ GitTag: tag
 
 func TestBuildInfo(t *testing.T) {
 	versionedString := fmt.Sprintf(`version.BuildInfo{Version:"unknown", GitRevision:"unknown", `+
-		`GolangVersion:"%s", BuildStatus:"unknown", GitTag:"unknown"}`,
+		`GolangVersion:"%s", VendorVersion:"unknown", BuildStatus:"unknown", GitTag:"unknown"}`,
 		runtime.Version())
 
 	cases := []struct {
@@ -106,19 +108,16 @@ func TestBuildInfo(t *testing.T) {
 		want     string
 		longWant string
 	}{
-		{
-			"all specified",
-			BuildInfo{
-				Version:       "VER",
-				GitRevision:   "GITREV",
-				GolangVersion: "GOLANGVER",
-				BuildStatus:   "STATUS",
-				GitTag:        "TAG",
-			},
+		{"all specified", BuildInfo{
+			Version:       "VER",
+			GitRevision:   "GITREV",
+			GolangVersion: "GOLANGVER",
+			VendorVersion: "VENDORVER",
+			BuildStatus:   "STATUS",
+			GitTag:        "TAG"},
 			"VER-GITREV-STATUS",
 			`version.BuildInfo{Version:"VER", GitRevision:"GITREV", GolangVersion:"GOLANGVER", ` +
-				`BuildStatus:"STATUS", GitTag:"TAG"}`,
-		},
+				`VendorVersion:"VENDORVER", BuildStatus:"STATUS", GitTag:"TAG"}`},
 
 		{"init", Info, "unknown-unknown-unknown", versionedString},
 	}

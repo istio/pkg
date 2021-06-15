@@ -24,11 +24,12 @@ import (
 // The following fields are populated at build time using -ldflags -X.
 // Note that DATE is omitted for reproducible builds
 var (
-	buildVersion     = "unknown"
-	buildGitRevision = "unknown"
-	buildStatus      = "unknown"
-	buildTag         = "unknown"
-	buildHub         = "unknown"
+	buildVersion       = "unknown"
+	buildGitRevision   = "unknown"
+	buildVendorVersion = "unknown"
+	buildStatus        = "unknown"
+	buildTag           = "unknown"
+	buildHub           = "unknown"
 )
 
 // BuildInfo describes version information about the binary build.
@@ -36,6 +37,7 @@ type BuildInfo struct {
 	Version       string `json:"version"`
 	GitRevision   string `json:"revision"`
 	GolangVersion string `json:"golang_version"`
+	VendorVersion string `json:"vendor_version"`
 	BuildStatus   string `json:"status"`
 	GitTag        string `json:"tag"`
 }
@@ -84,6 +86,8 @@ func NewBuildInfoFromOldString(oldOutput string) (BuildInfo, error) {
 				res.GitRevision = value
 			case "GolangVersion":
 				res.GolangVersion = value
+			case "VendorVersion":
+				res.VendorVersion = value
 			case "BuildStatus":
 				res.BuildStatus = value
 			case "GitTag":
@@ -130,6 +134,7 @@ func init() {
 		Version:       buildVersion,
 		GitRevision:   buildGitRevision,
 		GolangVersion: runtime.Version(),
+		VendorVersion: buildVendorVersion,
 		BuildStatus:   buildStatus,
 		GitTag:        buildTag,
 	}
