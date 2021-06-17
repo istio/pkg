@@ -17,6 +17,7 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 
 	"go.opencensus.io/stats"
@@ -45,6 +46,9 @@ type (
 		// Record makes an observation of the provided value for the given measure.
 		Record(value float64)
 
+		// RecordInt makes an observation of the provided value for the measure.
+		RecordInt(value int64)
+
 		// With creates a new Metric, with the LabelValues provided. This allows creating
 		// a set of pre-dimensioned data for recording purposes. This is primarily used
 		// for documentation and convenience. Metrics created with this method do not need
@@ -67,13 +71,15 @@ type (
 	LabelValue tag.Mutator
 
 	options struct {
-		unit   Unit
-		labels []Label
+		unit     Unit
+		labels   []Label
+		useInt64 bool
 	}
 
 	// RecordHook has a callback function which a measure is recorded.
 	RecordHook interface {
 		OnRecordFloat64Measure(f *stats.Float64Measure, tags []tag.Mutator, value float64)
+		OnRecordInt64Measure(i *stats.Int64Measure, tags []tag.Mutator, value int64)
 	}
 )
 
@@ -106,6 +112,15 @@ func WithLabels(labels ...Label) Options {
 func WithUnit(unit Unit) Options {
 	return func(opts *options) {
 		opts.unit = unit
+	}
+}
+
+// WithInt64Values provides configuration options for a new Metric, indicating that
+// recorded values will be saved as int64 values. Any float64 values recorded will
+// converted to int64s via math.Floor-based conversion.
+func WithInt64Values() Options {
+	return func(opts *options) {
+		opts.useInt64 = true
 	}
 }
 
@@ -153,7 +168,11 @@ func NewDistribution(name, description string, bounds []float64, opts ...Options
 }
 
 func newMetric(name, description string, aggregation *view.Aggregation, opts ...Options) Metric {
-	return newFloat64Metric(name, description, aggregation, opts...)
+	o := createOptions(opts...)
+	if o.useInt64 {
+		return newInt64Metric(name, description, aggregation, o)
+	}
+	return newFloat64Metric(name, description, aggregation, o)
 }
 
 type float64Metric struct {
@@ -171,11 +190,10 @@ func createOptions(opts ...Options) *options {
 	return o
 }
 
-func newFloat64Metric(name, description string, aggregation *view.Aggregation, opts ...Options) *float64Metric {
-	o := createOptions(opts...)
-	measure := stats.Float64(name, description, string(o.unit))
-	tagKeys := make([]tag.Key, 0, len(o.labels))
-	for _, l := range o.labels {
+func newFloat64Metric(name, description string, aggregation *view.Aggregation, opts *options) *float64Metric {
+	measure := stats.Float64(name, description, string(opts.unit))
+	tagKeys := make([]tag.Key, 0, len(opts.labels))
+	for _, l := range opts.labels {
 		tagKeys = append(tagKeys, tag.Key(l))
 	}
 	return &float64Metric{
@@ -206,6 +224,10 @@ func (f *float64Metric) Record(value float64) {
 	stats.RecordWithTags(context.Background(), f.tags, f.M(value)) //nolint:errcheck
 }
 
+func (f *float64Metric) RecordInt(value int64) {
+	f.Record(float64(value))
+}
+
 func (f *float64Metric) With(labelValues ...LabelValue) Metric {
 	t := make([]tag.Mutator, len(f.tags))
 	copy(t, f.tags)
@@ -217,4 +239,62 @@ func (f *float64Metric) With(labelValues ...LabelValue) Metric {
 
 func (f *float64Metric) Register() error {
 	return view.Register(f.view)
+}
+
+type int64Metric struct {
+	*stats.Int64Measure
+
+	tags []tag.Mutator
+	view *view.View
+}
+
+func newInt64Metric(name, description string, aggregation *view.Aggregation, opts *options) *int64Metric {
+	measure := stats.Int64(name, description, string(opts.unit))
+	tagKeys := make([]tag.Key, 0, len(opts.labels))
+	for _, l := range opts.labels {
+		tagKeys = append(tagKeys, tag.Key(l))
+	}
+	return &int64Metric{
+		measure,
+		make([]tag.Mutator, 0),
+		&view.View{Measure: measure, TagKeys: tagKeys, Aggregation: aggregation},
+	}
+}
+
+func (i *int64Metric) Increment() {
+	i.RecordInt(1)
+}
+
+func (i *int64Metric) Decrement() {
+	i.RecordInt(-1)
+}
+
+func (i *int64Metric) Name() string {
+	return i.Int64Measure.Name()
+}
+
+func (i *int64Metric) Record(value float64) {
+	i.RecordInt(int64(math.Floor(value)))
+}
+
+func (i *int64Metric) RecordInt(value int64) {
+	recordHookMutex.RLock()
+	if rh, ok := recordHooks[i.Name()]; ok {
+		rh.OnRecordInt64Measure(i.Int64Measure, i.tags, value)
+	}
+	recordHookMutex.RUnlock()
+	stats.RecordWithTags(context.Background(), i.tags, i.M(value)) //nolint:errcheck
+}
+
+func (i *int64Metric) With(labelValues ...LabelValue) Metric {
+	t := make([]tag.Mutator, len(i.tags))
+	copy(t, i.tags)
+	for _, tagValue := range labelValues {
+		t = append(t, tag.Mutator(tagValue))
+	}
+	return &int64Metric{i.Int64Measure, t, i.view}
+}
+
+func (i *int64Metric) Register() error {
+	return view.Register(i.view)
 }
