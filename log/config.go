@@ -345,6 +345,20 @@ func Configure(options *Options) error {
 		}
 	}
 
+	if options.teeToUDSServer {
+		// build uds core.
+		core, err = teeToUDSServer(core, options.udsSocketAddress,
+			options.udsServerPath, options.udsMaxRetryAttempts)
+		if err != nil {
+			return err
+		}
+		captureCore, err = teeToUDSServer(captureCore, options.udsSocketAddress,
+			options.udsServerPath, options.udsMaxRetryAttempts)
+		if err != nil {
+			return err
+		}
+	}
+
 	pt := patchTable{
 		write: func(ent zapcore.Entry, fields []zapcore.Field) error {
 			err := core.Write(ent, fields)

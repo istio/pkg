@@ -127,6 +127,12 @@ type Options struct {
 	stackdriverTargetProject string
 	stackdriverLogName       string
 	stackdriverResource      *monitoredres.MonitoredResource
+
+	// tee log
+	teeToUDSServer      bool
+	udsSocketAddress    string
+	udsServerPath       string
+	udsMaxRetryAttempts int
 }
 
 // DefaultOptions returns a new set of options, initialized to the defaults
@@ -156,6 +162,14 @@ func (o *Options) WithTeeToStackdriver(project, logName string, mr *monitoredres
 	o.stackdriverTargetProject = project
 	o.stackdriverLogName = logName
 	o.stackdriverResource = mr
+	return o
+}
+
+func (o *Options) WithTeeToUDS(addr, path string, maxRetryAttempts int) *Options {
+	o.teeToUDSServer = true
+	o.udsSocketAddress = addr
+	o.udsServerPath = path
+	o.udsMaxRetryAttempts = maxRetryAttempts
 	return o
 }
 
