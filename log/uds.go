@@ -42,6 +42,7 @@ func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempt
 				return net.Dial("unix", address)
 			},
 		},
+		Timeout: 100 * time.Millisecond,
 	}
 	uc := &udsCore{client: c, url: "http://unix" + path, maxAttempts: maxRetryAttempts + 1}
 	for l := zapcore.DebugLevel; l <= zapcore.FatalLevel; l++ {
