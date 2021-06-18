@@ -159,7 +159,7 @@ func clone(orig map[string]interface{}, newFields []zapcore.Field) map[string]in
 		case zapcore.BinaryType:
 			clone[f.Key] = f.Interface
 		case zapcore.BoolType:
-			clone[f.Key] = (f.Integer == 1)
+			clone[f.Key] = f.Integer == 1
 		case zapcore.ByteStringType:
 			clone[f.Key] = f.String
 		case zapcore.Complex128Type:
