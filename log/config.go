@@ -389,7 +389,7 @@ func Configure(options *Options) error {
 
 	// capture klog (Kubernetes logging) through our logging
 	configureKlog.Do(func() {
-		klog.SetLogger(newLogrAdapter(KlogScope))
+		klog.SetLogger(NewLogrAdapter(KlogScope))
 	})
 	return nil
 }

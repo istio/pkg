@@ -24,7 +24,7 @@ import (
 func runLogrTestWithScope(t *testing.T, s *Scope, f func(l logr.Logger)) []string {
 	lines, err := captureStdout(func() {
 		Configure(DefaultOptions())
-		l := newLogrAdapter(s)
+		l := NewLogrAdapter(s)
 		f(l)
 		_ = Sync()
 	})
