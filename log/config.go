@@ -347,12 +347,12 @@ func Configure(options *Options) error {
 
 	if options.teeToUDSServer {
 		// build uds core.
-		core, err = teeToUDSServer(core, options.udsSocketAddress,
+		core = teeToUDSServer(core, options.udsSocketAddress,
 			options.udsServerPath, options.udsMaxRetryAttempts)
 		if err != nil {
 			return err
 		}
-		captureCore, err = teeToUDSServer(captureCore, options.udsSocketAddress,
+		captureCore = teeToUDSServer(captureCore, options.udsSocketAddress,
 			options.udsServerPath, options.udsMaxRetryAttempts)
 		if err != nil {
 			return err

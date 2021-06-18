@@ -35,7 +35,7 @@ type udsCore struct {
 }
 
 // teeToUDSServer returns a zapcore.Core that writes entries to both the provided core and to an uds server.
-func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempts int) (zapcore.Core, error) {
+func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempts int) zapcore.Core {
 	c := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -50,7 +50,7 @@ func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempt
 			break
 		}
 	}
-	return zapcore.NewTee(baseCore, uc), nil
+	return zapcore.NewTee(baseCore, uc)
 }
 
 // Enabled implements zapcore.Core.
