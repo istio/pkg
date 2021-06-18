@@ -26,7 +26,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// A udsCore write entries to a UDS server
+// An udsCore write entries to an UDS server
 type udsCore struct {
 	client       http.Client
 	minimumLevel zapcore.Level
@@ -34,7 +34,7 @@ type udsCore struct {
 	maxAttempts  int
 }
 
-// teeToUDSServer returns a zapcore.Core that writes entries to both the provided core and to a uds server.
+// teeToUDSServer returns a zapcore.Core that writes entries to both the provided core and to an uds server.
 func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempts int) (zapcore.Core, error) {
 	c := http.Client{
 		Transport: &http.Transport{
@@ -79,7 +79,7 @@ func (u *udsCore) Sync() error {
 	return nil
 }
 
-// Write implements zapcore.Core. It writes a log entry to Stackdriver.
+// Write implements zapcore.Core. It writes a log entry to an UDS server.
 func (u *udsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	attempts := 0
 	b := backoff.NewExponentialBackOff()

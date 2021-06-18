@@ -128,7 +128,7 @@ type Options struct {
 	stackdriverLogName       string
 	stackdriverResource      *monitoredres.MonitoredResource
 
-	// tee log
+	// tee log to an UDS server
 	teeToUDSServer      bool
 	udsSocketAddress    string
 	udsServerPath       string
