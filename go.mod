@@ -11,7 +11,6 @@ replace golang.org/x/tools => golang.org/x/tools v0.0.0-20191216173652-a0e659d51
 require (
 	cloud.google.com/go v0.76.0 // indirect
 	cloud.google.com/go/logging v1.2.0
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0

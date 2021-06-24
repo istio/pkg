@@ -15,27 +15,29 @@
 package log
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff"
+	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 )
 
-// An udsCore write entries to an UDS server
+// An udsCore write entries to an UDS server with HTTP Post. Log messages will be encoded into a JSON array.
 type udsCore struct {
 	client       http.Client
 	minimumLevel zapcore.Level
 	url          string
-	maxAttempts  int
+	enc          zapcore.Encoder
+	buffers      []*buffer.Buffer
 }
 
 // teeToUDSServer returns a zapcore.Core that writes entries to both the provided core and to an uds server.
-func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempts int) zapcore.Core {
+func teeToUDSServer(baseCore zapcore.Core, address, path string) zapcore.Core {
 	c := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -44,7 +46,7 @@ func teeToUDSServer(baseCore zapcore.Core, address, path string, maxRetryAttempt
 		},
 		Timeout: 100 * time.Millisecond,
 	}
-	uc := &udsCore{client: c, url: "http://unix" + path, maxAttempts: maxRetryAttempts + 1}
+	uc := &udsCore{client: c, url: "http://unix" + path, enc: zapcore.NewJSONEncoder(defaultEncoderConfig)}
 	for l := zapcore.DebugLevel; l <= zapcore.FatalLevel; l++ {
 		if baseCore.Enabled(l) {
 			uc.minimumLevel = l
@@ -75,35 +77,34 @@ func (u *udsCore) Check(e zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Chec
 	return ce
 }
 
-// Sync implements zapcore.Core.
+// Sync implements zapcore.Core. It sends log messages with HTTP POST.
 func (u *udsCore) Sync() error {
+	logs := make([]string, 0, len(u.buffers))
+	for _, b := range u.buffers {
+		logs = append(logs, b.String())
+		b.Free()
+	}
+	msg, err := json.Marshal(logs)
+	if err != nil {
+		return fmt.Errorf("failed to sync uds log: %v", err)
+	}
+	resp, err := u.client.Post(u.url, "application/json", bytes.NewReader(msg))
+	if err != nil {
+		return fmt.Errorf("failed to send logs to uds server %v: %v", u.url, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("uds server returns non-ok status %v: %v", u.url, resp.Status)
+	}
 	return nil
 }
 
-// Write implements zapcore.Core. It writes a log entry to an UDS server.
+// Write implements zapcore.Core. Log messages will be temporarily buffered and sent to
+// UDS server asyncrhonously.
 func (u *udsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	attempts := 0
-	b := backoff.NewExponentialBackOff()
-	var lastError error
-	for attempts < u.maxAttempts {
-		attempts++
-		resp, err := u.client.Post(u.url, "text/plain", strings.NewReader(entry.Message))
-		if err != nil {
-			// Reties on intermittent errors, in case of server restarts etc.
-			lastError = fmt.Errorf("error writing logs to uds server %v: %v", u.url, err)
-			if attempts < u.maxAttempts {
-				time.Sleep(b.NextBackOff())
-			}
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("uds server returns non-ok status %v: %v", u.url, resp.Status)
-		}
-		lastError = nil
-		break
+	buffer, err := u.enc.EncodeEntry(entry, fields)
+	if err != nil {
+		return fmt.Errorf("failed to write log to uds logger: %v", err)
 	}
-	if lastError != nil {
-		return lastError
-	}
+	u.buffers = append(u.buffers, buffer)
 	return nil
 }
