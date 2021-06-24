@@ -125,6 +125,7 @@ type Options struct {
 	useStackdriverFormat     bool
 	teeToStackdriver         bool
 	stackdriverTargetProject string
+	stackdriverQuotaProject  string
 	stackdriverLogName       string
 	stackdriverResource      *monitoredres.MonitoredResource
 }
@@ -154,6 +155,17 @@ func (o *Options) WithStackdriverLoggingFormat() *Options {
 func (o *Options) WithTeeToStackdriver(project, logName string, mr *monitoredres.MonitoredResource) *Options {
 	o.teeToStackdriver = true
 	o.stackdriverTargetProject = project
+	o.stackdriverQuotaProject = project
+	o.stackdriverLogName = logName
+	o.stackdriverResource = mr
+	return o
+}
+
+// WithTeeToStackdriver configures a parallel logging pipeline that writes logs to the Google Cloud Logging API.
+func (o *Options) WithTeeToStackdriverWithQuotaProject(project, quotaProject, logName string, mr *monitoredres.MonitoredResource) *Options {
+	o.teeToStackdriver = true
+	o.stackdriverTargetProject = project
+	o.stackdriverQuotaProject = quotaProject
 	o.stackdriverLogName = logName
 	o.stackdriverResource = mr
 	return o

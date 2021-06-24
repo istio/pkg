@@ -22,6 +22,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/api/option"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
@@ -63,12 +64,12 @@ type stackdriverCore struct {
 }
 
 // teeToStackdriver returns a zapcore.Core that writes entries to both the provided core and to Stackdriver.
-func teeToStackdriver(baseCore zapcore.Core, project, logName string, mr *monitoredres.MonitoredResource) (zapcore.Core, error) {
+func teeToStackdriver(baseCore zapcore.Core, project, quotaProject, logName string, mr *monitoredres.MonitoredResource) (zapcore.Core, error) {
 	if project == "" {
 		return nil, errors.New("a project must be provided for stackdriver export")
 	}
 
-	client, err := logging.NewClient(context.Background(), project)
+	client, err := logging.NewClient(context.Background(), project, option.WithQuotaProject(quotaProject))
 	if err != nil {
 		return nil, err
 	}
