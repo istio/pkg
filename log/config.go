@@ -335,11 +335,23 @@ func Configure(options *Options) error {
 
 	if options.teeToStackdriver {
 		// build stackdriver core.
-		core, err = teeToStackdriver(core, options.stackdriverTargetProject, options.stackdriverLogName, options.stackdriverResource)
+		core, err =
+			teeToStackdriver(
+				core,
+				options.stackdriverTargetProject,
+				options.stackdriverQuotaProject,
+				options.stackdriverLogName,
+				options.stackdriverResource)
 		if err != nil {
 			return err
 		}
-		captureCore, err = teeToStackdriver(captureCore, options.stackdriverTargetProject, options.stackdriverLogName, options.stackdriverResource)
+		captureCore, err =
+			teeToStackdriver(
+				captureCore,
+				options.stackdriverTargetProject,
+				options.stackdriverQuotaProject,
+				options.stackdriverLogName,
+				options.stackdriverResource)
 		if err != nil {
 			return err
 		}
