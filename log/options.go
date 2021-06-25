@@ -164,6 +164,8 @@ func (o *Options) WithTeeToStackdriver(project, logName string, mr *monitoredres
 	return o
 }
 
+// WithTeeToUDS configures a parallel logging pipeline that writes logs to a server over UDS.
+// addr is the socket that the server listens on, and path is the HTTP path that process the log message.
 func (o *Options) WithTeeToUDS(addr, path string) *Options {
 	o.teeToUDSServer = true
 	o.udsSocketAddress = addr

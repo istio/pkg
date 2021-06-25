@@ -46,7 +46,12 @@ func teeToUDSServer(baseCore zapcore.Core, address, path string) zapcore.Core {
 		},
 		Timeout: 100 * time.Millisecond,
 	}
-	uc := &udsCore{client: c, url: "http://unix" + path, enc: zapcore.NewJSONEncoder(defaultEncoderConfig)}
+	uc := &udsCore{
+		client:  c,
+		url:     "http://unix" + path,
+		enc:     zapcore.NewJSONEncoder(defaultEncoderConfig),
+		buffers: make([]*buffer.Buffer, 0),
+	}
 	for l := zapcore.DebugLevel; l <= zapcore.FatalLevel; l++ {
 		if baseCore.Enabled(l) {
 			uc.minimumLevel = l
@@ -84,6 +89,7 @@ func (u *udsCore) Sync() error {
 		logs = append(logs, b.String())
 		b.Free()
 	}
+	u.buffers = make([]*buffer.Buffer, 0)
 	msg, err := json.Marshal(logs)
 	if err != nil {
 		return fmt.Errorf("failed to sync uds log: %v", err)

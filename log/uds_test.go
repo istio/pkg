@@ -89,4 +89,13 @@ func TestUDSLog(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("received log messages, got %v want %v", got, want)
 	}
+
+	// Clean up all the mssages, and log again. Check that buffer is cleaned up properly.
+	srv.messages = make([]string, 0)
+	Warn("test3")
+	Sync()
+	// There should only be one message in the buffer
+	if got, want := len(srv.messages), 1; got != want {
+		t.Fatalf("number received log messages got %v want %v", got, want)
+	}
 }
