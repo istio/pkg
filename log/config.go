@@ -82,6 +82,20 @@ var levelToZap = map[Level]zapcore.Level{
 	NoneLevel:  none,
 }
 
+var defaultEncoderConfig = zapcore.EncoderConfig{
+	TimeKey:        "time",
+	LevelKey:       "level",
+	NameKey:        "scope",
+	CallerKey:      "caller",
+	MessageKey:     "msg",
+	StacktraceKey:  "stack",
+	LineEnding:     zapcore.DefaultLineEnding,
+	EncodeLevel:    zapcore.LowercaseLevelEncoder,
+	EncodeCaller:   zapcore.ShortCallerEncoder,
+	EncodeDuration: zapcore.StringDurationEncoder,
+	EncodeTime:     formatDate,
+}
+
 // functions that can be replaced in a test setting
 type patchTable struct {
 	write       func(ent zapcore.Entry, fields []zapcore.Field) error
@@ -125,19 +139,7 @@ func prepZap(options *Options) (zapcore.Core, zapcore.Core, zapcore.WriteSyncer,
 		enc = zapcore.NewJSONEncoder(encCfg)
 		useJSON.Store(true)
 	} else {
-		encCfg := zapcore.EncoderConfig{
-			TimeKey:        "time",
-			LevelKey:       "level",
-			NameKey:        "scope",
-			CallerKey:      "caller",
-			MessageKey:     "msg",
-			StacktraceKey:  "stack",
-			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeCaller:   zapcore.ShortCallerEncoder,
-			EncodeDuration: zapcore.StringDurationEncoder,
-			EncodeTime:     formatDate,
-		}
+		encCfg := defaultEncoderConfig
 
 		if options.JSONEncoding {
 			enc = zapcore.NewJSONEncoder(encCfg)
@@ -352,6 +354,18 @@ func Configure(options *Options) error {
 				options.stackdriverQuotaProject,
 				options.stackdriverLogName,
 				options.stackdriverResource)
+		if err != nil {
+			return err
+		}
+	}
+
+	if options.teeToUDSServer {
+		// build uds core.
+		core = teeToUDSServer(core, options.udsSocketAddress, options.udsServerPath)
+		if err != nil {
+			return err
+		}
+		captureCore = teeToUDSServer(captureCore, options.udsSocketAddress, options.udsServerPath)
 		if err != nil {
 			return err
 		}

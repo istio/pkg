@@ -128,6 +128,11 @@ type Options struct {
 	stackdriverQuotaProject  string
 	stackdriverLogName       string
 	stackdriverResource      *monitoredres.MonitoredResource
+
+	// tee log to an UDS server
+	teeToUDSServer   bool
+	udsSocketAddress string
+	udsServerPath    string
 }
 
 // DefaultOptions returns a new set of options, initialized to the defaults
@@ -168,6 +173,15 @@ func (o *Options) WithTeeToStackdriverWithQuotaProject(project, quotaProject, lo
 	o.stackdriverQuotaProject = quotaProject
 	o.stackdriverLogName = logName
 	o.stackdriverResource = mr
+	return o
+}
+
+// WithTeeToUDS configures a parallel logging pipeline that writes logs to a server over UDS.
+// addr is the socket that the server listens on, and path is the HTTP path that process the log message.
+func (o *Options) WithTeeToUDS(addr, path string) *Options {
+	o.teeToUDSServer = true
+	o.udsSocketAddress = addr
+	o.udsServerPath = path
 	return o
 }
 
