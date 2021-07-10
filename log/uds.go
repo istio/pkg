@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/zap/buffer"
@@ -34,6 +35,7 @@ type udsCore struct {
 	url          string
 	enc          zapcore.Encoder
 	buffers      []*buffer.Buffer
+	mu           sync.Mutex
 }
 
 // teeToUDSServer returns a zapcore.Core that writes entries to both the provided core and to an uds server.
@@ -84,12 +86,7 @@ func (u *udsCore) Check(e zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Chec
 
 // Sync implements zapcore.Core. It sends log messages with HTTP POST.
 func (u *udsCore) Sync() error {
-	logs := make([]string, 0, len(u.buffers))
-	for _, b := range u.buffers {
-		logs = append(logs, b.String())
-		b.Free()
-	}
-	u.buffers = make([]*buffer.Buffer, 0)
+	logs := u.logsFromBuffer()
 	msg, err := json.Marshal(logs)
 	if err != nil {
 		return fmt.Errorf("failed to sync uds log: %v", err)
@@ -111,6 +108,20 @@ func (u *udsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	if err != nil {
 		return fmt.Errorf("failed to write log to uds logger: %v", err)
 	}
+	u.mu.Lock()
 	u.buffers = append(u.buffers, buffer)
+	u.mu.Unlock()
 	return nil
+}
+
+func (u *udsCore) logsFromBuffer() []string {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	logs := make([]string, 0, len(u.buffers))
+	for _, b := range u.buffers {
+		logs = append(logs, b.String())
+		b.Free()
+	}
+	u.buffers = make([]*buffer.Buffer, 0)
+	return logs
 }
