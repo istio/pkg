@@ -199,7 +199,7 @@ func NewDerivedGauge(name, description string, valueFn func() float64) DerivedMe
 	return &derivedFloat64Metric{m, name}
 }
 
-// NewDistribution creates a new Metric with an aggregration type of Distribution. This means that the
+// NewDistribution creates a new Metric with an aggregation type of Distribution. This means that the
 // data collected by the Metric will be collected and exported as a histogram, with the specified bounds.
 func NewDistribution(name, description string, bounds []float64, opts ...Options) Metric {
 	return newMetric(name, description, view.Distribution(bounds...), opts...)

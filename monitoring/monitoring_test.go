@@ -327,7 +327,7 @@ func TestRecordHook(t *testing.T) {
 	view.RegisterExporter(exp)
 	view.SetReportingPeriod(1 * time.Millisecond)
 
-	// testRocordHook will record value for hookSum measure when testSum is recorded
+	// testRecordHook will record value for hookSum measure when testSum is recorded
 	rh := &testRecordHook{}
 	monitoring.RegisterRecordHook(testSum.Name(), rh)
 
