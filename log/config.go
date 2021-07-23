@@ -55,7 +55,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -315,11 +314,6 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 	return nil
 }
 
-var (
-	KlogScope     = RegisterScope("klog", "", 0)
-	configureKlog = sync.Once{}
-)
-
 // Configure initializes Istio's logging subsystem.
 //
 // You typically call this once at process startup.
@@ -417,6 +411,12 @@ func Configure(options *Options) error {
 	configureKlog.Do(func() {
 		klog.SetLogger(NewLogrAdapter(KlogScope))
 	})
+	// --vklog is non zero then KlogScope should be increased.
+	// klog is a special case.
+	if klogVerbose() {
+		KlogScope.SetOutputLevel(DebugLevel)
+	}
+
 	return nil
 }
 
