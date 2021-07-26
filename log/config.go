@@ -101,6 +101,7 @@ type patchTable struct {
 	sync        func() error
 	exitProcess func(code int)
 	errorSink   zapcore.WriteSyncer
+	close       func() error
 }
 
 var (
@@ -329,9 +330,12 @@ func Configure(options *Options) error {
 		return err
 	}
 
+	closeFns := make([]func() error, 0, 0)
+
 	if options.teeToStackdriver {
+		var closeFn, captureCloseFn func() error
 		// build stackdriver core.
-		core, err =
+		core, closeFn, err =
 			teeToStackdriver(
 				core,
 				options.stackdriverTargetProject,
@@ -341,7 +345,7 @@ func Configure(options *Options) error {
 		if err != nil {
 			return err
 		}
-		captureCore, err =
+		captureCore, captureCloseFn, err =
 			teeToStackdriver(
 				captureCore,
 				options.stackdriverTargetProject,
@@ -351,6 +355,7 @@ func Configure(options *Options) error {
 		if err != nil {
 			return err
 		}
+		closeFns = append(closeFns, closeFn, captureCloseFn)
 	}
 
 	if options.teeToUDSServer {
@@ -377,6 +382,15 @@ func Configure(options *Options) error {
 		sync:        core.Sync,
 		exitProcess: os.Exit,
 		errorSink:   errSink,
+		close: func() error {
+			core.Sync()
+			for _, f := range closeFns {
+				if err := f(); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 	}
 	funcs.Store(pt)
 
@@ -424,4 +438,9 @@ func Configure(options *Options) error {
 // Processes should normally take care to call Sync before exiting.
 func Sync() error {
 	return funcs.Load().(patchTable).sync()
+}
+
+// Close implements io.Closer.
+func Close() error {
+	return funcs.Load().(patchTable).close()
 }
