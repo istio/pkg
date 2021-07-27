@@ -63,15 +63,17 @@ type stackdriverCore struct {
 	fields       map[string]interface{}
 }
 
+type CloseFunc func() error
+
 // teeToStackdriver returns a zapcore.Core that writes entries to both the provided core and to Stackdriver.
-func teeToStackdriver(baseCore zapcore.Core, project, quotaProject, logName string, mr *monitoredres.MonitoredResource) (zapcore.Core, error) {
+func teeToStackdriver(baseCore zapcore.Core, project, quotaProject, logName string, mr *monitoredres.MonitoredResource) (zapcore.Core, CloseFunc, error) {
 	if project == "" {
-		return nil, errors.New("a project must be provided for stackdriver export")
+		return nil, func() error { return nil }, errors.New("a project must be provided for stackdriver export")
 	}
 
 	client, err := logging.NewClient(context.Background(), project, option.WithQuotaProject(quotaProject))
 	if err != nil {
-		return nil, err
+		return nil, func() error { return nil }, err
 	}
 
 	var logger *logging.Logger
@@ -89,7 +91,7 @@ func teeToStackdriver(baseCore zapcore.Core, project, quotaProject, logName stri
 		}
 	}
 
-	return zapcore.NewTee(baseCore, sdCore), nil
+	return zapcore.NewTee(baseCore, sdCore), func() error { return client.Close() }, nil
 }
 
 // Enabled implements zapcore.Core.
