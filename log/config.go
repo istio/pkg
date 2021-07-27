@@ -330,7 +330,7 @@ func Configure(options *Options) error {
 		return err
 	}
 
-	closeFns := make([]func() error, 0, 0)
+	closeFns := make([]func() error, 0)
 
 	if options.teeToStackdriver {
 		var closeFn, captureCloseFn func() error
@@ -383,7 +383,8 @@ func Configure(options *Options) error {
 		exitProcess: os.Exit,
 		errorSink:   errSink,
 		close: func() error {
-			core.Sync()
+			// best-effort to sync
+			core.Sync() // nolint: errcheck
 			for _, f := range closeFns {
 				if err := f(); err != nil {
 					return err
