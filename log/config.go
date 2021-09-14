@@ -303,7 +303,7 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 			}
 			return nil
 		} else if s == GrpcScopeName {
-			grpcScope := RegisterScope(GrpcScopeName, "", 0)
+			grpcScope := RegisterScope(GrpcScopeName, "", 3)
 			logGrpc = true
 			setter(grpcScope, l)
 			return nil
@@ -419,7 +419,7 @@ func Configure(options *Options) error {
 
 	// capture gRPC logging
 	if options.LogGrpc {
-		grpclog.SetLogger(zapgrpc.NewLogger(captureLogger.WithOptions(zap.AddCallerSkip(2))))
+		grpclog.SetLogger(zapgrpc.NewLogger(captureLogger.WithOptions(zap.AddCallerSkip(3))))
 	}
 
 	// capture klog (Kubernetes logging) through our logging
