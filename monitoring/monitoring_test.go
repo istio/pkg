@@ -111,7 +111,7 @@ func TestSum(t *testing.T) {
 						testSumVal = sd.Value
 					}
 				} else {
-					return fmt.Errorf("unknown row in results: %v", r)
+					return fmt.Errorf("unknown row in results: %+v", r)
 				}
 			}
 			if got, want := goofySumVal, 44.0; got != want {
@@ -127,7 +127,7 @@ func TestSum(t *testing.T) {
 						int64SumVal = int64(sd.Value)
 					}
 				} else {
-					return fmt.Errorf("unknown row in results: %v", r)
+					return fmt.Errorf("unknown row in results: %+v", r)
 				}
 			}
 			if got, want := int64SumVal, int64(21); got != want {
@@ -457,4 +457,14 @@ func (r *testRecordHook) OnRecordFloat64Measure(f *stats.Float64Measure, tags []
 		return
 	}
 	hookSum.With(name.Value(v)).Record(value)
+}
+
+func BenchmarkCounter(b *testing.B) {
+	exp := &testExporter{rows: make(map[string][]*view.Row)}
+	view.RegisterExporter(exp)
+	view.SetReportingPeriod(1 * time.Millisecond)
+
+	for n := 0; n < b.N; n++ {
+		int64Sum.Increment()
+	}
 }
