@@ -11,7 +11,6 @@ replace golang.org/x/tools => golang.org/x/tools v0.0.0-20191216173652-a0e659d51
 require (
 	cloud.google.com/go/logging v1.4.2
 	github.com/fsnotify/fsnotify v1.5.1
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/uuid v1.3.0
@@ -37,4 +36,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/klog/v2 v2.5.0
+	sigs.k8s.io/yaml v1.3.0
 )
