@@ -354,13 +354,6 @@ func (g *generator) genConfigFile(v *viper.Viper, flags *pflag.FlagSet) error {
 			deepkeys[f.Name] = "--" + f.Name
 		}
 	})
-	ultimatealias := dereferenceMap(v.GetAliases())
-	for alias, target := range ultimatealias {
-		// limit to deep aliases pointing to this command's flags...
-		if strings.Contains(alias, ".") && flags.Lookup(target) != nil {
-			deepkeys[alias] = "--" + target
-		}
-	}
 
 	if len(deepkeys) < 1 {
 		return nil
