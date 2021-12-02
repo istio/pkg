@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc/grpclog"
@@ -289,7 +288,7 @@ func TestRotateMaxBackups(t *testing.T) {
 	// make sure that all log outputs is much larger than 2M
 	for i := 0; i < 4*1024; i++ {
 		for j := 0; j < 8; j++ {
-			glog.Info(line)
+			log.Println(line)
 		}
 	}
 
@@ -312,35 +311,6 @@ func TestRotateMaxBackups(t *testing.T) {
 	t.Errorf("Expecting at most %d backup logs", o.RotationMaxBackups)
 }
 
-func TestGlogV(t *testing.T) {
-	resetGlobals()
-
-	o := DefaultOptions()
-	_ = Configure(o)
-
-	for i := 0; i < 10; i++ {
-		defaultScope.SetOutputLevel(DebugLevel)
-		if enabled := glog.V(glog.Level(i)); !enabled {
-			t.Errorf("Expected to be enabled")
-		}
-
-		defaultScope.SetOutputLevel(InfoLevel)
-		if enabled := glog.V(glog.Level(i)); enabled {
-			t.Errorf("Expected to be disabled")
-		}
-
-		defaultScope.SetOutputLevel(WarnLevel)
-		if enabled := glog.V(glog.Level(i)); enabled {
-			t.Errorf("Expected to be disabled")
-		}
-
-		defaultScope.SetOutputLevel(ErrorLevel)
-		if enabled := glog.V(glog.Level(i)); enabled {
-			t.Errorf("Expected to be disabled")
-		}
-	}
-}
-
 func TestCapture(t *testing.T) {
 	lines, _ := captureStdout(func() {
 		o := DefaultOptions()
@@ -356,12 +326,6 @@ func TestCapture(t *testing.T) {
 		grpclog.Error("grpc-error")
 		grpclog.Warning("grpc-warn")
 		grpclog.Info("grpc-info")
-
-		// output to glog, this is getting captured by the istio/glog shim
-		glog.Error("glog-error")
-		glog.Warning("glog-warning")
-		glog.Info("glog-info")
-		glog.V(4).Info("glog-debug")
 
 		// output directly to zap
 		zap.L().Error("zap-error")
@@ -385,10 +349,6 @@ func TestCapture(t *testing.T) {
 		grpclog.Error("grpc-error-2")
 		grpclog.Warning("grpc-warn-2")
 		grpclog.Info("grpc-info-2")
-		glog.Error("glog-error-2")
-		glog.Warning("glog-warning-2")
-		glog.Info("glog-info-2")
-		glog.V(4).Info("glog-debug-2")
 		zap.L().Error("zap-error-2")
 		zap.L().Warn("zap-warn-2")
 		zap.L().Info("zap-info-2")
@@ -400,10 +360,6 @@ func TestCapture(t *testing.T) {
 		timePattern + "\tinfo\tlog/config_test.go:.*\tgrpc-error", // gRPC errors and warnings come out as info
 		timePattern + "\tinfo\tlog/config_test.go:.*\tgrpc-warn",
 		timePattern + "\tinfo\tlog/config_test.go:.*\tgrpc-info",
-		timePattern + "\terror\tlog/config_test.go:.*\tglog-error",
-		timePattern + "\twarn\tlog/config_test.go:.*\tglog-warn",
-		timePattern + "\tinfo\tlog/config_test.go:.*\tglog-info",
-		timePattern + "\tdebug\tlog/config_test.go:.*\tglog-debug",
 		timePattern + "\terror\tlog/config_test.go:.*\tzap-error",
 		timePattern + "\twarn\tlog/config_test.go:.*\tzap-warn",
 		timePattern + "\tinfo\tlog/config_test.go:.*\tzap-info",

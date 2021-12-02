@@ -43,7 +43,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
 	"istio.io/pkg/collateral/metrics"
@@ -329,7 +328,7 @@ func genHTMLFragment(cmd *cobra.Command, path string, p Predicates) error {
 		}
 
 		g.genCommand(commands[n])
-		_ = g.genConfigFile(viper.GetViper(), commands[n].Flags())
+		_ = g.genConfigFile(commands[n].Flags())
 	}
 
 	g.genVars(cmd, p.SelectEnv)
@@ -345,7 +344,7 @@ func genHTMLFragment(cmd *cobra.Command, path string, p Predicates) error {
 	return err
 }
 
-func (g *generator) genConfigFile(v *viper.Viper, flags *pflag.FlagSet) error {
+func (g *generator) genConfigFile(flags *pflag.FlagSet) error {
 	// find all flag names and aliases which contain dots, as these allow
 	// structured config files, which aren't intuitive
 	deepkeys := make(map[string]string)
@@ -354,13 +353,6 @@ func (g *generator) genConfigFile(v *viper.Viper, flags *pflag.FlagSet) error {
 			deepkeys[f.Name] = "--" + f.Name
 		}
 	})
-	ultimatealias := dereferenceMap(v.GetAliases())
-	for alias, target := range ultimatealias {
-		// limit to deep aliases pointing to this command's flags...
-		if strings.Contains(alias, ".") && flags.Lookup(target) != nil {
-			deepkeys[alias] = "--" + target
-		}
-	}
 
 	if len(deepkeys) < 1 {
 		return nil
