@@ -39,7 +39,7 @@ type zapLogger struct {
 
 const debugLevelThreshold = 3
 
-func (zl *zapLogger) Enabled() bool {
+func (zl *zapLogger) Enabled(int) bool {
 	if zl.lvlSet && zl.lvl > debugLevelThreshold {
 		return zl.l.DebugEnabled()
 	}
@@ -58,7 +58,10 @@ func trimNewline(msg string) string {
 	return msg
 }
 
-func (zl *zapLogger) Info(msg string, keysAndVals ...interface{}) {
+func (zl *zapLogger) Init(logr.RuntimeInfo) {
+}
+
+func (zl *zapLogger) Info(level int, msg string, keysAndVals ...interface{}) {
 	if zl.lvlSet && zl.lvl > debugLevelThreshold {
 		zl.l.WithLabels(keysAndVals...).Debug(trimNewline(msg))
 	} else {
@@ -77,26 +80,30 @@ func (zl *zapLogger) Error(err error, msg string, keysAndVals ...interface{}) {
 }
 
 func (zl *zapLogger) V(level int) logr.Logger {
-	return &zapLogger{
+	zlog := &zapLogger{
 		lvl:    zl.lvl + level,
 		l:      zl.l,
 		lvlSet: true,
 	}
+
+	return logr.New(zlog)
 }
 
-func (zl *zapLogger) WithValues(keysAndValues ...interface{}) logr.Logger {
-	return NewLogrAdapter(zl.l.WithLabels(keysAndValues...))
+func (zl *zapLogger) WithValues(keysAndValues ...interface{}) logr.LogSink {
+	return NewLogrAdapter(zl.l.WithLabels(keysAndValues...)).GetSink()
 }
 
-func (zl *zapLogger) WithName(name string) logr.Logger {
+func (zl *zapLogger) WithName(string) logr.LogSink {
 	return zl
 }
 
-// NewLogger creates a new logr.Logger using the given Zap Logger to log.
+// NewLogrAdapter creates a new logr.Logger using the given Zap Logger to log.
 func NewLogrAdapter(l *Scope) logr.Logger {
-	return &zapLogger{
+	zlog := &zapLogger{
 		l:      l,
 		lvl:    0,
 		lvlSet: false,
 	}
+
+	return logr.New(zlog)
 }
