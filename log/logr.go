@@ -32,15 +32,13 @@ import (
 // Zap does come with its own logr implementation, but we have chosen to re-implement to allow usage of
 // our Scope - in particular, this allows changing the logging level of kubernetes logs by users.
 type zapLogger struct {
-	l      *Scope
-	lvl    int
-	lvlSet bool
+	l *Scope
 }
 
 const debugLevelThreshold = 3
 
-func (zl *zapLogger) Enabled(int) bool {
-	if zl.lvlSet && zl.lvl > debugLevelThreshold {
+func (zl *zapLogger) Enabled(level int) bool {
+	if level > debugLevelThreshold {
 		return zl.l.DebugEnabled()
 	}
 	return zl.l.InfoEnabled()
@@ -62,7 +60,7 @@ func (zl *zapLogger) Init(logr.RuntimeInfo) {
 }
 
 func (zl *zapLogger) Info(level int, msg string, keysAndVals ...interface{}) {
-	if zl.lvlSet && zl.lvl > debugLevelThreshold {
+	if level > debugLevelThreshold {
 		zl.l.WithLabels(keysAndVals...).Debug(trimNewline(msg))
 	} else {
 		zl.l.WithLabels(keysAndVals...).Info(trimNewline(msg))
@@ -79,11 +77,9 @@ func (zl *zapLogger) Error(err error, msg string, keysAndVals ...interface{}) {
 	}
 }
 
-func (zl *zapLogger) V(level int) logr.Logger {
+func (zl *zapLogger) V(int) logr.Logger {
 	zlog := &zapLogger{
-		lvl:    zl.lvl + level,
-		l:      zl.l,
-		lvlSet: true,
+		l: zl.l,
 	}
 
 	return logr.New(zlog)
@@ -100,9 +96,7 @@ func (zl *zapLogger) WithName(string) logr.LogSink {
 // NewLogrAdapter creates a new logr.Logger using the given Zap Logger to log.
 func NewLogrAdapter(l *Scope) logr.Logger {
 	zlog := &zapLogger{
-		l:      l,
-		lvl:    0,
-		lvlSet: false,
+		l: l,
 	}
 
 	return logr.New(zlog)
