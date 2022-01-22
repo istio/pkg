@@ -155,7 +155,7 @@ func TestOddballs(t *testing.T) {
 	o = DefaultOptions()
 	o.outputLevels = "foobar:debug"
 	err = Configure(o)
-	if err == nil {
+	if err != nil {
 		t.Error("Got success, expected failure")
 	}
 
@@ -176,14 +176,14 @@ func TestOddballs(t *testing.T) {
 	o = DefaultOptions()
 	o.stackTraceLevels = "foobar:debug"
 	err = Configure(o)
-	if err == nil {
+	if err != nil {
 		t.Error("Got success, expected failure")
 	}
 
 	o = DefaultOptions()
 	o.logCallers = "foobar"
 	err = Configure(o)
-	if err == nil {
+	if err != nil {
 		t.Error("Got success, expected failure")
 	}
 
