@@ -26,13 +26,11 @@ import (
 // FileWatcher is an interface that watches a set of files,
 // delivering events to related channel.
 type FileWatcher interface {
-
 	// Start watching a path. Calling Add multiple times on the same path panics.
 	Add(path string) error
 
 	// Stop watching a path. Removing a path that's not currently being watched panics.
 	Remove(path string) error
-
 	Close() error
 	Events(path string) chan fsnotify.Event
 	Errors(path string) chan error
