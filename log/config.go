@@ -330,23 +330,21 @@ func Configure(options *Options) error {
 	if options.teeToStackdriver {
 		var closeFn, captureCloseFn func() error
 		// build stackdriver core.
-		core, closeFn, err =
-			teeToStackdriver(
-				core,
-				options.stackdriverTargetProject,
-				options.stackdriverQuotaProject,
-				options.stackdriverLogName,
-				options.stackdriverResource)
+		core, closeFn, err = teeToStackdriver(
+			core,
+			options.stackdriverTargetProject,
+			options.stackdriverQuotaProject,
+			options.stackdriverLogName,
+			options.stackdriverResource)
 		if err != nil {
 			return err
 		}
-		captureCore, captureCloseFn, err =
-			teeToStackdriver(
-				captureCore,
-				options.stackdriverTargetProject,
-				options.stackdriverQuotaProject,
-				options.stackdriverLogName,
-				options.stackdriverResource)
+		captureCore, captureCloseFn, err = teeToStackdriver(
+			captureCore,
+			options.stackdriverTargetProject,
+			options.stackdriverQuotaProject,
+			options.stackdriverLogName,
+			options.stackdriverResource)
 		if err != nil {
 			return err
 		}

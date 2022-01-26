@@ -47,7 +47,7 @@ func newWatchFileImpl() (string, func(), error) {
 	}
 
 	watchFile := path.Join(watchDir, "test.conf")
-	err = ioutil.WriteFile(watchFile, []byte("foo: bar\n"), 0640)
+	err = ioutil.WriteFile(watchFile, []byte("foo: bar\n"), 0o640)
 	if err != nil {
 		_ = os.RemoveAll(watchDir)
 		return "", nil, err
@@ -89,11 +89,11 @@ func newTwoWatchFile(t *testing.T) (string, string, func()) {
 	g.Expect(err).NotTo(HaveOccurred())
 
 	watchFile1 := path.Join(watchDir, "test1.conf")
-	err = ioutil.WriteFile(watchFile1, []byte("foo: bar\n"), 0640)
+	err = ioutil.WriteFile(watchFile1, []byte("foo: bar\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	watchFile2 := path.Join(watchDir, "test2.conf")
-	err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0640)
+	err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	cleanup := func() {
@@ -119,12 +119,12 @@ func newSymlinkedWatchFile(t *testing.T) (string, string, func()) {
 	g.Expect(err).NotTo(HaveOccurred())
 
 	dataDir1 := path.Join(watchDir, "data1")
-	err = os.Mkdir(dataDir1, 0777)
+	err = os.Mkdir(dataDir1, 0o777)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	realTestFile := path.Join(dataDir1, "test.conf")
 	t.Logf("Real test file location: %s\n", realTestFile)
-	err = ioutil.WriteFile(realTestFile, []byte("foo: bar\n"), 0640)
+	err = ioutil.WriteFile(realTestFile, []byte("foo: bar\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	cleanup := func() {
@@ -161,7 +161,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err = ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0640)
+		err = ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
 
@@ -191,11 +191,11 @@ func TestWatchFile(t *testing.T) {
 
 		// Link to another `test.conf` file
 		dataDir2 := path.Join(watchDir, "data2")
-		err := os.Mkdir(dataDir2, 0777)
+		err := os.Mkdir(dataDir2, 0o777)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		watchFile2 := path.Join(dataDir2, "test.conf")
-		err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0640)
+		err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// change the symlink using the `ln -sfn` command
@@ -227,7 +227,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err := ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0640)
+		err := ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
 
@@ -440,7 +440,7 @@ func changeFileContents(file string) {
 		b[i] = byte(rand.Int31n(255))
 	}
 
-	_ = ioutil.WriteFile(file, b, 0777)
+	_ = ioutil.WriteFile(file, b, 0o777)
 }
 
 func (c *churnFile) modify() {

@@ -52,7 +52,7 @@ func getVars() []envVar {
 	result := []envVar{}
 	for _, v := range env {
 		eq := strings.Index(v, "=")
-		name := v[:eq]
+		name := v[:eq] //nolint
 		value := v[eq+1:]
 		result = append(result, envVar{Name: name, Value: value})
 	}
