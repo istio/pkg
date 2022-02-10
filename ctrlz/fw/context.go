@@ -22,7 +22,6 @@ import (
 
 // Topic is used to describe a single major ControlZ functional area.
 type Topic interface {
-
 	// Title returns the title for the area, which will be used in the sidenav and window title.
 	Title() string
 
