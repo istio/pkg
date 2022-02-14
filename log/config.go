@@ -354,13 +354,7 @@ func Configure(options *Options) error {
 	if options.teeToUDSServer {
 		// build uds core.
 		core = teeToUDSServer(core, options.udsSocketAddress, options.udsServerPath)
-		if err != nil {
-			return err
-		}
 		captureCore = teeToUDSServer(captureCore, options.udsSocketAddress, options.udsServerPath)
-		if err != nil {
-			return err
-		}
 	}
 
 	pt := patchTable{
