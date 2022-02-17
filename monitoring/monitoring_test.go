@@ -216,6 +216,55 @@ func TestDerivedGauge(t *testing.T) {
 	}
 }
 
+func TestDerivedGaugeWithLabels(t *testing.T) {
+	testDerivedGauge := monitoring.NewDerivedGaugeWithLabels(
+		"test_derived_gauge",
+		"Testing derived gauae functionality",
+		map[string]string{
+			"foo": "bar",
+		},
+		func() float64 {
+			return 17.76
+		},
+	)
+	exp := &testExporter{rows: make(map[string][]*view.Row), metrics: make(map[string][]*metricdata.TimeSeries)}
+
+	reader := metricexport.NewReader()
+
+	err := retry(
+		func() error {
+			reader.ReadAndExport(exp)
+
+			if len(exp.metrics[testDerivedGauge.Name()]) < 1 {
+				return errors.New("no values recorded for gauge, want 1")
+			}
+
+			found := false
+			for _, ts := range exp.metrics[testDerivedGauge.Name()] {
+				for _, l := range ts.LabelValues {
+					if got, want := l.Value, "bar"; got != want {
+						return fmt.Errorf("unexpected label for gauge %q found; got %s; expected %s", testDerivedGauge.Name(), got, want)
+					}
+				}
+
+				for _, point := range ts.Points {
+					if got, want := point.Value.(float64), 17.76; got != want {
+						return fmt.Errorf("unexpected value for gauge %q found; got %f; expected %f", testDerivedGauge.Name(), got, want)
+					}
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf("expected value for gauge %q not found; expected 17.76", testDerivedGauge.Name())
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Errorf("failure recording derived gauge values: %v", err)
+	}
+}
+
 func TestDistribution(t *testing.T) {
 	exp := &testExporter{rows: make(map[string][]*view.Row)}
 	view.RegisterExporter(exp)
