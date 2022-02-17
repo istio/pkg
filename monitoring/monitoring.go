@@ -186,9 +186,20 @@ func NewGauge(name, description string, opts ...Options) Metric {
 // NewDerivedGauge creates a new Metric with an aggregation type of LastValue that generates the value
 // dynamically according to the provided function. This can be used for values based on querying some
 // state within a system (when event-driven recording is not appropriate).
-// NOTE: Labels not currently supported.
 func NewDerivedGauge(name, description string, valueFn func() float64) DerivedMetric {
-	m, err := derivedRegistry.AddFloat64DerivedGauge(name, metric.WithDescription(description), metric.WithUnit(metricdata.UnitDimensionless))
+	return NewDerivedGaugeWithLabels(name, description, nil, valueFn)
+}
+
+// NewDerivedGaugeWithLabels almost same as NewDerivedGauge, expect with const labels.
+func NewDerivedGaugeWithLabels(name, description string, labels map[string]string, valueFn func() float64) DerivedMetric {
+	constLabels := make(map[metricdata.LabelKey]metricdata.LabelValue)
+	for k, v := range labels {
+		constLabels[metricdata.LabelKey{Key: k}] = metricdata.NewLabelValue(v)
+	}
+	m, err := derivedRegistry.AddFloat64DerivedGauge(name,
+		metric.WithDescription(description),
+		metric.WithConstLabel(constLabels),
+		metric.WithUnit(metricdata.UnitDimensionless))
 	if err != nil {
 		log.Warnf("failed to add metric %q: %v", name, err)
 	}
