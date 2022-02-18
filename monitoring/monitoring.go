@@ -190,7 +190,7 @@ func NewDerivedGauge(name, description string, valueFn func() float64) DerivedMe
 	return NewDerivedGaugeWithLabels(name, description, nil, valueFn)
 }
 
-// NewDerivedGaugeWithLabels almost same as NewDerivedGauge, expect with const labels.
+// NewDerivedGaugeWithLabels creates a new Metric that takes its value from the provided function with a set of const labels.
 func NewDerivedGaugeWithLabels(name, description string, labels map[string]string, valueFn func() float64) DerivedMetric {
 	constLabels := make(map[metricdata.LabelKey]metricdata.LabelValue)
 	for k, v := range labels {
