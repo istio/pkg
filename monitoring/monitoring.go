@@ -76,10 +76,20 @@ type (
 
 		// Register handles any required setup to ensure metric export.
 		Register() error
+
+		// ValueFrom is used to update the derived value with the provided
+		// function and the associated label values. If the metric is unlabeled,
+		// ValueFrom may be called without any labelValues. Otherwise, the labelValues
+		// supplied MUST match the label keys supplied at creation time both in number
+		// and in order.
+		ValueFrom(valueFn func() float64, labelValues ...string)
 	}
 
 	// Options encode changes to the options passed to a Metric at creation time.
 	Options func(*options)
+
+	// DerivedOptions encode changes to the options passed to a DerivedMetric at creation time.
+	DerivedOptions func(*derivedOptions)
 
 	// A Label provides a named dimension for a Metric.
 	Label tag.Key
@@ -92,6 +102,11 @@ type (
 		unit     Unit
 		labels   []Label
 		useInt64 bool
+	}
+
+	derivedOptions struct {
+		labelKeys []string
+		valueFn   func() float64
 	}
 
 	// RecordHook has a callback function which a measure is recorded.
@@ -146,6 +161,24 @@ func WithInt64Values() Options {
 	}
 }
 
+// WithLabelKeys is used to configure the label keys used by a DerivedMetric. This
+// option is mutually exclusive with the derived option `WithValueFrom` and will be ignored
+// if that option is provided.
+func WithLabelKeys(keys ...string) DerivedOptions {
+	return func(opts *derivedOptions) {
+		opts.labelKeys = keys
+	}
+}
+
+// WithValueFrom is used to configure the derivation of a DerivedMetric. This option
+// is mutually exclusive with the derived option `WithLabelKeys`. It acts as syntactic sugar
+// that elides the need to create a DerivedMetric (with no labels) and then call `ValueFrom`.
+func WithValueFrom(valueFn func() float64) DerivedOptions {
+	return func(opts *derivedOptions) {
+		opts.valueFn = valueFn
+	}
+}
+
 // Value creates a new LabelValue for the Label.
 func (l Label) Value(value string) LabelValue {
 	return tag.Upsert(tag.Key(l), value)
@@ -186,28 +219,23 @@ func NewGauge(name, description string, opts ...Options) Metric {
 // NewDerivedGauge creates a new Metric with an aggregation type of LastValue that generates the value
 // dynamically according to the provided function. This can be used for values based on querying some
 // state within a system (when event-driven recording is not appropriate).
-func NewDerivedGauge(name, description string, valueFn func() float64) DerivedMetric {
-	return NewDerivedGaugeWithLabels(name, description, nil, valueFn)
-}
-
-// NewDerivedGaugeWithLabels creates a new Metric that takes its value from the provided function with a set of const labels.
-func NewDerivedGaugeWithLabels(name, description string, labels map[string]string, valueFn func() float64) DerivedMetric {
-	constLabels := make(map[metricdata.LabelKey]metricdata.LabelValue)
-	for k, v := range labels {
-		constLabels[metricdata.LabelKey{Key: k}] = metricdata.NewLabelValue(v)
-	}
+func NewDerivedGauge(name, description string, opts ...DerivedOptions) DerivedMetric {
+	options := createDerivedOptions(opts...)
 	m, err := derivedRegistry.AddFloat64DerivedGauge(name,
 		metric.WithDescription(description),
-		metric.WithConstLabel(constLabels),
-		metric.WithUnit(metricdata.UnitDimensionless))
+		metric.WithLabelKeys(options.labelKeys...),
+		metric.WithUnit(metricdata.UnitDimensionless)) // TODO: allow unit in options
 	if err != nil {
 		log.Warnf("failed to add metric %q: %v", name, err)
 	}
-	err = m.UpsertEntry(valueFn)
-	if err != nil {
-		log.Warnf("failed to upsert entry for %q: %v", name, err)
+	derived := &derivedFloat64Metric{
+		base: m,
+		name: name,
 	}
-	return &derivedFloat64Metric{m, name}
+	if options.valueFn != nil {
+		derived.ValueFrom(options.valueFn)
+	}
+	return derived
 }
 
 // NewDistribution creates a new Metric with an aggregation type of Distribution. This means that the
@@ -225,7 +253,7 @@ func newMetric(name, description string, aggregation *view.Aggregation, opts ...
 }
 
 type derivedFloat64Metric struct {
-	*metric.Float64DerivedGauge
+	base *metric.Float64DerivedGauge
 
 	name string
 }
@@ -237,6 +265,18 @@ func (d *derivedFloat64Metric) Name() string {
 // no-op
 func (d *derivedFloat64Metric) Register() error {
 	return nil
+}
+
+func (d *derivedFloat64Metric) ValueFrom(valueFn func() float64, labelValues ...string) {
+	if len(labelValues) == 0 {
+		d.base.UpsertEntry(valueFn)
+		return
+	}
+	lv := make([]metricdata.LabelValue, 0, len(labelValues))
+	for _, l := range labelValues {
+		lv = append(lv, metricdata.NewLabelValue(l))
+	}
+	d.base.UpsertEntry(valueFn, lv...)
 }
 
 type float64Metric struct {
@@ -256,6 +296,19 @@ func createOptions(opts ...Options) *options {
 	o := &options{unit: None, labels: make([]Label, 0)}
 	for _, opt := range opts {
 		opt(o)
+	}
+	return o
+}
+
+func createDerivedOptions(opts ...DerivedOptions) *derivedOptions {
+	o := &derivedOptions{labelKeys: make([]string, 0)}
+	for _, opt := range opts {
+		opt(o)
+	}
+	// if a valueFn is supplied, then no label values can be supplied.
+	// to prevent issues, drop the label keys
+	if o.valueFn != nil {
+		o.labelKeys = []string{}
 	}
 	return o
 }
