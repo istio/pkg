@@ -269,14 +269,18 @@ func (d *derivedFloat64Metric) Register() error {
 
 func (d *derivedFloat64Metric) ValueFrom(valueFn func() float64, labelValues ...string) {
 	if len(labelValues) == 0 {
-		d.base.UpsertEntry(valueFn)
+		if err := d.base.UpsertEntry(valueFn); err != nil {
+			log.Errorf("failed to add value for derived metric %q: %v", d.name, err)
+		}
 		return
 	}
 	lv := make([]metricdata.LabelValue, 0, len(labelValues))
 	for _, l := range labelValues {
 		lv = append(lv, metricdata.NewLabelValue(l))
 	}
-	d.base.UpsertEntry(valueFn, lv...)
+	if err := d.base.UpsertEntry(valueFn, lv...); err != nil {
+		log.Errorf("failed to add value for derived metric %q: %v", d.name, err)
+	}
 }
 
 type float64Metric struct {
