@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export ARTIFACTS ?= "/tmp"
+export ARTIFACTS ?= /tmp
 
 gen-go:
 	@go generate ./...

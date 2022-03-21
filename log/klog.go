@@ -16,6 +16,7 @@ package log
 
 import (
 	goflag "flag"
+	"fmt"
 	"sync"
 
 	"github.com/spf13/pflag"
@@ -46,11 +47,23 @@ func klogVerbose() bool {
 	return gf.Value.String() != "0"
 }
 
+var (
+	klogFlagSet     = &goflag.FlagSet{}
+	klogFlagSetOnce = sync.Once{}
+)
+
 // KlogVerboseFlag returns verbose flag from the klog library.
 // After parsing it contains the parsed verbosity value.
 func klogVerboseFlag() *goflag.Flag {
-	fs := &goflag.FlagSet{}
-	klog.InitFlags(fs)
+	klogFlagSetOnce.Do(func() {
+		klog.InitFlags(klogFlagSet)
+	})
 	// --v= flag of klog.
-	return fs.Lookup("v")
+	return klogFlagSet.Lookup("v")
+}
+
+// EnableKlogWithVerbosity sets the klog verbosity directly.
+// When using in an application, EnableKlogWithCobra is preferred to expose a --vklog flag.
+func EnableKlogWithVerbosity(v int) {
+	_ = klogFlagSet.Set("v", fmt.Sprint(v))
 }
