@@ -65,5 +65,5 @@ func klogVerboseFlag() *goflag.Flag {
 // EnableKlogWithVerbosity sets the klog verbosity directly.
 // When using in an application, EnableKlogWithCobra is preferred to expose a --vklog flag.
 func EnableKlogWithVerbosity(v int) {
-	klogFlagSet.Set("v", fmt.Sprint(v))
+	_ = klogFlagSet.Set("v", fmt.Sprint(v))
 }
