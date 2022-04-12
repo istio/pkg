@@ -126,7 +126,7 @@ func TestGrpc(t *testing.T) {
 	o.outputLevels = "grpc:info"
 	if err := Configure(o); err != nil {
 		t.Errorf("Expecting success, got %v", err)
-	} else if o.LogGrpc != true {
+	} else if !o.LogGrpc {
 		t.Errorf("Expecting LogGrpc, got %v", o.LogGrpc)
 	}
 }

@@ -120,7 +120,7 @@ func TestBool(t *testing.T) {
 
 	ev := RegisterBoolVar(testVar, true, "")
 	v, present := ev.Lookup()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 	if present {
@@ -128,7 +128,7 @@ func TestBool(t *testing.T) {
 	}
 
 	v = ev.Get()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 
@@ -136,7 +136,7 @@ func TestBool(t *testing.T) {
 
 	ev = RegisterBoolVar(testVar, true, "")
 	v, present = ev.Lookup()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 	if !present {
@@ -144,7 +144,7 @@ func TestBool(t *testing.T) {
 	}
 
 	v = ev.Get()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 
@@ -152,7 +152,7 @@ func TestBool(t *testing.T) {
 
 	ev = RegisterBoolVar(testVar, false, "")
 	v, present = ev.Lookup()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 	if !present {
@@ -160,7 +160,7 @@ func TestBool(t *testing.T) {
 	}
 
 	v = ev.Get()
-	if v != true {
+	if !v {
 		t.Errorf("Expected true, got %v", v)
 	}
 }
