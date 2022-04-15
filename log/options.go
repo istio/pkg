@@ -31,7 +31,7 @@ const (
 	defaultOutputPath         = "stdout"
 	defaultErrorOutputPath    = "stderr"
 	defaultRotationMaxAge     = 30
-	defaultRotationMaxSize    = 100 * 1024 * 1024
+	defaultRotationMaxSize    = 100
 	defaultRotationMaxBackups = 1000
 )
 
