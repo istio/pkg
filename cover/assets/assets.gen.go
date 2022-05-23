@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 )
-
 type asset struct {
 	bytes []byte
 	info  os.FileInfo
@@ -220,8 +219,8 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"templates": {nil, map[string]*bintree{
-		"index.html": {templatesIndexHtml, map[string]*bintree{}},
+	"templates": &bintree{nil, map[string]*bintree{
+		"index.html": &bintree{templatesIndexHtml, map[string]*bintree{}},
 	}},
 }}
 
@@ -235,7 +234,7 @@ func RestoreAsset(dir, name string) error {
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(_filePath(dir, filepath.Dir(name)), os.FileMode(0o755))
+	err = os.MkdirAll(_filePath(dir, filepath.Dir(name)), os.FileMode(0755))
 	if err != nil {
 		return err
 	}
