@@ -203,7 +203,8 @@ func (s *smt) update(root []byte, keys, values, batch [][]byte, iBatch, height i
 
 // updateParallel updates both sides of the trie simultaneously
 func (s *smt) updateParallel(lnode, rnode, root []byte, keys, values, batch, lkeys, rkeys, lvalues, rvalues [][]byte,
-	iBatch, height int, shortcut, store bool, ch chan<- result) {
+	iBatch, height int, shortcut, store bool, ch chan<- result,
+) {
 	// keys are separated between the left and right branches
 	// update the branches in parallel
 	lch := make(chan result, 1)
@@ -226,7 +227,8 @@ func (s *smt) updateParallel(lnode, rnode, root []byte, keys, values, batch, lke
 
 // updateRight updates the right side of the tree
 func (s *smt) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
-	store bool, ch chan<- result) {
+	store bool, ch chan<- result,
+) {
 	// all the keys go in the right subtree
 	newch := make(chan result, 1)
 	s.update(rnode, keys, values, batch, 2*iBatch+2, height-1, shortcut, store, newch)
@@ -241,7 +243,8 @@ func (s *smt) updateRight(lnode, rnode, root []byte, keys, values, batch [][]byt
 
 // updateLeft updates the left side of the tree
 func (s *smt) updateLeft(lnode, rnode, root []byte, keys, values, batch [][]byte, iBatch, height int, shortcut,
-	store bool, ch chan<- result) {
+	store bool, ch chan<- result,
+) {
 	// all the keys go in the left subtree
 	newch := make(chan result, 1)
 	s.update(lnode, keys, values, batch, 2*iBatch+1, height-1, shortcut, store, newch)
@@ -311,7 +314,8 @@ const batchLen int = 31
 // loadChildren looks for the children of a node.
 // if the node is not stored in cache, it will be loaded from db.
 func (s *smt) loadChildren(root []byte, height, iBatch int, batch [][]byte) ([][]byte, int, []byte, []byte, bool,
-	error) {
+	error,
+) {
 	isShortcut := false
 	if height%4 == 0 {
 		if len(root) == 0 {
@@ -361,7 +365,8 @@ func (s *smt) loadBatch(root []byte) ([][]byte, error) {
 // the key is the hash and the value is the appended child nodes or the appended key/value in case of a shortcut.
 // keys of go mappings cannot be byte slices so the hash is copied to a byte array
 func (s *smt) interiorHash(left, right []byte, height, iBatch int, oldRoot []byte, shortcut, store bool, keys, values,
-	batch [][]byte) []byte {
+	batch [][]byte,
+) []byte {
 	var h []byte
 	if len(left) == 0 && len(right) == 0 {
 		// if a key was deleted, the node becomes default

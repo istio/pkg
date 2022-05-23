@@ -53,7 +53,8 @@ func ZapLogHandlerCallbackFunc(
 	level Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string) {
+	msg string,
+) {
 	var fields []zapcore.Field
 	if useJSON.Load().(bool) {
 		if ie != nil {

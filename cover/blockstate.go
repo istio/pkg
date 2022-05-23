@@ -31,7 +31,8 @@ type blockState struct {
 
 func initEntry(
 	length int, name string,
-	readPosFn ReadPosFn, readStmtFn ReadStmtFn, readCountFn ReadCountFn, clearCountFn ClearCountFn) *blockState {
+	readPosFn ReadPosFn, readStmtFn ReadStmtFn, readCountFn ReadCountFn, clearCountFn ClearCountFn,
+) *blockState {
 	e := &blockState{
 		length: length,
 		ephemeral: Block{
