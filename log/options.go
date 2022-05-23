@@ -374,7 +374,8 @@ func (o *Options) AttachFlags(
 	stringArrayVar func(p *[]string, name string, value []string, usage string),
 	stringVar func(p *string, name string, value string, usage string),
 	intVar func(p *int, name string, value int, usage string),
-	boolVar func(p *bool, name string, value bool, usage string)) {
+	boolVar func(p *bool, name string, value bool, usage string),
+) {
 	stringArrayVar(&o.OutputPaths, "log_target", o.OutputPaths,
 		"The set of paths where to output the log. This can be any path as well as the special values stdout and stderr")
 

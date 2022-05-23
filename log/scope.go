@@ -392,7 +392,8 @@ func (s *Scope) callHandlers(
 	severity Level,
 	scope *Scope,
 	ie *structured.Error,
-	msg string) {
+	msg string,
+) {
 	defaultHandlersMu.RLock()
 	defer defaultHandlersMu.RUnlock()
 	for _, h := range defaultHandlers {

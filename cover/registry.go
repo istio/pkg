@@ -37,7 +37,8 @@ func GetRegistry() *Registry {
 // Register code coverage data structure
 func (r *Registry) Register(
 	length int, context string,
-	readPosFn ReadPosFn, readStmtFn ReadStmtFn, readCountFn ReadCountFn, clearCountFn ClearCountFn) {
+	readPosFn ReadPosFn, readStmtFn ReadStmtFn, readCountFn ReadCountFn, clearCountFn ClearCountFn,
+) {
 	e := initEntry(length, context, readPosFn, readStmtFn, readCountFn, clearCountFn)
 
 	r.mu.Lock()
