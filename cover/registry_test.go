@@ -141,21 +141,15 @@ func newTestCovVar(length int) *testCovVar { // nolint:unparam
 }
 
 func (v *testCovVar) readPos(o []uint32) {
-	for i := 0; i < len(v.pos); i++ {
-		o[i] = v.pos[i]
-	}
+	copy(o, v.pos)
 }
 
 func (v *testCovVar) readStmt(o []uint16) {
-	for i := 0; i < len(v.stmt); i++ {
-		o[i] = v.stmt[i]
-	}
+	copy(o, v.stmt)
 }
 
 func (v *testCovVar) readCount(o []uint32) {
-	for i := 0; i < len(v.count); i++ {
-		o[i] = v.count[i]
-	}
+	copy(o, v.count)
 }
 
 func (v *testCovVar) clearCount() {
