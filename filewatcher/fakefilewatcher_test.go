@@ -51,7 +51,7 @@ func TestFakeFileWatcher(t *testing.T) {
 		default:
 		}
 
-		wantEvent := fsnotify.Event{file, fsnotify.Write}
+		wantEvent := fsnotify.Event{Name: file, Op: fsnotify.Write}
 		fakeWatcher.InjectEvent(file, wantEvent)
 		gotEvent := <-watcher.Events(file)
 		if gotEvent != wantEvent {
@@ -78,7 +78,7 @@ func TestFakeFileWatcher(t *testing.T) {
 		default:
 		}
 
-		wantEvent = fsnotify.Event{file, fsnotify.Write}
+		wantEvent = fsnotify.Event{Name: file, Op: fsnotify.Write}
 		fakeWatcher.InjectEvent(file, wantEvent)
 		select {
 		case gotEvent := <-watcher.Events(file):
@@ -120,7 +120,7 @@ func TestFakeFileWatcher(t *testing.T) {
 	}
 
 	for _, file := range []string{"foo2", "bar2", "baz2"} {
-		wantEvent := fsnotify.Event{file, fsnotify.Write}
+		wantEvent := fsnotify.Event{Name: file, Op: fsnotify.Write}
 		fakeWatcher.InjectEvent(file, wantEvent)
 		select {
 		case gotEvent := <-watcher.Events(file):
