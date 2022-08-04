@@ -15,7 +15,6 @@
 package log
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -205,8 +204,7 @@ func TestOddballs(t *testing.T) {
 func TestRotateNoStdout(t *testing.T) {
 	// Ensure that rotation is setup properly
 
-	dir, _ := ioutil.TempDir("", "TestRotateNoStdout")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
@@ -220,7 +218,7 @@ func TestRotateNoStdout(t *testing.T) {
 	defaultScope.Error("HELLO")
 	Sync() // nolint: errcheck
 
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		t.Errorf("Got failure '%v', expecting success", err)
 	}
@@ -232,8 +230,7 @@ func TestRotateNoStdout(t *testing.T) {
 }
 
 func TestRotateAndStdout(t *testing.T) {
-	dir, _ := ioutil.TempDir("", "TestRotateAndStdout")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
@@ -247,7 +244,7 @@ func TestRotateAndStdout(t *testing.T) {
 		defaultScope.Error("HELLO")
 		Sync() // nolint: errcheck
 
-		content, err := ioutil.ReadFile(file)
+		content, err := os.ReadFile(file)
 		if err != nil {
 			t.Errorf("Got failure '%v', expecting success", err)
 		}
@@ -264,8 +261,7 @@ func TestRotateAndStdout(t *testing.T) {
 }
 
 func TestRotateMaxBackups(t *testing.T) {
-	dir, _ := ioutil.TempDir("", "TestRotateMaxBackups")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
@@ -295,7 +291,7 @@ func TestRotateMaxBackups(t *testing.T) {
 	// log rotation happens asynchronously and there's no way to synchronize with it,
 	// so we poll
 	for i := 0; i < 100009; i++ {
-		rd, err := ioutil.ReadDir(dir)
+		rd, err := os.ReadDir(dir)
 		if err != nil {
 			t.Fatalf("Unable to read dir: %v", err)
 		}
@@ -406,7 +402,7 @@ func TestCapture(t *testing.T) {
 
 // Runs the given function while capturing everything sent to stdout
 func captureStdout(f func()) ([]string, error) {
-	tf, err := ioutil.TempFile("", "log_test")
+	tf, err := os.CreateTemp("", "log_test")
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +417,7 @@ func captureStdout(f func()) ([]string, error) {
 	_ = tf.Sync()
 	_ = tf.Close()
 
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	_ = os.Remove(path)
 
 	if err != nil {

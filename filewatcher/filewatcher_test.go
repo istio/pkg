@@ -17,7 +17,6 @@ package filewatcher
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -35,19 +34,19 @@ var rootTmpDir string
 
 func init() {
 	var err error
-	if rootTmpDir, err = ioutil.TempDir("", "filewatcher_test"); err != nil {
+	if rootTmpDir, err = os.MkdirTemp("", "filewatcher_test"); err != nil {
 		panic(err)
 	}
 }
 
 func newWatchFileImpl() (string, func(), error) {
-	watchDir, err := ioutil.TempDir(rootTmpDir, "")
+	watchDir, err := os.MkdirTemp(rootTmpDir, "")
 	if err != nil {
 		return "", nil, err
 	}
 
 	watchFile := path.Join(watchDir, "test.conf")
-	err = ioutil.WriteFile(watchFile, []byte("foo: bar\n"), 0o640)
+	err = os.WriteFile(watchFile, []byte("foo: bar\n"), 0o640)
 	if err != nil {
 		_ = os.RemoveAll(watchDir)
 		return "", nil, err
@@ -69,7 +68,7 @@ func newWatchFile(t *testing.T) (string, func()) {
 func newWatchFileThatDoesNotExist(t *testing.T) (string, func()) {
 	g := NewGomegaWithT(t)
 
-	watchDir, err := ioutil.TempDir("", "")
+	watchDir, err := os.MkdirTemp("", "")
 	g.Expect(err).NotTo(HaveOccurred())
 
 	watchFile := path.Join(watchDir, "test.conf")
@@ -85,15 +84,15 @@ func newWatchFileThatDoesNotExist(t *testing.T) (string, func()) {
 func newTwoWatchFile(t *testing.T) (string, string, func()) {
 	g := NewGomegaWithT(t)
 
-	watchDir, err := ioutil.TempDir("", "")
+	watchDir, err := os.MkdirTemp("", "")
 	g.Expect(err).NotTo(HaveOccurred())
 
 	watchFile1 := path.Join(watchDir, "test1.conf")
-	err = ioutil.WriteFile(watchFile1, []byte("foo: bar\n"), 0o640)
+	err = os.WriteFile(watchFile1, []byte("foo: bar\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	watchFile2 := path.Join(watchDir, "test2.conf")
-	err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
+	err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	cleanup := func() {
@@ -119,7 +118,7 @@ func newTwoWatchFile(t *testing.T) (string, string, func()) {
 func newSymlinkedWatchFile(t *testing.T) (string, string, func()) {
 	g := NewGomegaWithT(t)
 
-	watchDir, err := ioutil.TempDir("", "")
+	watchDir, err := os.MkdirTemp("", "")
 	g.Expect(err).NotTo(HaveOccurred())
 
 	dataDir1 := path.Join(watchDir, "data1")
@@ -128,7 +127,7 @@ func newSymlinkedWatchFile(t *testing.T) (string, string, func()) {
 
 	realTestFile := path.Join(dataDir1, "test.conf")
 	t.Logf("Real test file location: %s\n", realTestFile)
-	err = ioutil.WriteFile(realTestFile, []byte("foo: bar\n"), 0o640)
+	err = os.WriteFile(realTestFile, []byte("foo: bar\n"), 0o640)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	cleanup := func() {
@@ -165,7 +164,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err = ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
+		err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
 
@@ -199,7 +198,7 @@ func TestWatchFile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		watchFile2 := path.Join(dataDir2, "test.conf")
-		err = ioutil.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
+		err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// change the symlink using the `ln -sfn` command
@@ -231,7 +230,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err := ioutil.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
+		err := os.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
 		g.Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
 
@@ -444,7 +443,7 @@ func changeFileContents(file string) {
 		b[i] = byte(rand.Int31n(255))
 	}
 
-	_ = ioutil.WriteFile(file, b, 0o777)
+	_ = os.WriteFile(file, b, 0o777)
 }
 
 func (c *churnFile) modify() {
