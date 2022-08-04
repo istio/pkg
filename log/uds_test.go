@@ -16,7 +16,7 @@ package log
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -31,7 +31,7 @@ type udsServer struct {
 func (us *udsServer) handleLog(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 	if r.Body != nil {
-		if data, err := ioutil.ReadAll(r.Body); err == nil {
+		if data, err := io.ReadAll(r.Body); err == nil {
 			body = data
 		}
 	}

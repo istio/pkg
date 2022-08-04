@@ -41,6 +41,13 @@ func EnableKlogWithCobra() {
 		}))
 }
 
+// EnableKlogWithCobra enables klog to work with go flags.
+// k8s libraries like client-go use klog.
+func EnableKlogWithGoFlag() {
+	gf := klogVerboseFlag()
+	goflag.CommandLine.Var(gf.Value, "vklog", gf.Usage+". Like -v flag. ex: --vklog=9")
+}
+
 // isKlogVerbose returns true if klog verbosity is non-zero.
 func klogVerbose() bool {
 	gf := klogVerboseFlag()
