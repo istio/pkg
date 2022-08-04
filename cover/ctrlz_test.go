@@ -16,7 +16,7 @@ package cover
 
 import (
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -161,7 +161,7 @@ func getOrFail(t *testing.T, url string) string {
 		t.Fatalf("Unexpected Get status for %q: %v", url, r.StatusCode)
 	}
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		t.Fatalf("Error reading body for %q: %v", url, err)
 	}
@@ -181,7 +181,7 @@ func postOrFail(t *testing.T, url string) {
 		t.Fatalf("Unexpected Post status for %q: %v", url, r.StatusCode)
 	}
 
-	_, err = ioutil.ReadAll(r.Body)
+	_, err = io.ReadAll(r.Body)
 	if err != nil {
 		t.Fatalf("Error reading body for %q: %v", url, err)
 	}

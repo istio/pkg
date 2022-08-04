@@ -28,19 +28,20 @@ import (
 //
 // Scope supports structured logging using WithLabels:
 //
-//   s := RegisterScope("MyScope", "Description", 0)
-//   s = s.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
-//   s.Info("Hello")                      // <time>   info   MyScope   Hello  foo=bar baz=123 qux=0.123
+//	s := RegisterScope("MyScope", "Description", 0)
+//	s = s.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
+//	s.Info("Hello")                      // <time>   info   MyScope   Hello  foo=bar baz=123 qux=0.123
 //
 // The output format can be globally configured to be JSON instead, using Options in this package.
-//  e.g. <time>   info   MyScope   { "message":"Hello","foo":"bar","baz":123 }
+//
+//	e.g. <time>   info   MyScope   { "message":"Hello","foo":"bar","baz":123 }
 //
 // Scope also supports an error dictionary. The caller can pass a *structured.Error object as the first parameter
 // to any of the output functions (Fatal*, Error* etc.) and this will append the fields in the object to the output:
 //
-//   e := &structured.Error{MoreInfo:"See the documentation in istio.io/helpful_link"}
-//   s.WithLabels("foo", "bar").Error(e, "Hello")
-//     <time>   info   MyScope   Hello  moreInfo=See the documentation in istio.io/helpful_link foo=bar
+//	e := &structured.Error{MoreInfo:"See the documentation in istio.io/helpful_link"}
+//	s.WithLabels("foo", "bar").Error(e, "Hello")
+//	  <time>   info   MyScope   Hello  moreInfo=See the documentation in istio.io/helpful_link foo=bar
 //
 // See structured.Error for additional guidance on defining errors in a dictionary.
 type Scope struct {

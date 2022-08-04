@@ -15,7 +15,6 @@
 package appsignals
 
 import (
-	"io/ioutil"
 	"os"
 	"syscall"
 	"testing"
@@ -59,7 +58,7 @@ func TestReloadWatcher(t *testing.T) {
 	}
 
 	// File watch
-	f, err := ioutil.TempFile("", "marker")
+	f, err := os.CreateTemp("", "marker")
 	if err != nil {
 		t.Fatalf("failed to created tmpfile: %v", err)
 	}

@@ -120,7 +120,6 @@ func (b BuildInfo) String() string {
 
 // LongForm returns a dump of the Info struct
 // This looks like:
-//
 func (b BuildInfo) LongForm() string {
 	return fmt.Sprintf("%#v", b)
 }
