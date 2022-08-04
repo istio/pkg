@@ -105,12 +105,16 @@ func newTwoWatchFile(t *testing.T) (string, string, func()) {
 
 // newSymlinkedWatchFile simulates the behavior of k8s configmap/secret.
 // Path structure looks like:
-//      <watchDir>/test.conf
-//                   ^
-//                   |
+//
+//	<watchDir>/test.conf
+//	             ^
+//	             |
+//
 // <watchDir>/data/test.conf
-//             ^
-//             |
+//
+//	^
+//	|
+//
 // <watchDir>/data1/test.conf
 func newSymlinkedWatchFile(t *testing.T) (string, string, func()) {
 	g := NewGomegaWithT(t)

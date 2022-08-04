@@ -52,16 +52,16 @@ type Stats struct {
 //
 // Using a cache is very simple:
 //
-//   c := NewLRU(5*time.Second,     // default per-entry ttl
-//               5*time.Second,     // eviction interval
-//               500)               // max # of entries tracked
-//   c.Set("foo", "bar")			// add an entry
-//   value, ok := c.Get("foo")		// try to retrieve the entry
-//   if ok {
-//		fmt.Printf("Got value %v\n", value)
-//   } else {
-//      fmt.Printf("Value was not found, must have been evicted")
-//   }
+//	  c := NewLRU(5*time.Second,     // default per-entry ttl
+//	              5*time.Second,     // eviction interval
+//	              500)               // max # of entries tracked
+//	  c.Set("foo", "bar")			// add an entry
+//	  value, ok := c.Get("foo")		// try to retrieve the entry
+//	  if ok {
+//			fmt.Printf("Got value %v\n", value)
+//	  } else {
+//	     fmt.Printf("Value was not found, must have been evicted")
+//	  }
 type Cache interface {
 	// Ideas for the future:
 	//   - Return the number of entries in the cache in stats.
