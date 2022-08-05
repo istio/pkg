@@ -204,8 +204,7 @@ func TestOddballs(t *testing.T) {
 func TestRotateNoStdout(t *testing.T) {
 	// Ensure that rotation is setup properly
 
-	dir, _ := os.MkdirTemp("", "TestRotateNoStdout")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
@@ -231,8 +230,7 @@ func TestRotateNoStdout(t *testing.T) {
 }
 
 func TestRotateAndStdout(t *testing.T) {
-	dir, _ := os.MkdirTemp("", "TestRotateAndStdout")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
@@ -263,8 +261,7 @@ func TestRotateAndStdout(t *testing.T) {
 }
 
 func TestRotateMaxBackups(t *testing.T) {
-	dir, _ := os.MkdirTemp("", "TestRotateMaxBackups")
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := dir + "/rot.log"
 
