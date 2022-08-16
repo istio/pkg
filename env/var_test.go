@@ -121,9 +121,11 @@ func TestGeneric(t *testing.T) {
 		A string `json:"a"`
 	}
 	runTest(t, "int", 123, "789", 789)
+	runTest(t, "int32", int32(123), "789", 789)
 	runTest(t, "bool", false, "true", true)
 	runTest(t, "duration", time.Second, "1m", time.Minute)
 	runTest(t, "float64", float64(1.5), "2.5", float64(2.5))
+	runTest(t, "float32", float32(1.5), "2.5", float32(2.5))
 	runTest(t, "complex", test{A: "2"}, `{"a":"3"}`, test{A: "3"})
 }
 

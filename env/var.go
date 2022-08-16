@@ -18,8 +18,8 @@ package env
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"sync"
@@ -42,6 +42,8 @@ const (
 	FLOAT
 	// Variable holds a time duration.
 	DURATION
+	// Variable holds a dynamic unknown type.
+	OTHER
 )
 
 // Var describes a single environment variable
@@ -63,6 +65,9 @@ type Var struct {
 
 	// The type of the variable's value
 	Type VarType
+
+	// The underlying Go type of the variable
+	GoType string
 }
 
 // StringVar represents a single string environment variable.
@@ -111,24 +116,40 @@ func VarDescriptions() []Var {
 	return sorted
 }
 
-type marshal interface {
-	json.Marshaler
-	json.Unmarshaler
-}
-
 type Parseable interface {
 	comparable
 }
 
 type GenericVar[T Parseable] struct {
 	Var
+	delegate specializedVar[T]
 }
 
 func Register[T Parseable](name string, defaultValue T, description string) GenericVar[T] {
+	// Specialized cases
+	// In the future, once only Register() remains, we can likely drop most of these.
+	// however, time.Duration is needed still as it doesn't implement json
+	switch d := any(defaultValue).(type) {
+	case time.Duration:
+		v := RegisterDurationVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case string:
+		v := RegisterStringVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case float64:
+		v := RegisterFloatVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case int:
+		v := RegisterIntVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case bool:
+		v := RegisterBoolVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	}
 	b, _ := json.Marshal(defaultValue)
-	v := Var{Name: name, DefaultValue: string(b), Description: description, Type: STRING}
+	v := Var{Name: name, DefaultValue: string(b), Description: description, Type: STRING, GoType: fmt.Sprintf("%T", defaultValue)}
 	RegisterVar(v)
-	return GenericVar[T]{getVar(name)}
+	return GenericVar[T]{getVar(name), nil}
 }
 
 // RegisterStringVar registers a new string environment variable.
@@ -331,6 +352,9 @@ func (v DurationVar) Lookup() (time.Duration, bool) {
 // It returns the value, which will be the default if the variable is not present.
 // To distinguish between an empty value and an unset value, use Lookup.
 func (v GenericVar[T]) Get() T {
+	if v.delegate != nil {
+		return v.delegate.Get()
+	}
 	result, _ := v.Lookup()
 	return result
 }
@@ -341,30 +365,26 @@ func (v GenericVar[T]) Get() T {
 // Otherwise the returned value will be the default and the boolean will
 // be false.
 func (v GenericVar[T]) Lookup() (T, bool) {
+	if v.delegate != nil {
+		return v.delegate.Lookup()
+	}
 	result, ok := os.LookupEnv(v.Name)
 	if !ok {
 		result = v.DefaultValue
 	}
 
-	x := new(T)
-	unmarshal := json.Unmarshal
-	// Special case time.Duration since its not json.Unmarshal but common
-	switch any(x).(type) {
-	case *time.Duration:
-		unmarshal = func(data []byte, v any) error {
-			d, err := time.ParseDuration(string(data))
-			if err != nil {
-				return err
-			}
-			reflect.ValueOf(v).Elem().SetInt(int64(d))
-			return nil
-		}
-	}
+	res := new(T)
 
-	if err := unmarshal([]byte(result), x); err != nil {
+	if err := json.Unmarshal([]byte(result), res); err != nil {
 		log.Warnf("Invalid environment variable value `%s` defaulting to %v: %v", result, v.DefaultValue, err)
-		_ = unmarshal([]byte(v.DefaultValue), x)
+		_ = json.Unmarshal([]byte(v.DefaultValue), res)
 	}
 
-	return *x, ok
+	return *res, ok
+}
+
+// specializedVar represents a var that can Get/Lookup
+type specializedVar[T any] interface {
+	Lookup() (T, bool)
+	Get() T
 }

@@ -680,6 +680,8 @@ func (g *generator) genVars(root *cobra.Command, selectFn SelectEnvFn) {
 			g.emit("<td>Floating-Point</td>")
 		case env.DURATION:
 			g.emit("<td>Time Duration</td>")
+		case env.OTHER:
+			g.emit(fmt.Sprintf("<td>%s</td>", v.GoType))
 		}
 
 		g.emit("<td><code>", html.EscapeString(v.DefaultValue), "</code></td>")
