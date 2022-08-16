@@ -118,10 +118,6 @@ func TestBasicScopes(t *testing.T) {
 			f:   func() { s.Debugf("%s", "Hello") },
 			pat: timePattern + "\tdebug\ttestScope\tHello",
 		},
-		{
-			f:   func() { s.Debuga("Hello") },
-			pat: timePattern + "\tdebug\ttestScope\tHello",
-		},
 
 		{
 			f:   func() { s.Info("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
@@ -137,10 +133,6 @@ func TestBasicScopes(t *testing.T) {
 		},
 		{
 			f:   func() { s.Infof("%s", "Hello") },
-			pat: timePattern + "\tinfo\ttestScope\tHello",
-		},
-		{
-			f:   func() { s.Infoa("Hello") },
 			pat: timePattern + "\tinfo\ttestScope\tHello",
 		},
 
@@ -177,10 +169,6 @@ func TestBasicScopes(t *testing.T) {
 			f:   func() { s.Errorf("%s", "Hello") },
 			pat: timePattern + "\terror\ttestScope\tHello",
 		},
-		{
-			f:   func() { s.Errora("Hello") },
-			pat: timePattern + "\terror\ttestScope\tHello",
-		},
 
 		{
 			f:        func() { s.Fatal("Hello") },
@@ -204,11 +192,6 @@ func TestBasicScopes(t *testing.T) {
 		},
 		{
 			f:        func() { s.Fatalf("%s", "Hello") },
-			pat:      timePattern + "\tfatal\ttestScope\tHello",
-			wantExit: true,
-		},
-		{
-			f:        func() { s.Fatala("Hello") },
 			pat:      timePattern + "\tfatal\ttestScope\tHello",
 			wantExit: true,
 		},
@@ -318,9 +301,9 @@ func TestScopeWithLabel(t *testing.T) {
 		Configure(DefaultOptions())
 		funcs.Store(funcs.Load().(patchTable))
 		s2 := s.WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123)
-		s2.Debuga("Hello")
+		s2.Debug("Hello")
 		// s should be unmodified.
-		s.Debuga("Hello")
+		s.Debug("Hello")
 
 		_ = Sync()
 	})
@@ -343,7 +326,7 @@ func TestScopeJSON(t *testing.T) {
 		o.JSONEncoding = true
 		Configure(o)
 		funcs.Store(funcs.Load().(patchTable))
-		s.WithLabels("foo", "bar", "baz", 123).Debuga("Hello")
+		s.WithLabels("foo", "bar", "baz", 123).Debug("Hello")
 
 		_ = Sync()
 	})

@@ -47,10 +47,6 @@ func TestDefault(t *testing.T) {
 			f:   func() { Debugf("%s", "Hello") },
 			pat: timePattern + "\tdebug\tHello",
 		},
-		{
-			f:   func() { Debuga("Hello") },
-			pat: timePattern + "\tdebug\tHello",
-		},
 
 		{
 			f:   func() { Info("Hello") },
@@ -64,11 +60,6 @@ func TestDefault(t *testing.T) {
 			f:   func() { Infof("%s", "Hello") },
 			pat: timePattern + "\tinfo\tHello",
 		},
-		{
-			f:   func() { Infoa("Hello") },
-			pat: timePattern + "\tinfo\tHello",
-		},
-
 		{
 			f:   func() { Warn("Hello") },
 			pat: timePattern + "\twarn\tHello",
@@ -98,10 +89,6 @@ func TestDefault(t *testing.T) {
 			f:   func() { Errorf("%s", "Hello") },
 			pat: timePattern + "\terror\tHello",
 		},
-		{
-			f:   func() { Errora("Hello") },
-			pat: timePattern + "\terror\tHello",
-		},
 
 		{
 			f:        func() { Fatal("Hello") },
@@ -115,11 +102,6 @@ func TestDefault(t *testing.T) {
 		},
 		{
 			f:        func() { Fatalf("%s", "Hello") },
-			pat:      timePattern + "\tfatal\tHello",
-			wantExit: true,
-		},
-		{
-			f:        func() { Fatala("Hello") },
 			pat:      timePattern + "\tfatal\tHello",
 			wantExit: true,
 		},
@@ -229,7 +211,7 @@ func TestErrorDictionary(t *testing.T) {
 			t.Errorf("Got err '%v', expecting success", err)
 		}
 
-		Infoa(ie, "Hello")
+		Info(ie, "Hello")
 		_ = Sync()
 	})
 	if err != nil {
@@ -298,7 +280,7 @@ func TestDefaultWithLabel(t *testing.T) {
 	lines, err := captureStdout(func() {
 		Configure(DefaultOptions())
 		funcs.Store(funcs.Load().(patchTable))
-		WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123).Errora("Hello")
+		WithLabels("foo", "bar").WithLabels("baz", 123, "qux", 0.123).Error("Hello")
 
 		_ = Sync()
 	})

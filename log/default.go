@@ -27,11 +27,6 @@ func Fatal(fields ...interface{}) {
 	defaultScope.Fatal(fields...)
 }
 
-// Fatala uses fmt.Sprint to construct and log a message at fatal level.
-func Fatala(args ...interface{}) {
-	defaultScope.Fatala(args...)
-}
-
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
 func Fatalf(args ...interface{}) {
 	defaultScope.Fatalf(args...)
@@ -45,11 +40,6 @@ func FatalEnabled() bool {
 // Error outputs a message at error level.
 func Error(fields ...interface{}) {
 	defaultScope.Error(fields...)
-}
-
-// Errora uses fmt.Sprint to construct and log a message at error level.
-func Errora(args ...interface{}) {
-	defaultScope.Errora(args...)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
@@ -87,11 +77,6 @@ func Info(fields ...interface{}) {
 	defaultScope.Info(fields...)
 }
 
-// Infoa uses fmt.Sprint to construct and log a message at info level.
-func Infoa(args ...interface{}) {
-	defaultScope.Infoa(args...)
-}
-
 // Infof uses fmt.Sprintf to construct and log a message at info level.
 func Infof(args ...interface{}) {
 	defaultScope.Infof(args...)
@@ -105,11 +90,6 @@ func InfoEnabled() bool {
 // Debug outputs a message at debug level.
 func Debug(fields ...interface{}) {
 	defaultScope.Debug(fields...)
-}
-
-// Debuga uses fmt.Sprint to construct and log a message at debug level.
-func Debuga(args ...interface{}) {
-	defaultScope.Debuga(args...)
 }
 
 // Debugf uses fmt.Sprintf to construct and log a message at debug level.
