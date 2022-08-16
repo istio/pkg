@@ -65,6 +65,68 @@ func TestString(t *testing.T) {
 	}
 }
 
+func runTest[T Parseable](t *testing.T, name string, v1 T, s2 string, v2 T) {
+	t.Run(name, func(t *testing.T) {
+		reset()
+		ev := Register(testVar, v1, "")
+		v, present := ev.Lookup()
+		if v != v1 {
+			t.Errorf("Expected %v, got %v", v1, v)
+		}
+		if present {
+			t.Errorf("Expected not present")
+		}
+
+		v = ev.Get()
+		if v != v1 {
+			t.Errorf("Expected %v, got %v", v1, v)
+		}
+
+		_ = os.Setenv(testVar, "XXX")
+
+		ev = Register(testVar, v1, "")
+		v, present = ev.Lookup()
+		if v != v1 {
+			t.Errorf("Expected %v, got %v", v1, v)
+		}
+		if !present {
+			t.Errorf("Expected present")
+		}
+
+		v = ev.Get()
+		if v != v1 {
+			t.Errorf("Expected %v, got %v", v1, v)
+		}
+
+		_ = os.Setenv(testVar, s2)
+
+		ev = Register(testVar, v1, "")
+		v, present = ev.Lookup()
+		if v != v2 {
+			t.Errorf("Expected %v, got %v", v2, v)
+		}
+		if !present {
+			t.Errorf("Expected present")
+		}
+
+		v = ev.Get()
+		if v != v2 {
+			t.Errorf("Expected %v, got %v", v2, v)
+		}
+	})
+}
+
+func TestGeneric(t *testing.T) {
+	type test struct {
+		A string `json:"a"`
+	}
+	runTest(t, "int", 123, "789", 789)
+	runTest(t, "bool", false, "true", true)
+	runTest(t, "duration", time.Second, "1m", time.Minute)
+	runTest(t, "float64", float64(1.5), "2.5", float64(2.5))
+	runTest(t, "complex", test{A: "2"}, `{"a":"3"}`, test{A: "3"})
+}
+
 func TestInt(t *testing.T) {
 	reset()
 

@@ -17,7 +17,9 @@
 package env
 
 import (
+	"encoding/json"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"sync"
@@ -107,6 +109,26 @@ func VarDescriptions() []Var {
 	})
 
 	return sorted
+}
+
+type marshal interface {
+	json.Marshaler
+	json.Unmarshaler
+}
+
+type Parseable interface {
+	comparable
+}
+
+type GenericVar[T Parseable] struct {
+	Var
+}
+
+func Register[T Parseable](name string, defaultValue T, description string) GenericVar[T] {
+	b, _ := json.Marshal(defaultValue)
+	v := Var{Name: name, DefaultValue: string(b), Description: description, Type: STRING}
+	RegisterVar(v)
+	return GenericVar[T]{getVar(name)}
 }
 
 // RegisterStringVar registers a new string environment variable.
@@ -303,4 +325,46 @@ func (v DurationVar) Lookup() (time.Duration, bool) {
 	}
 
 	return d, ok
+}
+
+// Get retrieves the value of the environment variable.
+// It returns the value, which will be the default if the variable is not present.
+// To distinguish between an empty value and an unset value, use Lookup.
+func (v GenericVar[T]) Get() T {
+	result, _ := v.Lookup()
+	return result
+}
+
+// Lookup retrieves the value of the environment variable. If the
+// variable is present in the environment the
+// value (which may be empty) is returned and the boolean is true.
+// Otherwise the returned value will be the default and the boolean will
+// be false.
+func (v GenericVar[T]) Lookup() (T, bool) {
+	result, ok := os.LookupEnv(v.Name)
+	if !ok {
+		result = v.DefaultValue
+	}
+
+	x := new(T)
+	unmarshal := json.Unmarshal
+	// Special case time.Duration since its not json.Unmarshal but common
+	switch any(x).(type) {
+	case *time.Duration:
+		unmarshal = func(data []byte, v any) error {
+			d, err := time.ParseDuration(string(data))
+			if err != nil {
+				return err
+			}
+			reflect.ValueOf(v).Elem().SetInt(int64(d))
+			return nil
+		}
+	}
+
+	if err := unmarshal([]byte(result), x); err != nil {
+		log.Warnf("Invalid environment variable value `%s` defaulting to %v: %v", result, v.DefaultValue, err)
+		_ = unmarshal([]byte(v.DefaultValue), x)
+	}
+
+	return *x, ok
 }
