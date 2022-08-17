@@ -93,7 +93,8 @@ func TestOpts(t *testing.T) {
 		t.Run(v.args, func(t *testing.T) {
 			v.cmd.SetArgs(strings.Split(v.args, " "))
 			var out bytes.Buffer
-			v.cmd.SetOutput(&out)
+			v.cmd.SetOut(&out)
+			v.cmd.SetErr(&out)
 			err := v.cmd.Execute()
 
 			if !v.expectFail && err != nil {
@@ -266,7 +267,8 @@ control plane version: 1.2.0
 		t.Run(fmt.Sprintf("case %d %s", i, strings.Join(v.args, " ")), func(t *testing.T) {
 			cmd := CobraCommandWithOptions(CobraOptions{GetRemoteVersion: mockRemoteMesh(v.remoteMesh, v.err)})
 			var out bytes.Buffer
-			cmd.SetOutput(&out)
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
 			cmd.SetArgs(v.args)
 			err := cmd.Execute()
 			output := out.String()
