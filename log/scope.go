@@ -155,12 +155,6 @@ func (s *Scope) Fatal(args ...interface{}) {
 	}
 }
 
-// Fatala uses fmt.Sprint to construct and log a message at fatal level.
-// Deprecated: use Fatal.
-func (s *Scope) Fatala(args ...interface{}) {
-	s.Fatal(args...)
-}
-
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
 func (s *Scope) Fatalf(args ...interface{}) {
 	if s.GetOutputLevel() >= FatalLevel {
@@ -188,12 +182,6 @@ func (s *Scope) Error(args ...interface{}) {
 		}
 		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
 	}
-}
-
-// Errora uses fmt.Sprint to construct and log a message at error level.
-// Deprecated: use Error.
-func (s *Scope) Errora(args ...interface{}) {
-	s.Error(args...)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
@@ -260,12 +248,6 @@ func (s *Scope) Info(args ...interface{}) {
 	}
 }
 
-// Infoa uses fmt.Sprint to construct and log a message at info level.
-// Deprecated: use Info.
-func (s *Scope) Infoa(args ...interface{}) {
-	s.Info(args...)
-}
-
 // Infof uses fmt.Sprintf to construct and log a message at info level.
 func (s *Scope) Infof(args ...interface{}) {
 	if s.GetOutputLevel() >= InfoLevel {
@@ -305,12 +287,6 @@ func (s *Scope) Debugf(args ...interface{}) {
 		}
 		s.callHandlers(DebugLevel, s, ie, msg)
 	}
-}
-
-// Debuga outputs a message at debug level.
-// Deprecated: use Debug.
-func (s *Scope) Debuga(args ...interface{}) {
-	s.Debug(args...)
 }
 
 // DebugEnabled returns whether output of messages using this scope is currently enabled for debug-level output.
