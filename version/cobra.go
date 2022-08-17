@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -178,9 +179,14 @@ func renderProxyVersions(pinfos *[]ProxyInfo) string {
 		ids := versions[pinfo.IstioVersion]
 		versions[pinfo.IstioVersion] = append(ids, pinfo.ID)
 	}
+	sortedVersions := make([]string, 0)
+	for v := range versions {
+		sortedVersions = append(sortedVersions, v)
+	}
+	sort.Strings(sortedVersions)
 	counts := []string{}
-	for ver, ids := range versions {
-		counts = append(counts, fmt.Sprintf("%s (%d proxies)", ver, len(ids)))
+	for _, ver := range sortedVersions {
+		counts = append(counts, fmt.Sprintf("%s (%d proxies)", ver, len(versions[ver])))
 	}
 	return strings.Join(counts, ", ")
 }
