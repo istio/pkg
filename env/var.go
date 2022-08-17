@@ -383,8 +383,24 @@ func (v GenericVar[T]) Lookup() (T, bool) {
 	return *res, ok
 }
 
+func (v GenericVar[T]) IsSet() bool {
+	_, ok := v.Lookup()
+	return ok
+}
+
+func (v GenericVar[T]) GetName() string {
+	return v.Var.Name
+}
+
 // specializedVar represents a var that can Get/Lookup
 type specializedVar[T any] interface {
 	Lookup() (T, bool)
 	Get() T
+}
+
+// VariableInfo provides generic information about a variable. All Variables implement this interface.
+// This is largely to workaround lack of covariance in Go.
+type VariableInfo interface {
+	GetName() string
+	IsSet() bool
 }
