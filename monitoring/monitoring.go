@@ -410,6 +410,9 @@ func (f *float64Metric) disable() {
 }
 
 func (f *float64Metric) With(labelValues ...LabelValue) Metric {
+	if f.disabled {
+		return f
+	}
 	t := make([]tag.Mutator, len(f.tags), len(f.tags)+len(labelValues))
 	copy(t, f.tags)
 	for _, tagValue := range labelValues {
@@ -520,6 +523,9 @@ func (i *int64Metric) disable() {
 }
 
 func (i *int64Metric) With(labelValues ...LabelValue) Metric {
+	if i.disabled {
+		return i
+	}
 	t := make([]tag.Mutator, len(i.tags), len(i.tags)+len(labelValues))
 	copy(t, i.tags)
 	for _, tagValue := range labelValues {
