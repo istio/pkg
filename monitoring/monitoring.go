@@ -63,6 +63,10 @@ type (
 		// Register configures the Metric for export. It MUST be called before collection
 		// of values for the Metric. An error will be returned if registration fails.
 		Register() error
+
+		// disable configures the metric in 'Disabled' state. It is useful for cases where
+		// metrics are enabled based on some configuration flag.
+		disable()
 	}
 
 	// DerivedMetrics can be used to supply values that dynamically derive from internal
@@ -204,6 +208,19 @@ func MustRegister(metrics ...Metric) {
 	}
 }
 
+// RegisterIf is a helper function that will ensure that the provided Metrics are
+// registered if enabled function returns true.
+// If a metric fails to register, this method will panic.
+func RegisterIf(metric Metric, enabled func() bool) {
+	if enabled() {
+		if err := metric.Register(); err != nil {
+			panic(err)
+		}
+		return
+	}
+	metric.disable()
+}
+
 // NewSum creates a new Metric with an aggregation type of Sum (the values will be cumulative).
 // That means that data collected by the new Metric will be summed before export.
 func NewSum(name, description string, opts ...Options) Metric {
@@ -294,6 +311,8 @@ type float64Metric struct {
 
 	incrementMeasure []stats.Measurement
 	decrementMeasure []stats.Measurement
+
+	disabled bool
 }
 
 func createOptions(opts ...Options) *options {
@@ -335,10 +354,16 @@ func newFloat64Metric(name, description string, aggregation *view.Aggregation, o
 }
 
 func (f *float64Metric) Increment() {
+	if f.disabled {
+		return
+	}
 	f.recordMeasurements(f.incrementMeasure)
 }
 
 func (f *float64Metric) Decrement() {
+	if f.disabled {
+		return
+	}
 	f.recordMeasurements(f.decrementMeasure)
 }
 
@@ -347,6 +372,9 @@ func (f *float64Metric) Name() string {
 }
 
 func (f *float64Metric) Record(value float64) {
+	if f.disabled {
+		return
+	}
 	recordHookMutex.RLock()
 	if rh, ok := recordHooks[f.Name()]; ok {
 		rh.OnRecordFloat64Measure(f.Float64Measure, f.tags, value)
@@ -357,6 +385,9 @@ func (f *float64Metric) Record(value float64) {
 }
 
 func (f *float64Metric) recordMeasurements(m []stats.Measurement) {
+	if f.disabled {
+		return
+	}
 	recordHookMutex.RLock()
 	if rh, ok := recordHooks[f.Name()]; ok {
 		for _, mv := range m {
@@ -368,7 +399,14 @@ func (f *float64Metric) recordMeasurements(m []stats.Measurement) {
 }
 
 func (f *float64Metric) RecordInt(value int64) {
+	if f.disabled {
+		return
+	}
 	f.Record(float64(value))
+}
+
+func (f *float64Metric) disable() {
+	f.disabled = true
 }
 
 func (f *float64Metric) With(labelValues ...LabelValue) Metric {
@@ -405,6 +443,8 @@ type int64Metric struct {
 	incrementMeasure []stats.Measurement
 	// decrementMeasure is a precomputed -1 measurement to avoid extra allocations in Decrement()
 	decrementMeasure []stats.Measurement
+
+	disabled bool
 }
 
 func newInt64Metric(name, description string, aggregation *view.Aggregation, opts *options) *int64Metric {
@@ -425,10 +465,16 @@ func newInt64Metric(name, description string, aggregation *view.Aggregation, opt
 }
 
 func (i *int64Metric) Increment() {
+	if i.disabled {
+		return
+	}
 	i.recordMeasurements(i.incrementMeasure)
 }
 
 func (i *int64Metric) Decrement() {
+	if i.disabled {
+		return
+	}
 	i.recordMeasurements(i.decrementMeasure)
 }
 
@@ -437,10 +483,16 @@ func (i *int64Metric) Name() string {
 }
 
 func (i *int64Metric) Record(value float64) {
+	if i.disabled {
+		return
+	}
 	i.RecordInt(int64(math.Floor(value)))
 }
 
 func (i *int64Metric) recordMeasurements(m []stats.Measurement) {
+	if i.disabled {
+		return
+	}
 	recordHookMutex.RLock()
 	if rh, ok := recordHooks[i.Name()]; ok {
 		for _, mv := range m {
@@ -452,12 +504,19 @@ func (i *int64Metric) recordMeasurements(m []stats.Measurement) {
 }
 
 func (i *int64Metric) RecordInt(value int64) {
+	if i.disabled {
+		return
+	}
 	recordHookMutex.RLock()
 	if rh, ok := recordHooks[i.Name()]; ok {
 		rh.OnRecordInt64Measure(i.Int64Measure, i.tags, value)
 	}
 	recordHookMutex.RUnlock()
 	stats.Record(i.ctx, i.M(value)) //nolint:errcheck
+}
+
+func (i *int64Metric) disable() {
+	i.disabled = true
 }
 
 func (i *int64Metric) With(labelValues ...LabelValue) Metric {
@@ -478,5 +537,8 @@ func (i *int64Metric) With(labelValues ...LabelValue) Metric {
 }
 
 func (i *int64Metric) Register() error {
+	if i.disabled {
+		return nil
+	}
 	return view.Register(i.view)
 }
