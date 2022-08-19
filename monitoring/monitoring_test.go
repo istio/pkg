@@ -85,8 +85,8 @@ var (
 
 func init() {
 	monitoring.MustRegister(testSum, hookSum, int64Sum, testDistribution, testGauge)
-	monitoring.RegisterIf(testDisabledSum, func() bool { return false })
-	monitoring.RegisterIf(testConditionalSum, func() bool { return true })
+	testDisabledSum = monitoring.RegisterIf(testDisabledSum, func() bool { return false })
+	testConditionalSum = monitoring.RegisterIf(testConditionalSum, func() bool { return true })
 }
 
 func TestSum(t *testing.T) {
