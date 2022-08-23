@@ -85,6 +85,10 @@ type (
 		ValueFrom(valueFn func() float64, labelValues ...string)
 	}
 
+	disabledMetric struct {
+		name string
+	}
+
 	// Options encode changes to the options passed to a Metric at creation time.
 	Options func(*options)
 
@@ -115,6 +119,35 @@ type (
 		OnRecordInt64Measure(i *stats.Int64Measure, tags []tag.Mutator, value int64)
 	}
 )
+
+// Decrement implements Metric
+func (dm *disabledMetric) Decrement() {}
+
+// Increment implements Metric
+func (dm *disabledMetric) Increment() {}
+
+// Name implements Metric
+func (dm *disabledMetric) Name() string {
+	return dm.name
+}
+
+// Record implements Metric
+func (dm *disabledMetric) Record(value float64) {}
+
+// RecordInt implements Metric
+func (dm *disabledMetric) RecordInt(value int64) {}
+
+// Register implements Metric
+func (dm *disabledMetric) Register() error {
+	return nil
+}
+
+// With implements Metric
+func (dm *disabledMetric) With(labelValues ...LabelValue) Metric {
+	return dm
+}
+
+var _ Metric = &disabledMetric{}
 
 var (
 	recordHooks     map[string]RecordHook
@@ -202,6 +235,21 @@ func MustRegister(metrics ...Metric) {
 			panic(err)
 		}
 	}
+}
+
+// RegisterIf is a helper function that will ensure that the provided
+// Metric is registered if enabled function returns true.
+// If a metric fails to register, this method will panic.
+// It returns the registered metric or no-op metric based on enabled function.
+// NOTE: It is important to use the returned Metric if RegisterIf is used.
+func RegisterIf(metric Metric, enabled func() bool) Metric {
+	if enabled() {
+		if err := metric.Register(); err != nil {
+			panic(err)
+		}
+		return metric
+	}
+	return &disabledMetric{name: metric.Name()}
 }
 
 // NewSum creates a new Metric with an aggregation type of Sum (the values will be cumulative).
