@@ -78,9 +78,9 @@ type lruWrapper struct {
 
 type lruCache struct {
 	sync.RWMutex
-	entries           []lruEntry            // allocate once, not resizable
-	sentinel          *lruEntry             // direct pointer to entries[0] to avoid bounds checking
-	lookup            map[interface{}]int32 // keys => entry index
+	entries           []lruEntry    // allocate once, not resizable
+	sentinel          *lruEntry     // direct pointer to entries[0] to avoid bounds checking
+	lookup            map[any]int32 // keys => entry index
 	stats             Stats
 	defaultExpiration time.Duration
 	stopEvicter       chan bool
@@ -90,11 +90,11 @@ type lruCache struct {
 
 // lruEntry is used to hold a value in the ordered lru list represented by the entry slice
 type lruEntry struct {
-	next       int32       // index of next entry
-	prev       int32       // index of previous entry
-	key        interface{} // cache key associated with this entry
-	value      interface{} // cache value associated with this entry
-	expiration int64       // nanoseconds
+	next       int32 // index of next entry
+	prev       int32 // index of previous entry
+	key        any   // cache key associated with this entry
+	value      any   // cache value associated with this entry
+	expiration int64 // nanoseconds
 }
 
 // entry 0 in the slice is the sentinel node
@@ -119,7 +119,7 @@ const sentinelIndex = 0
 func NewLRU(defaultExpiration time.Duration, evictionInterval time.Duration, maxEntries int32) ExpiringCache {
 	c := &lruCache{
 		entries:           make([]lruEntry, maxEntries+1),
-		lookup:            make(map[interface{}]int32, maxEntries),
+		lookup:            make(map[any]int32, maxEntries),
 		defaultExpiration: defaultExpiration,
 	}
 
@@ -220,11 +220,11 @@ func (c *lruCache) linkEntryAtTail(index int32) {
 	c.sentinel.prev = index
 }
 
-func (c *lruCache) Set(key interface{}, value interface{}) {
+func (c *lruCache) Set(key any, value any) {
 	c.SetWithExpiration(key, value, c.defaultExpiration)
 }
 
-func (c *lruCache) SetWithExpiration(key interface{}, value interface{}, expiration time.Duration) {
+func (c *lruCache) SetWithExpiration(key any, value any, expiration time.Duration) {
 	exp := atomic.LoadInt64(&c.baseTimeNanos) + expiration.Nanoseconds()
 
 	c.Lock()
@@ -249,10 +249,10 @@ func (c *lruCache) SetWithExpiration(key interface{}, value interface{}, expirat
 	c.Unlock()
 }
 
-func (c *lruCache) Get(key interface{}) (interface{}, bool) {
+func (c *lruCache) Get(key any) (any, bool) {
 	c.Lock()
 
-	var value interface{}
+	var value any
 	index, ok := c.lookup[key]
 	if ok {
 		c.unlinkEntry(index)
@@ -268,7 +268,7 @@ func (c *lruCache) Get(key interface{}) (interface{}, bool) {
 	return value, ok
 }
 
-func (c *lruCache) Remove(key interface{}) {
+func (c *lruCache) Remove(key any) {
 	c.Lock()
 
 	if index, ok := c.lookup[key]; ok {

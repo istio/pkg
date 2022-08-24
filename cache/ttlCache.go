@@ -53,7 +53,7 @@ type ttlCache struct {
 
 // A single cache entry. This is the values we use in our storage map
 type entry struct {
-	value      interface{}
+	value      any
 	expiration int64 // nanoseconds
 }
 
@@ -64,7 +64,7 @@ type entry struct {
 // from the `sync.Map` that backs this cache (using `Map.Delete()`). No
 // locks are held during the invocation of this callback. The callback
 // should not result in blocking calls to long-running operations, however.
-type EvictionCallback func(key, value interface{})
+type EvictionCallback func(key, value any)
 
 // NewTTL creates a new cache with a time-based eviction model.
 //
@@ -84,7 +84,7 @@ type EvictionCallback func(key, value interface{})
 // use up all available memory by continuing to add entries to the cache with a
 // long enough expiration time. Don't do that.
 func NewTTL(defaultExpiration time.Duration, evictionInterval time.Duration) ExpiringCache {
-	return NewTTLWithCallback(defaultExpiration, evictionInterval, func(key, value interface{}) {})
+	return NewTTLWithCallback(defaultExpiration, evictionInterval, func(key, value any) {})
 }
 
 // NewTTLWithCallback creates a new cache with a time-based eviction model that will invoke the supplied
@@ -149,7 +149,7 @@ func (c *ttlCache) evictExpired(t time.Time) {
 	// This is a cache, not a map. So we're OK with this extremely rare
 	// situation. So long as the cache never lies, it's OK if it spuriously
 	// forgets.
-	c.entries.Range(func(key interface{}, value interface{}) bool {
+	c.entries.Range(func(key any, value any) bool {
 		e := value.(*entry)
 		if e.expiration <= n {
 			c.entries.Delete(key)
@@ -165,11 +165,11 @@ func (c *ttlCache) EvictExpired() {
 	c.evictExpired(time.Now())
 }
 
-func (c *ttlCache) Set(key interface{}, value interface{}) {
+func (c *ttlCache) Set(key any, value any) {
 	c.SetWithExpiration(key, value, c.defaultExpiration)
 }
 
-func (c *ttlCache) SetWithExpiration(key interface{}, value interface{}, expiration time.Duration) {
+func (c *ttlCache) SetWithExpiration(key any, value any, expiration time.Duration) {
 	e := &entry{
 		value:      value,
 		expiration: atomic.LoadInt64(&c.baseTimeNanos) + expiration.Nanoseconds(),
@@ -179,7 +179,7 @@ func (c *ttlCache) SetWithExpiration(key interface{}, value interface{}, expirat
 	atomic.AddUint64(&c.stats.Writes, 1)
 }
 
-func (c *ttlCache) Get(key interface{}) (interface{}, bool) {
+func (c *ttlCache) Get(key any) (any, bool) {
 	e, ok := c.entries.Load(key)
 	if !ok {
 		atomic.AddUint64(&c.stats.Misses, 1)
@@ -195,7 +195,7 @@ func (c *ttlCache) Get(key interface{}) (interface{}, bool) {
 	return e.(*entry).value, true
 }
 
-func (c *ttlCache) Remove(key interface{}) {
+func (c *ttlCache) Remove(key any) {
 	c.entries.Delete(key)
 
 	// Note: we count this as a removal even in the case where the key wasn't actually in the map
@@ -203,7 +203,7 @@ func (c *ttlCache) Remove(key interface{}) {
 }
 
 func (c *ttlCache) RemoveAll() {
-	c.entries.Range(func(key interface{}, value interface{}) bool {
+	c.entries.Range(func(key any, value any) bool {
 		c.entries.Delete(key)
 
 		// Note: can miscount if the key was evicted before it was removed

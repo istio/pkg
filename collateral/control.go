@@ -396,26 +396,26 @@ func dereferenceMap(m map[string]string) (result map[string]string) {
 	return
 }
 
-func buildNestedMap(flatMap map[string]string) (result map[string]interface{}) {
-	result = make(map[string]interface{})
+func buildNestedMap(flatMap map[string]string) (result map[string]any) {
+	result = make(map[string]any)
 	for complexkey, value := range flatMap {
 		buildMapRecursive(strings.Split(complexkey, "."), result, value)
 	}
 	return
 }
 
-func buildMapRecursive(remainingPath []string, currentPointer map[string]interface{}, value string) {
+func buildMapRecursive(remainingPath []string, currentPointer map[string]any, value string) {
 	if len(remainingPath) == 1 {
 		currentPointer[remainingPath[0]] = value
 		return
 	}
-	var nextPointer interface{}
+	var nextPointer any
 	var existingPath bool
 	if nextPointer, existingPath = currentPointer[remainingPath[0]]; !existingPath {
-		nextPointer = make(map[string]interface{})
+		nextPointer = make(map[string]any)
 		currentPointer[remainingPath[0]] = nextPointer
 	}
-	buildMapRecursive(remainingPath[1:], nextPointer.(map[string]interface{}), value)
+	buildMapRecursive(remainingPath[1:], nextPointer.(map[string]any), value)
 }
 
 func (g *generator) genFrontMatter(root *cobra.Command, numEntries int) {

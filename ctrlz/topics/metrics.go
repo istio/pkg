@@ -76,7 +76,7 @@ func getMetricInfo() []*prom2json.Family {
 				Name:    name,
 				Help:    v.Description,
 				Type:    strings.ToUpper(v.Aggregation.Type.String()),
-				Metrics: make([]interface{}, 0),
+				Metrics: make([]any, 0),
 			}
 			result = append(result, &family)
 
@@ -86,7 +86,7 @@ func getMetricInfo() []*prom2json.Family {
 					labels[tag.Key.Name()] = tag.Value
 				}
 
-				var metric interface{}
+				var metric any
 
 				switch d := row.Data.(type) {
 				case *view.LastValueData:

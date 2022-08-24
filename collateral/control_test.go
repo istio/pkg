@@ -81,7 +81,7 @@ func Test_buildNestedMap(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       args
-		wantResult map[string]interface{}
+		wantResult map[string]any
 	}{
 		{
 			name: "configmap",
@@ -92,11 +92,11 @@ func Test_buildNestedMap(t *testing.T) {
 					"extra":                   "thing",
 				},
 			},
-			wantResult: map[string]interface{}{
-				"one": map[string]interface{}{
-					"two": map[string]interface{}{
+			wantResult: map[string]any{
+				"one": map[string]any{
+					"two": map[string]any{
 						"valuethree": "onetwovaluethree",
-						"three": map[string]interface{}{
+						"three": map[string]any{
 							"valuefour": "onetwothreevaluefour",
 						},
 					},

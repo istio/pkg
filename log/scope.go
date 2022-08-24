@@ -58,7 +58,7 @@ type Scope struct {
 
 	// labels data - key slice to preserve ordering
 	labelKeys []string
-	labels    map[string]interface{}
+	labels    map[string]any
 }
 
 var (
@@ -116,7 +116,7 @@ func RegisterScope(name string, description string, callerSkip int) *Scope {
 		scopes[name] = s
 	}
 
-	s.labels = make(map[string]interface{})
+	s.labels = make(map[string]any)
 
 	return s
 }
@@ -144,7 +144,7 @@ func Scopes() map[string]*Scope {
 }
 
 // Fatal uses fmt.Sprint to construct and log a message at fatal level.
-func (s *Scope) Fatal(args ...interface{}) {
+func (s *Scope) Fatal(args ...any) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
@@ -156,7 +156,7 @@ func (s *Scope) Fatal(args ...interface{}) {
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
-func (s *Scope) Fatalf(args ...interface{}) {
+func (s *Scope) Fatalf(args ...any) {
 	if s.GetOutputLevel() >= FatalLevel {
 		ie, firstIdx := getErrorStruct(args)
 		msg := fmt.Sprint(args[firstIdx])
@@ -173,7 +173,7 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func (s *Scope) Error(args ...interface{}) {
+func (s *Scope) Error(args ...any) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
@@ -185,7 +185,7 @@ func (s *Scope) Error(args ...interface{}) {
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
-func (s *Scope) Errorf(args ...interface{}) {
+func (s *Scope) Errorf(args ...any) {
 	if s.GetOutputLevel() >= ErrorLevel {
 		ie, firstIdx := getErrorStruct(args)
 		msg := fmt.Sprint(args[firstIdx])
@@ -202,7 +202,7 @@ func (s *Scope) ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func (s *Scope) Warn(args ...interface{}) {
+func (s *Scope) Warn(args ...any) {
 	if s.GetOutputLevel() >= WarnLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
@@ -215,12 +215,12 @@ func (s *Scope) Warn(args ...interface{}) {
 
 // Warna uses fmt.Sprint to construct and log a message at warn level.
 // Deprecated: use Warn.
-func (s *Scope) Warna(args ...interface{}) {
+func (s *Scope) Warna(args ...any) {
 	s.Warn(args...)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
-func (s *Scope) Warnf(args ...interface{}) {
+func (s *Scope) Warnf(args ...any) {
 	if s.GetOutputLevel() >= WarnLevel {
 		ie, firstIdx := getErrorStruct(args)
 		msg := fmt.Sprint(args[firstIdx])
@@ -237,7 +237,7 @@ func (s *Scope) WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func (s *Scope) Info(args ...interface{}) {
+func (s *Scope) Info(args ...any) {
 	if s.GetOutputLevel() >= InfoLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
@@ -249,7 +249,7 @@ func (s *Scope) Info(args ...interface{}) {
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
-func (s *Scope) Infof(args ...interface{}) {
+func (s *Scope) Infof(args ...any) {
 	if s.GetOutputLevel() >= InfoLevel {
 		ie, firstIdx := getErrorStruct(args)
 		msg := fmt.Sprint(args[firstIdx])
@@ -266,7 +266,7 @@ func (s *Scope) InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func (s *Scope) Debug(args ...interface{}) {
+func (s *Scope) Debug(args ...any) {
 	if s.GetOutputLevel() >= DebugLevel {
 		ie, firstIdx := getErrorStruct(args)
 		if firstIdx == 0 {
@@ -278,7 +278,7 @@ func (s *Scope) Debug(args ...interface{}) {
 }
 
 // Debugf uses fmt.Sprintf to construct and log a message at debug level.
-func (s *Scope) Debugf(args ...interface{}) {
+func (s *Scope) Debugf(args ...any) {
 	if s.GetOutputLevel() >= DebugLevel {
 		ie, firstIdx := getErrorStruct(args)
 		msg := fmt.Sprint(args[firstIdx])
@@ -344,7 +344,7 @@ func (s *Scope) copy() *Scope {
 // WithLabels adds a key-value pairs to the labels in s. The key must be a string, while the value may be any type.
 // It returns a copy of s, with the labels added.
 // e.g. newScope := oldScope.WithLabels("foo", "bar", "baz", 123, "qux", 0.123)
-func (s *Scope) WithLabels(kvlist ...interface{}) *Scope {
+func (s *Scope) WithLabels(kvlist ...any) *Scope {
 	out := s.copy()
 	if len(kvlist)%2 != 0 {
 		out.labels["WithLabels error"] = fmt.Sprintf("even number of parameters required, got %d", len(kvlist))
@@ -380,8 +380,8 @@ func (s *Scope) callHandlers(
 
 // getErrorStruct returns (*Error, 1) if it is the first argument in the list is an Error ptr,
 // or (nil,0) otherwise. The second return value is the offset to the first non-Error field.
-func getErrorStruct(fields ...interface{}) (*structured.Error, int) {
-	ief, ok := fields[0].([]interface{})
+func getErrorStruct(fields ...any) (*structured.Error, int) {
+	ief, ok := fields[0].([]any)
 	if !ok {
 		return nil, 0
 	}
@@ -393,8 +393,8 @@ func getErrorStruct(fields ...interface{}) (*structured.Error, int) {
 	return ie, 1
 }
 
-func copyStringInterfaceMap(m map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(m))
+func copyStringInterfaceMap(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
 	for k, v := range m {
 		out[k] = v
 	}

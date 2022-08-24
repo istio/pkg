@@ -31,7 +31,7 @@ import (
 type ReadableCollection interface {
 	Name() string
 	Keys() (keys []string, err error)
-	Get(id string) (interface{}, error)
+	Get(id string) (any, error)
 }
 
 // collection topic is a Topic fw.implementation that exposes a set of collections through CtrlZ.
@@ -136,7 +136,7 @@ func (c *collectionTopic) handleCollection(w http.ResponseWriter, _ *http.Reques
 type itemContext struct {
 	Collection string
 	Key        string
-	Value      interface{}
+	Value      any
 	Error      string
 }
 
@@ -179,7 +179,7 @@ func (c *collectionTopic) listCollection(name string) ([]string, error) {
 	return nil, fmt.Errorf("collection not found: %q", name)
 }
 
-func (c *collectionTopic) getItem(collection string, id string) (interface{}, error) {
+func (c *collectionTopic) getItem(collection string, id string) (any, error) {
 	for _, col := range c.collections {
 		if col.Name() == collection {
 			return col.Get(id)
@@ -199,7 +199,7 @@ func NewCollectionTopic(title string, prefix string, collections ...ReadableColl
 }
 
 // NewStaticCollection creates a static collection from the given set of items.
-func NewStaticCollection(name string, items map[string]interface{}) ReadableCollection {
+func NewStaticCollection(name string, items map[string]any) ReadableCollection {
 	return &staticCollection{
 		name:  name,
 		items: items,
@@ -210,7 +210,7 @@ func NewStaticCollection(name string, items map[string]interface{}) ReadableColl
 // during construction.
 type staticCollection struct {
 	name  string
-	items map[string]interface{}
+	items map[string]any
 }
 
 var _ ReadableCollection = &staticCollection{}
@@ -232,6 +232,6 @@ func (r *staticCollection) Keys() ([]string, error) {
 }
 
 // Get is implementation of ReadableCollection.Get.
-func (r *staticCollection) Get(id string) (interface{}, error) {
+func (r *staticCollection) Get(id string) (any, error) {
 	return r.items[id], nil
 }
