@@ -23,12 +23,12 @@ func registerDefaultScope() *Scope {
 var defaultScope = registerDefaultScope()
 
 // Fatal outputs a message at fatal level.
-func Fatal(fields ...interface{}) {
+func Fatal(fields ...any) {
 	defaultScope.Fatal(fields...)
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
-func Fatalf(args ...interface{}) {
+func Fatalf(args ...any) {
 	defaultScope.Fatalf(args...)
 }
 
@@ -38,12 +38,12 @@ func FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func Error(fields ...interface{}) {
+func Error(fields ...any) {
 	defaultScope.Error(fields...)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
-func Errorf(args ...interface{}) {
+func Errorf(args ...any) {
 	defaultScope.Errorf(args...)
 }
 
@@ -53,17 +53,17 @@ func ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func Warn(fields ...interface{}) {
+func Warn(fields ...any) {
 	defaultScope.Warn(fields...)
 }
 
 // Warna uses fmt.Sprint to construct and log a message at warn level.
-func Warna(args ...interface{}) {
+func Warna(args ...any) {
 	defaultScope.Warna(args...)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
-func Warnf(args ...interface{}) {
+func Warnf(args ...any) {
 	defaultScope.Warnf(args...)
 }
 
@@ -73,12 +73,12 @@ func WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func Info(fields ...interface{}) {
+func Info(fields ...any) {
 	defaultScope.Info(fields...)
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
-func Infof(args ...interface{}) {
+func Infof(args ...any) {
 	defaultScope.Infof(args...)
 }
 
@@ -88,12 +88,12 @@ func InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func Debug(fields ...interface{}) {
+func Debug(fields ...any) {
 	defaultScope.Debug(fields...)
 }
 
 // Debugf uses fmt.Sprintf to construct and log a message at debug level.
-func Debugf(args ...interface{}) {
+func Debugf(args ...any) {
 	defaultScope.Debugf(args...)
 }
 
@@ -104,6 +104,6 @@ func DebugEnabled() bool {
 
 // WithLabels adds a key-value pairs to the labels in s. The key must be a string, while the value may be any type.
 // It returns a copy of the default scope, with the labels added.
-func WithLabels(kvlist ...interface{}) *Scope {
+func WithLabels(kvlist ...any) *Scope {
 	return defaultScope.WithLabels(kvlist...)
 }
