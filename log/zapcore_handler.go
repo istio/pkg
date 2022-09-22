@@ -158,11 +158,6 @@ func emit(scope *Scope, level zapcore.Level, msg string, fields []zapcore.Field)
 	}
 }
 
-// backwards compatibility. TODO(mostrowski): remove this
-func (s *Scope) emit(level zapcore.Level, ps bool, msg string, fields []zapcore.Field) {
-	emit(s, level, msg, fields)
-}
-
 // toErrString returns the string representation of err, handling the nil case.
 func toErrString(err error) string {
 	if err == nil {
