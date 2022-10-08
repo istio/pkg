@@ -49,7 +49,7 @@ type callbackRecorder struct {
 	callbacks int64
 }
 
-func (c *callbackRecorder) callback(key, value interface{}) {
+func (c *callbackRecorder) callback(key, value any) {
 	atomic.AddInt64(&c.callbacks, 1)
 }
 

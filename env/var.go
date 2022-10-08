@@ -17,6 +17,8 @@
 package env
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -40,6 +42,8 @@ const (
 	FLOAT
 	// Variable holds a time duration.
 	DURATION
+	// Variable holds a dynamic unknown type.
+	OTHER
 )
 
 // Var describes a single environment variable
@@ -61,6 +65,9 @@ type Var struct {
 
 	// The type of the variable's value
 	Type VarType
+
+	// The underlying Go type of the variable
+	GoType string
 }
 
 // StringVar represents a single string environment variable.
@@ -107,6 +114,42 @@ func VarDescriptions() []Var {
 	})
 
 	return sorted
+}
+
+type Parseable interface {
+	comparable
+}
+
+type GenericVar[T Parseable] struct {
+	Var
+	delegate specializedVar[T]
+}
+
+func Register[T Parseable](name string, defaultValue T, description string) GenericVar[T] {
+	// Specialized cases
+	// In the future, once only Register() remains, we can likely drop most of these.
+	// however, time.Duration is needed still as it doesn't implement json
+	switch d := any(defaultValue).(type) {
+	case time.Duration:
+		v := RegisterDurationVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case string:
+		v := RegisterStringVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case float64:
+		v := RegisterFloatVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case int:
+		v := RegisterIntVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	case bool:
+		v := RegisterBoolVar(name, d, description)
+		return GenericVar[T]{v.Var, any(v).(specializedVar[T])}
+	}
+	b, _ := json.Marshal(defaultValue)
+	v := Var{Name: name, DefaultValue: string(b), Description: description, Type: STRING, GoType: fmt.Sprintf("%T", defaultValue)}
+	RegisterVar(v)
+	return GenericVar[T]{getVar(name), nil}
 }
 
 // RegisterStringVar registers a new string environment variable.
@@ -303,4 +346,61 @@ func (v DurationVar) Lookup() (time.Duration, bool) {
 	}
 
 	return d, ok
+}
+
+// Get retrieves the value of the environment variable.
+// It returns the value, which will be the default if the variable is not present.
+// To distinguish between an empty value and an unset value, use Lookup.
+func (v GenericVar[T]) Get() T {
+	if v.delegate != nil {
+		return v.delegate.Get()
+	}
+	result, _ := v.Lookup()
+	return result
+}
+
+// Lookup retrieves the value of the environment variable. If the
+// variable is present in the environment the
+// value (which may be empty) is returned and the boolean is true.
+// Otherwise the returned value will be the default and the boolean will
+// be false.
+func (v GenericVar[T]) Lookup() (T, bool) {
+	if v.delegate != nil {
+		return v.delegate.Lookup()
+	}
+	result, ok := os.LookupEnv(v.Name)
+	if !ok {
+		result = v.DefaultValue
+	}
+
+	res := new(T)
+
+	if err := json.Unmarshal([]byte(result), res); err != nil {
+		log.Warnf("Invalid environment variable value `%s` defaulting to %v: %v", result, v.DefaultValue, err)
+		_ = json.Unmarshal([]byte(v.DefaultValue), res)
+	}
+
+	return *res, ok
+}
+
+func (v GenericVar[T]) IsSet() bool {
+	_, ok := v.Lookup()
+	return ok
+}
+
+func (v GenericVar[T]) GetName() string {
+	return v.Var.Name
+}
+
+// specializedVar represents a var that can Get/Lookup
+type specializedVar[T any] interface {
+	Lookup() (T, bool)
+	Get() T
+}
+
+// VariableInfo provides generic information about a variable. All Variables implement this interface.
+// This is largely to workaround lack of covariance in Go.
+type VariableInfo interface {
+	GetName() string
+	IsSet() bool
 }

@@ -60,7 +60,7 @@ func encodeStackdriverLevel(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) 
 type stackdriverCore struct {
 	logger       *logging.Logger
 	minimumLevel zapcore.Level
-	fields       map[string]interface{}
+	fields       map[string]any
 }
 
 type CloseFunc func() error
@@ -146,8 +146,8 @@ func (sc *stackdriverCore) Write(entry zapcore.Entry, fields []zapcore.Field) er
 }
 
 // clone creates a new field map without mutating the original.
-func clone(orig map[string]interface{}, newFields []zapcore.Field) map[string]interface{} {
-	clone := make(map[string]interface{})
+func clone(orig map[string]any, newFields []zapcore.Field) map[string]any {
+	clone := make(map[string]any)
 
 	for k, v := range orig {
 		clone[k] = v

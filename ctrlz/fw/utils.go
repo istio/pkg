@@ -30,7 +30,7 @@ func RenderError(w http.ResponseWriter, statusCode int, err error) {
 }
 
 // RenderHTML executes the given template, sending the output to the supplied response writer
-func RenderHTML(w http.ResponseWriter, t *template.Template, data interface{}) {
+func RenderHTML(w http.ResponseWriter, t *template.Template, data any) {
 	b := &bytes.Buffer{}
 
 	if err := t.Execute(b, data); err != nil {
@@ -44,7 +44,7 @@ func RenderHTML(w http.ResponseWriter, t *template.Template, data interface{}) {
 }
 
 // RenderJSON outputs the given data as JSON
-func RenderJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func RenderJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 

@@ -59,7 +59,7 @@ func trimNewline(msg string) string {
 func (zl *zapLogger) Init(logr.RuntimeInfo) {
 }
 
-func (zl *zapLogger) Info(level int, msg string, keysAndVals ...interface{}) {
+func (zl *zapLogger) Info(level int, msg string, keysAndVals ...any) {
 	if level > debugLevelThreshold {
 		zl.l.WithLabels(keysAndVals...).Debug(trimNewline(msg))
 	} else {
@@ -67,7 +67,7 @@ func (zl *zapLogger) Info(level int, msg string, keysAndVals ...interface{}) {
 	}
 }
 
-func (zl *zapLogger) Error(err error, msg string, keysAndVals ...interface{}) {
+func (zl *zapLogger) Error(err error, msg string, keysAndVals ...any) {
 	if zl.l.ErrorEnabled() {
 		if err == nil {
 			zl.l.WithLabels(keysAndVals...).Error(trimNewline(msg))
@@ -85,7 +85,7 @@ func (zl *zapLogger) V(int) logr.Logger {
 	return logr.New(zlog)
 }
 
-func (zl *zapLogger) WithValues(keysAndValues ...interface{}) logr.LogSink {
+func (zl *zapLogger) WithValues(keysAndValues ...any) logr.LogSink {
 	return NewLogrAdapter(zl.l.WithLabels(keysAndValues...)).GetSink()
 }
 

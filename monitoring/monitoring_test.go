@@ -69,10 +69,24 @@ var (
 		"test_gauge",
 		"Testing gauge functionality",
 	)
+
+	testDisabledSum = monitoring.NewSum(
+		"events_disabled_total",
+		"Number of events observed, by name and kind",
+		monitoring.WithLabels(name, kind),
+	)
+
+	testConditionalSum = monitoring.NewSum(
+		"events_conditional_total",
+		"Number of events observed, by name and kind",
+		monitoring.WithLabels(name, kind),
+	)
 )
 
 func init() {
 	monitoring.MustRegister(testSum, hookSum, int64Sum, testDistribution, testGauge)
+	testDisabledSum = monitoring.RegisterIf(testDisabledSum, func() bool { return false })
+	testConditionalSum = monitoring.RegisterIf(testConditionalSum, func() bool { return true })
 }
 
 func TestSum(t *testing.T) {
@@ -138,6 +152,23 @@ func TestSum(t *testing.T) {
 	)
 	if err != nil {
 		t.Errorf("failure recording sum values: %v", err)
+	}
+}
+
+func TestRegisterIfSum(t *testing.T) {
+	testDisabledSum.With(name.Value("foo"), kind.Value("bar")).Increment()
+	var err error
+	_, err = view.RetrieveData(testDisabledSum.Name())
+	if err == nil || !strings.EqualFold(err.Error(), "cannot retrieve data; view \"events_disabled_total\" is not registered") {
+		t.Errorf("failure validating disabled metrics. exptected error but got %v", err)
+	}
+	testConditionalSum.With(name.Value("foo"), kind.Value("bar")).Increment()
+	rows, err := view.RetrieveData(testConditionalSum.Name())
+	if err != nil {
+		t.Errorf("exptected to register metric %s but got %v", testConditionalSum.Name(), err)
+	}
+	if len(rows) == 0 {
+		t.Errorf("exptected to metric %s has values  but got %v", testConditionalSum.Name(), len(rows))
 	}
 }
 

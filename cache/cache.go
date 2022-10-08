@@ -73,15 +73,15 @@ type Cache interface {
 	// the same key that is already in the cache. The entry may be automatically
 	// expunged from the cache at some point, depending on the eviction policies
 	// of the cache and the options specified when the cache was created.
-	Set(key interface{}, value interface{})
+	Set(key any, value any)
 
 	// Get retrieves the value associated with the supplied key if the key
 	// is present in the cache.
-	Get(key interface{}) (value interface{}, ok bool)
+	Get(key any) (value any, ok bool)
 
 	// Remove synchronously deletes the given key from the cache. This has no effect if the key is not
 	// currently in the cache.
-	Remove(key interface{})
+	Remove(key any)
 
 	// RemoveAll synchronously deletes all entries from the cache.
 	RemoveAll()
@@ -98,7 +98,7 @@ type ExpiringCache interface {
 	// This will replace any entry with the same key that is already in the cache.
 	// The entry will be automatically expunged from the cache at or slightly after the
 	// requested expiration time.
-	SetWithExpiration(key interface{}, value interface{}, expiration time.Duration)
+	SetWithExpiration(key any, value any, expiration time.Duration)
 
 	// EvictExpired() synchronously evicts all expired entries from the cache
 	EvictExpired()
