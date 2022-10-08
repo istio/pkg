@@ -29,6 +29,7 @@ var (
 	buildStatus      = "unknown"
 	buildTag         = "unknown"
 	buildHub         = "unknown"
+	buildArch        = "unknown"
 )
 
 // BuildInfo describes version information about the binary build.
@@ -55,10 +56,11 @@ type ProxyInfo struct {
 	IstioVersion string
 }
 
-// DockerBuildInfo contains and exposes Hub: buildHub and Tag: buildVersion
+// DockerBuildInfo contains and exposes Hub: buildHub, Tag: buildVersion and Arch: buildArch
 type DockerBuildInfo struct {
-	Hub string
-	Tag string
+	Hub  string
+	Tag  string
+	Arch string
 }
 
 // NewBuildInfoFromOldString creates a BuildInfo struct based on the output
@@ -134,7 +136,8 @@ func init() {
 	}
 
 	DockerInfo = DockerBuildInfo{
-		Hub: buildHub,
-		Tag: buildVersion,
+		Hub:  buildHub,
+		Tag:  buildVersion,
+		Arch: buildArch,
 	}
 }
