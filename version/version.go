@@ -29,6 +29,7 @@ var (
 	buildStatus      = "unknown"
 	buildTag         = "unknown"
 	buildHub         = "unknown"
+	buildOS          = "unknown"
 	buildArch        = "unknown"
 )
 
@@ -56,10 +57,11 @@ type ProxyInfo struct {
 	IstioVersion string
 }
 
-// DockerBuildInfo contains and exposes Hub: buildHub, Tag: buildVersion and Arch: buildArch
+// DockerBuildInfo contains and exposes Hub: buildHub, Tag: buildVersion, OS: buildOS, and Arch: buildArch
 type DockerBuildInfo struct {
 	Hub  string
 	Tag  string
+	OS   string
 	Arch string
 }
 
@@ -138,6 +140,7 @@ func init() {
 	DockerInfo = DockerBuildInfo{
 		Hub:  buildHub,
 		Tag:  buildVersion,
+		OS:   buildOS,
 		Arch: buildArch,
 	}
 }
