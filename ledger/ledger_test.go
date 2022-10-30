@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/sync/errgroup"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func TestLongKeys(t *testing.T) {
