@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 
 	"istio.io/pkg/ctrlz/fw"
 	"istio.io/pkg/ctrlz/topics/assets"
