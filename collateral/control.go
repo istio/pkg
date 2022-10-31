@@ -43,7 +43,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 
 	"istio.io/pkg/collateral/metrics"
 	"istio.io/pkg/env"
