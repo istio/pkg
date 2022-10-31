@@ -57,11 +57,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc/grpclog"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"k8s.io/klog/v2"
 )
 
