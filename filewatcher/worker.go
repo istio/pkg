@@ -251,6 +251,8 @@ func (wk *worker) errorChannel(path string) chan error {
 }
 
 // gets the MD5 of the given file, or nil if there's a problem
+// nolint: gosec
+// not security sensitive code
 func getMd5Sum(file string) []byte {
 	f, err := os.Open(file)
 	if err != nil {
