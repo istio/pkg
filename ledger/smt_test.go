@@ -242,6 +242,8 @@ func TestSmtRaisesError(t *testing.T) {
 	}
 }
 
+// nolint: gosec
+// test only code
 func getFreshData(size int) [][]byte {
 	length := 8
 	var data [][]byte

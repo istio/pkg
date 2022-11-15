@@ -422,6 +422,8 @@ func (c *churnFile) create(w FileWatcher) error {
 
 	go func() {
 		// sporadically read events
+		// nolint: gosec
+		// test only code
 		for {
 			<-time.After(time.Millisecond * time.Duration(rand.Int31n(5)))
 			select {
@@ -436,6 +438,8 @@ func (c *churnFile) create(w FileWatcher) error {
 	return nil
 }
 
+// nolint: gosec
+// test only code
 func changeFileContents(file string) {
 	l := rand.Int31n(4 * 1024)
 	b := make([]byte, l)
@@ -504,6 +508,8 @@ func TestChurn(t *testing.T) {
 				}
 			}()
 
+			// nolint: gosec
+			// test only code
 			for {
 				select {
 				case <-done:
