@@ -16,8 +16,8 @@ package ledger
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"runtime"
 	"sort"
 	"testing"
