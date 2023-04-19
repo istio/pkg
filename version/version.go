@@ -1,4 +1,4 @@
-// Copyright 2018 Istio Authors
+// Copyright Istio Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,11 +51,28 @@ type ServerInfo struct {
 // MeshInfo contains the versions for all Istio control plane components
 type MeshInfo []ServerInfo
 
+// NodeType decides the responsibility of the proxy serves in the mesh
+type NodeType string
+
+const (
+	// SidecarProxy type is used for sidecar proxies in the application containers
+	SidecarProxy NodeType = "sidecar"
+
+	// Router type is used for standalone proxies acting as L7/L4 routers
+	Router NodeType = "router"
+
+	// Waypoint type is used for waypoint proxies
+	Waypoint NodeType = "waypoint"
+
+	// Ztunnel type is used for node proxies (ztunnel)
+	Ztunnel NodeType = "ztunnel"
+)
+
 // ProxyInfo contains the version for a single data plane component
 type ProxyInfo struct {
 	ID           string
 	IstioVersion string
-	Type         string
+	Type         NodeType
 }
 
 // DockerBuildInfo contains and exposes Hub: buildHub, Tag: buildVersion, OS: buildOS, and Arch: buildArch
