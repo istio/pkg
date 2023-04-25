@@ -58,8 +58,8 @@ const (
 	// SidecarProxy type is used for sidecar proxies in the application containers
 	SidecarProxy NodeType = "sidecar"
 
-	// Router type is used for standalone proxies acting as L7/L4 routers
-	Router NodeType = "router"
+	// Gateway type is used for gateway proxies that enable ingress and egress traffic
+	Gateway NodeType = "gateway"
 
 	// Waypoint type is used for waypoint proxies
 	Waypoint NodeType = "waypoint"
