@@ -72,10 +72,6 @@ func TestDefault(t *testing.T) {
 			f:   func() { Warnf("%s", "Hello") },
 			pat: timePattern + "\twarn\tHello",
 		},
-		{
-			f:   func() { Warna("Hello") },
-			pat: timePattern + "\twarn\tHello",
-		},
 
 		{
 			f:   func() { Error("Hello") },
@@ -211,7 +207,7 @@ func TestErrorDictionary(t *testing.T) {
 			t.Errorf("Got err '%v', expecting success", err)
 		}
 
-		Info(ie, "Hello")
+		Infof(ie, "Hello")
 		_ = Sync()
 	})
 	if err != nil {

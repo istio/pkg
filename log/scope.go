@@ -90,7 +90,12 @@ func registerDefaultHandler(callback scopeHandlerCallbackFunc) {
 // for a single process, the same Scope struct is returned.
 //
 // Scope names cannot include colons, commas, or periods.
-func RegisterScope(name string, description string, callerSkip int) *Scope {
+func RegisterScope(name string, description string) *Scope {
+	// We only allow internal callers to set callerSkip
+	return registerScope(name, description, 0)
+}
+
+func registerScope(name string, description string, callerSkip int) *Scope {
 	if strings.ContainsAny(name, ":,.") {
 		panic(fmt.Sprintf("scope name %s is invalid, it cannot contain colons, commas, or periods", name))
 	}
@@ -173,14 +178,9 @@ func (s *Scope) FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func (s *Scope) Error(args ...any) {
+func (s *Scope) Error(args any) {
 	if s.GetOutputLevel() >= ErrorLevel {
-		ie, firstIdx := getErrorStruct(args)
-		if firstIdx == 0 {
-			s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args...))
-			return
-		}
-		s.callHandlers(ErrorLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
+		s.callHandlers(ErrorLevel, s, nil, fmt.Sprint(args))
 	}
 }
 
@@ -202,21 +202,10 @@ func (s *Scope) ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func (s *Scope) Warn(args ...any) {
+func (s *Scope) Warn(args any) {
 	if s.GetOutputLevel() >= WarnLevel {
-		ie, firstIdx := getErrorStruct(args)
-		if firstIdx == 0 {
-			s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args...))
-			return
-		}
-		s.callHandlers(WarnLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
+		s.callHandlers(WarnLevel, s, nil, fmt.Sprint(args))
 	}
-}
-
-// Warna uses fmt.Sprint to construct and log a message at warn level.
-// Deprecated: use Warn.
-func (s *Scope) Warna(args ...any) {
-	s.Warn(args...)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
@@ -237,14 +226,9 @@ func (s *Scope) WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func (s *Scope) Info(args ...any) {
+func (s *Scope) Info(args any) {
 	if s.GetOutputLevel() >= InfoLevel {
-		ie, firstIdx := getErrorStruct(args)
-		if firstIdx == 0 {
-			s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args...))
-			return
-		}
-		s.callHandlers(InfoLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
+		s.callHandlers(InfoLevel, s, nil, fmt.Sprint(args))
 	}
 }
 
@@ -266,14 +250,9 @@ func (s *Scope) InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func (s *Scope) Debug(args ...any) {
+func (s *Scope) Debug(args any) {
 	if s.GetOutputLevel() >= DebugLevel {
-		ie, firstIdx := getErrorStruct(args)
-		if firstIdx == 0 {
-			s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args...))
-			return
-		}
-		s.callHandlers(DebugLevel, s, ie, fmt.Sprint(args[firstIdx:]...))
+		s.callHandlers(DebugLevel, s, nil, fmt.Sprint(args))
 	}
 }
 

@@ -17,7 +17,7 @@ package log
 // These functions enable logging using a global Scope. See scope.go for usage information.
 
 func registerDefaultScope() *Scope {
-	return RegisterScope(DefaultScopeName, "Unscoped logging messages.", 1)
+	return registerScope(DefaultScopeName, "Unscoped logging messages.", 1)
 }
 
 var defaultScope = registerDefaultScope()
@@ -38,8 +38,8 @@ func FatalEnabled() bool {
 }
 
 // Error outputs a message at error level.
-func Error(fields ...any) {
-	defaultScope.Error(fields...)
+func Error(fields any) {
+	defaultScope.Error(fields)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
@@ -53,13 +53,8 @@ func ErrorEnabled() bool {
 }
 
 // Warn outputs a message at warn level.
-func Warn(fields ...any) {
-	defaultScope.Warn(fields...)
-}
-
-// Warna uses fmt.Sprint to construct and log a message at warn level.
-func Warna(args ...any) {
-	defaultScope.Warna(args...)
+func Warn(fields any) {
+	defaultScope.Warn(fields)
 }
 
 // Warnf uses fmt.Sprintf to construct and log a message at warn level.
@@ -73,8 +68,8 @@ func WarnEnabled() bool {
 }
 
 // Info outputs a message at info level.
-func Info(fields ...any) {
-	defaultScope.Info(fields...)
+func Info(fields any) {
+	defaultScope.Info(fields)
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
@@ -88,8 +83,8 @@ func InfoEnabled() bool {
 }
 
 // Debug outputs a message at debug level.
-func Debug(fields ...any) {
-	defaultScope.Debug(fields...)
+func Debug(fields any) {
+	defaultScope.Debug(fields)
 }
 
 // Debugf uses fmt.Sprintf to construct and log a message at debug level.

@@ -91,7 +91,7 @@ func TestKlog(t *testing.T) {
 }
 
 func TestBasicScopes(t *testing.T) {
-	s := RegisterScope("testScope", "z", 0)
+	s := RegisterScope("testScope", "z")
 
 	cases := []struct {
 		f          func()
@@ -102,13 +102,8 @@ func TestBasicScopes(t *testing.T) {
 		stackLevel Level
 	}{
 		{
-			// zap.Field is no longer supported, prints like regular Sprint.
-			f:   func() { s.Debug("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\tdebug\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
-		},
-		{
-			f:   func() { s.Debug("Hello", " some", " fields") },
-			pat: timePattern + "\tdebug\ttestScope\tHello some fields",
+			f:   func() { s.Debug("Hello") },
+			pat: timePattern + "\tdebug\ttestScope\tHello",
 		},
 		{
 			f:   func() { s.Debugf("Hello") },
@@ -120,12 +115,8 @@ func TestBasicScopes(t *testing.T) {
 		},
 
 		{
-			f:   func() { s.Info("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\tinfo\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
-		},
-		{
-			f:   func() { s.Info("Hello", " some", " fields") },
-			pat: timePattern + "\tinfo\ttestScope\tHello some fields",
+			f:   func() { s.Info("Hello") },
+			pat: timePattern + "\tinfo\ttestScope\tHello",
 		},
 		{
 			f:   func() { s.Infof("Hello") },
@@ -137,12 +128,8 @@ func TestBasicScopes(t *testing.T) {
 		},
 
 		{
-			f:   func() { s.Warn("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\twarn\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
-		},
-		{
-			f:   func() { s.Warn("Hello", " some", " fields") },
-			pat: timePattern + "\twarn\ttestScope\tHello some fields",
+			f:   func() { s.Warn("Hello") },
+			pat: timePattern + "\twarn\ttestScope\tHello",
 		},
 		{
 			f:   func() { s.Warnf("Hello") },
@@ -152,14 +139,10 @@ func TestBasicScopes(t *testing.T) {
 			f:   func() { s.Warnf("%s", "Hello") },
 			pat: timePattern + "\twarn\ttestScope\tHello",
 		},
-		{
-			f:   func() { s.Warna("Hello") },
-			pat: timePattern + "\twarn\ttestScope\tHello",
-		},
 
 		{
-			f:   func() { s.Error("Hello", zap.String("key", "value"), zap.Int("intkey", 123)) },
-			pat: timePattern + "\terror\ttestScope\tHello{key 15 0 value <nil>} {intkey 11 123  <nil>}",
+			f:   func() { s.Error("Hello") },
+			pat: timePattern + "\terror\ttestScope\tHello",
 		},
 		{
 			f:   func() { s.Errorf("Hello") },
@@ -294,7 +277,7 @@ func TestBasicScopes(t *testing.T) {
 func TestScopeWithLabel(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
+	s := RegisterScope(name, desc)
 	s.SetOutputLevel(DebugLevel)
 
 	lines, err := captureStdout(func() {
@@ -318,7 +301,7 @@ func TestScopeWithLabel(t *testing.T) {
 func TestScopeJSON(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
+	s := RegisterScope(name, desc)
 	s.SetOutputLevel(DebugLevel)
 
 	lines, err := captureStdout(func() {
@@ -340,7 +323,7 @@ func TestScopeJSON(t *testing.T) {
 func TestScopeErrorDictionary(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
+	s := RegisterScope(name, desc)
 	s.SetOutputLevel(DebugLevel)
 
 	ie := &structured.Error{
@@ -371,7 +354,7 @@ func TestScopeErrorDictionary(t *testing.T) {
 func TestScopeErrorDictionaryWrap(t *testing.T) {
 	const name = "TestScope"
 	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
+	s := RegisterScope(name, desc)
 	s.SetOutputLevel(DebugLevel)
 
 	lines, err := captureStdout(func() {
@@ -422,7 +405,7 @@ func mustRegexMatchString(t *testing.T, got, want string) {
 func TestScopeEnabled(t *testing.T) {
 	const name = "TestEnabled"
 	const desc = "Desc"
-	s := RegisterScope(name, desc, 0)
+	s := RegisterScope(name, desc)
 
 	if n := s.Name(); n != name {
 		t.Errorf("Got %s, expected %s", n, name)
@@ -480,8 +463,8 @@ func TestScopeEnabled(t *testing.T) {
 }
 
 func TestMultipleScopesWithSameName(t *testing.T) {
-	z1 := RegisterScope("zzzz", "z", 0)
-	z2 := RegisterScope("zzzz", "z", 0)
+	z1 := RegisterScope("zzzz", "z")
+	z2 := RegisterScope("zzzz", "z")
 
 	if z1 != z2 {
 		t.Error("Expecting the same scope objects, got different ones")
@@ -493,7 +476,7 @@ func TestFind(t *testing.T) {
 		t.Error("Found scope, but expected it wouldn't exist")
 	}
 
-	_ = RegisterScope("TestFind", "", 0)
+	_ = RegisterScope("TestFind", "")
 
 	if z := FindScope("TestFind"); z == nil {
 		t.Error("Did not find scope, expected to find it")
@@ -528,7 +511,7 @@ func tryBadName(t *testing.T, name string) {
 		t.Errorf("Expecting to panic when using bad scope name %s, but didn't", name)
 	}()
 
-	_ = RegisterScope(name, "A poorly named scope", 0)
+	_ = RegisterScope(name, "A poorly named scope")
 }
 
 func TestBadWriter(t *testing.T) {

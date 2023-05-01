@@ -91,7 +91,7 @@ func TestTimestampProperMicros(t *testing.T) {
 
 func TestOverrides(t *testing.T) {
 	resetGlobals()
-	s := RegisterScope("TestOverrides", "For testing", 0)
+	s := RegisterScope("TestOverrides", "For testing")
 
 	o := DefaultOptions()
 	o.outputLevels = "default:debug,all:info"

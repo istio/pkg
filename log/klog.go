@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	KlogScope     = RegisterScope("klog", "", 0)
+	KlogScope     = RegisterScope("klog", "")
 	configureKlog = sync.Once{}
 )
 
