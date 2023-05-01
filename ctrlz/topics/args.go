@@ -15,7 +15,6 @@
 package topics
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 
@@ -39,7 +38,7 @@ func (argsTopic) Prefix() string {
 }
 
 func (argsTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/args.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/args.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		fw.RenderHTML(w, tmpl, os.Args)

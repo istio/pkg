@@ -16,7 +16,6 @@ package topics
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"syscall"
 
@@ -41,7 +40,7 @@ func (signalsTopic) Prefix() string {
 }
 
 func (signalsTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/signals.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/signals.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		fw.RenderHTML(w, tmpl, nil)

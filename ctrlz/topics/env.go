@@ -15,7 +15,6 @@
 package topics
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 	"sort"
@@ -61,7 +60,7 @@ func getVars() []envVar {
 }
 
 func (envTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/env.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/env.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		fw.RenderHTML(w, tmpl, getVars())

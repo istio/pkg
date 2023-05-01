@@ -67,7 +67,7 @@ type Server struct {
 }
 
 func augmentLayout(layout *template.Template, page string) *template.Template {
-	return template.Must(layout.Parse(string(assets.MustAsset(page))))
+	return assets.ParseTemplate(layout, page)
 }
 
 func registerTopic(router *mux.Router, layout *template.Template, t fw.Topic) {
@@ -144,7 +144,7 @@ func Run(o *Options, customTopics []fw.Topic) (*Server, error) {
 		"normalize": normalize,
 	}
 
-	baseLayout := template.Must(template.New("base").Parse(string(assets.MustAsset("templates/layouts/base.html"))))
+	baseLayout := assets.ParseTemplate(template.New("base"), "templates/layouts/base.html")
 	baseLayout = baseLayout.Funcs(funcs)
 	baseLayout = template.Must(baseLayout.Parse("{{ define \"instance\" }}" + instance + "{{ end }}"))
 	_ = augmentLayout(baseLayout, "templates/modules/header.html")
