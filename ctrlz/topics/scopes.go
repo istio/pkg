@@ -17,7 +17,6 @@ package topics
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"sort"
 
@@ -78,7 +77,7 @@ func getScopeInfo(s *log.Scope) *scopeInfo {
 }
 
 func (scopeTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/scopes.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/scopes.html")
 
 	_ = context.HTMLRouter().NewRoute().HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		allScopes := log.Scopes()

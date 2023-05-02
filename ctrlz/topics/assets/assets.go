@@ -12,6 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate go-bindata --nocompress --nometadata --pkg assets -o assets.gen.go ./templates/...
-
 package assets
+
+import (
+	"embed"
+	"html/template"
+)
+
+// FS embeds the templates
+//
+//go:embed templates/*
+var FS embed.FS
+
+func ParseTemplate(l *template.Template, name string) *template.Template {
+	b, err := FS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return template.Must(l.Parse(string(b)))
+}

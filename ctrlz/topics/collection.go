@@ -60,13 +60,13 @@ func (c *collectionTopic) Prefix() string {
 // Activate is implementation of Topic.Activate.
 func (c *collectionTopic) Activate(context fw.TopicContext) {
 	l := template.Must(context.Layout().Clone())
-	c.mainTmpl = template.Must(l.Parse(string(assets.MustAsset("templates/collection/main.html"))))
+	c.mainTmpl = assets.ParseTemplate(l, "templates/collection/main.html")
 
 	l = template.Must(context.Layout().Clone())
-	c.listTmpl = template.Must(l.Parse(string(assets.MustAsset("templates/collection/list.html"))))
+	c.listTmpl = assets.ParseTemplate(l, "templates/collection/list.html")
 
 	l = template.Must(context.Layout().Clone())
-	c.itemTmpl = template.Must(l.Parse(string(assets.MustAsset("templates/collection/item.html"))))
+	c.itemTmpl = assets.ParseTemplate(l, "templates/collection/item.html")
 
 	_ = context.HTMLRouter().
 		StrictSlash(true).

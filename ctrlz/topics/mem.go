@@ -16,7 +16,6 @@
 package topics
 
 import (
-	"html/template"
 	"net/http"
 	"runtime"
 
@@ -40,7 +39,7 @@ func (memTopic) Prefix() string {
 }
 
 func (memTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/mem.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/mem.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ms := &runtime.MemStats{}

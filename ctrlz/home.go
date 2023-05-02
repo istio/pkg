@@ -63,8 +63,8 @@ func getHomeInfo() *homeInfo {
 }
 
 func registerHome(router *mux.Router, layout *template.Template) {
-	homeTmpl := template.Must(template.Must(layout.Clone()).Parse(string(assets.MustAsset("templates/home.html"))))
-	errorTmpl := template.Must(template.Must(layout.Clone()).Parse(string(assets.MustAsset("templates/404.html"))))
+	homeTmpl := assets.ParseTemplate(template.Must(layout.Clone()), "templates/home.html")
+	errorTmpl := assets.ParseTemplate(template.Must(layout.Clone()), "templates/404.html")
 
 	_ = router.NewRoute().PathPrefix("/").Methods("GET").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path == "/" {
@@ -72,7 +72,7 @@ func registerHome(router *mux.Router, layout *template.Template) {
 			fw.RenderHTML(w, homeTmpl, getHomeInfo())
 		} else if req.URL.Path == "/homej" || req.URL.Path == "/homej/" {
 			fw.RenderJSON(w, http.StatusOK, getHomeInfo())
-		} else if a, err := assets.Asset("static" + req.URL.Path); err == nil {
+		} else if a, err := assets.FS.ReadFile("static" + req.URL.Path); err == nil {
 			// static asset
 			ext := strings.ToLower(filepath.Ext(req.URL.Path))
 			if mime, ok := mimeTypes[ext]; ok {

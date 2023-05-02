@@ -16,7 +16,6 @@ package topics
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"strings"
 	"sync"
@@ -45,7 +44,7 @@ func (metricsTopic) Prefix() string {
 }
 
 func (metricsTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/metrics.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/metrics.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		fw.RenderHTML(w, tmpl, getMetricInfo())

@@ -15,7 +15,6 @@
 package topics
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 	"runtime"
@@ -75,7 +74,7 @@ func getProcInfo() *procInfo {
 }
 
 func (procTopic) Activate(context fw.TopicContext) {
-	tmpl := template.Must(context.Layout().Parse(string(assets.MustAsset("templates/proc.html"))))
+	tmpl := assets.ParseTemplate(context.Layout(), "templates/proc.html")
 
 	_ = context.HTMLRouter().StrictSlash(true).NewRoute().Path("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		fw.RenderHTML(w, tmpl, getProcInfo())
