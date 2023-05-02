@@ -272,14 +272,14 @@ func TestOpts(t *testing.T) {
 			})
 		}
 
-		_ = RegisterScope("foo", "bar", 0)
+		_ = RegisterScope("foo", "bar")
 	}
 }
 
 func TestSetLevel(t *testing.T) {
 	resetGlobals()
 
-	_ = RegisterScope("TestSetLevel", "", 0)
+	_ = RegisterScope("TestSetLevel", "")
 
 	cases := []struct {
 		levels      string

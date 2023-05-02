@@ -300,7 +300,7 @@ func processLevels(allScopes map[string]*Scope, arg string, setter func(*Scope, 
 			}
 			return nil
 		} else if s == GrpcScopeName {
-			grpcScope := RegisterScope(GrpcScopeName, "", 3)
+			grpcScope := registerScope(GrpcScopeName, "", 3)
 			logGrpc = true
 			setter(grpcScope, l)
 			return nil
