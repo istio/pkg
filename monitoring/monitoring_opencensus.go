@@ -1,5 +1,4 @@
-//go:build !opencensus
-// +build !opencensus
+//go:build !skip_opencensus
 
 // Copyright 2019 Istio Authors
 //
@@ -19,14 +18,13 @@ package monitoring
 
 import (
 	"context"
+
 	"go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"math"
-
 	"istio.io/pkg/log"
 )
 
@@ -76,9 +74,6 @@ func newGaugeOC(name, description string, opts ...Options) Metric {
 
 func newMetricOC(name, description string, aggregation *view.Aggregation, opts ...Options) Metric {
 	o := createOptions(opts...)
-	if o.useInt64 {
-		return newInt64Metric(name, description, aggregation, o)
-	}
 	return newFloat64Metric(name, description, aggregation, o)
 }
 
@@ -95,9 +90,9 @@ func newDerivedGaugeOpenCensus(name, description string, opts ...DerivedOptions)
 		base: m,
 		name: name,
 	}
-	if options.valueFn != nil {
-		derived.ValueFrom(options.valueFn)
-	}
+	//if options.valueFn != nil {
+	//	derived.ValueFrom(options.valueFn)
+	//}
 	return derived
 }
 
@@ -116,7 +111,7 @@ func (d *derivedFloat64Metric) Register() error {
 	return nil
 }
 
-func (d *derivedFloat64Metric) ValueFrom(valueFn func() float64, labelValues ...string) {
+func (d *derivedFloat64Metric) ValueFrom(valueFn func() float64, labelValues ...Attr) {
 	if len(labelValues) == 0 {
 		if err := d.base.UpsertEntry(valueFn); err != nil {
 			log.Errorf("failed to add value for derived metric %q: %v", d.name, err)
@@ -125,7 +120,7 @@ func (d *derivedFloat64Metric) ValueFrom(valueFn func() float64, labelValues ...
 	}
 	lv := make([]metricdata.LabelValue, 0, len(labelValues))
 	for _, l := range labelValues {
-		lv = append(lv, metricdata.NewLabelValue(l))
+		lv = append(lv, metricdata.NewLabelValue(l.Value))
 	}
 	if err := d.base.UpsertEntry(valueFn, lv...); err != nil {
 		log.Errorf("failed to add value for derived metric %q: %v", d.name, err)
@@ -149,7 +144,7 @@ func newFloat64Metric(name, description string, aggregation *view.Aggregation, o
 	measure := stats.Float64(name, description, string(opts.unit))
 	tagKeys := make([]tag.Key, 0, len(opts.labels))
 	for _, l := range opts.labels {
-		tagKeys = append(tagKeys, tag.MustNewKey(l))
+		tagKeys = append(tagKeys, tag.MustNewKey(string(l)))
 	}
 	ctx, _ := tag.New(context.Background()) //nolint:errcheck
 	return &float64Metric{
@@ -203,16 +198,20 @@ func (f *float64Metric) RecordInt(value int64) {
 // values for a Metric.
 type LabelValue tag.Mutator
 
-func toLabelValues(args ...string) []LabelValue {
+func toLabelValues(args ...Attr) []tag.Mutator {
+	t := make([]tag.Mutator, len(args))
+	for _, a := range args {
+		t = append(t, tag.Insert(tag.MustNewKey(a.Key), a.Value))
+	}
 	return nil
 }
 
-func (f *float64Metric) With(labelValues ...string) Metric {
+func (f *float64Metric) With(labelValues ...Attr) Metric {
 	t := make([]tag.Mutator, len(f.tags), len(f.tags)+len(labelValues))
 	copy(t, f.tags)
 	lv := toLabelValues(labelValues...)
 	for _, tagValue := range lv {
-		t = append(t, tag.Mutator(tagValue))
+		t = append(t, tagValue)
 	}
 	ctx, _ := tag.New(context.Background(), t...) //nolint:errcheck
 	return &float64Metric{
@@ -227,94 +226,4 @@ func (f *float64Metric) With(labelValues ...string) Metric {
 
 func (f *float64Metric) Register() error {
 	return view.Register(f.view)
-}
-
-type int64Metric struct {
-	*stats.Int64Measure
-
-	// tags stores all tags for the metrics
-	tags []tag.Mutator
-	// ctx is a precomputed context holding tags, as an optimization
-	ctx  context.Context
-	view *view.View
-
-	// incrementMeasure is a precomputed +1 measurement to avoid extra allocations in Increment()
-	incrementMeasure []stats.Measurement
-	// decrementMeasure is a precomputed -1 measurement to avoid extra allocations in Decrement()
-	decrementMeasure []stats.Measurement
-}
-
-func newInt64Metric(name, description string, aggregation *view.Aggregation, opts *options) *int64Metric {
-	measure := stats.Int64(name, description, string(opts.unit))
-	tagKeys := make([]tag.Key, 0, len(opts.labels))
-	for _, l := range opts.labels {
-		tagKeys = append(tagKeys, tag.MustNewKey(l))
-	}
-	ctx, _ := tag.New(context.Background()) //nolint:errcheck
-	return &int64Metric{
-		Int64Measure:     measure,
-		tags:             make([]tag.Mutator, 0),
-		ctx:              ctx,
-		view:             &view.View{Measure: measure, TagKeys: tagKeys, Aggregation: aggregation},
-		incrementMeasure: []stats.Measurement{measure.M(1)},
-		decrementMeasure: []stats.Measurement{measure.M(-1)},
-	}
-}
-
-func (i *int64Metric) Increment() {
-	i.recordMeasurements(i.incrementMeasure)
-}
-
-func (i *int64Metric) Decrement() {
-	i.recordMeasurements(i.decrementMeasure)
-}
-
-func (i *int64Metric) Name() string {
-	return i.Int64Measure.Name()
-}
-
-func (i *int64Metric) Record(value float64) {
-	i.RecordInt(int64(math.Floor(value)))
-}
-
-func (i *int64Metric) recordMeasurements(m []stats.Measurement) {
-	recordHookMutex.RLock()
-	if rh, ok := recordHooks[i.Name()]; ok {
-		for _, mv := range m {
-			rh.OnRecordInt64Measure(i.Int64Measure, i.tags, int64(math.Floor(mv.Value())))
-		}
-	}
-	recordHookMutex.RUnlock()
-	stats.Record(i.ctx, m...) //nolint:errcheck
-}
-
-func (i *int64Metric) RecordInt(value int64) {
-	recordHookMutex.RLock()
-	if rh, ok := recordHooks[i.Name()]; ok {
-		rh.OnRecordInt64Measure(i.Int64Measure, i.tags, value)
-	}
-	recordHookMutex.RUnlock()
-	stats.Record(i.ctx, i.M(value)) //nolint:errcheck
-}
-
-func (i *int64Metric) With(labelValues ...string) Metric {
-	t := make([]tag.Mutator, len(i.tags), len(i.tags)+len(labelValues))
-	copy(t, i.tags)
-	lv := toLabelValues(labelValues...)
-	for _, tagValue := range lv {
-		t = append(t, tag.Mutator(tagValue))
-	}
-	ctx, _ := tag.New(context.Background(), t...) //nolint:errcheck
-	return &int64Metric{
-		Int64Measure:     i.Int64Measure,
-		tags:             t,
-		ctx:              ctx,
-		view:             i.view,
-		incrementMeasure: i.incrementMeasure,
-		decrementMeasure: i.decrementMeasure,
-	}
-}
-
-func (i *int64Metric) Register() error {
-	return view.Register(i.view)
 }

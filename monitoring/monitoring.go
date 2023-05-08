@@ -15,6 +15,8 @@
 package monitoring
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -66,7 +68,7 @@ type (
 		// a set of pre-dimensioned data for recording purposes. This is primarily used
 		// for documentation and convenience. Metrics created with this method do not need
 		// to be registered (they share the registration of their parent Metric).
-		With(labelValues ...string) Metric
+		With(labelValues ...Attr) Metric
 
 		// Register configures the Metric for export. It MUST be called before collection
 		// of values for the Metric. An error will be returned if registration fails.
@@ -91,7 +93,7 @@ type (
 		// ValueFrom may be called without any labelValues. Otherwise, the labelValues
 		// supplied MUST match the label keys supplied at creation time both in number
 		// and in order.
-		ValueFrom(valueFn func() float64, labelValues ...string)
+		ValueFrom(valueFn func() float64, labelValues ...Attr)
 	}
 
 	disabledMetric struct {
@@ -108,18 +110,18 @@ type (
 	//Label Key
 
 	options struct {
-		unit     Unit
-		labels   []string // Label
-		useInt64 bool
+		unit   Unit
+		labels []Label // Label
+		//useInt64 bool
 	}
 
 	derivedOptions struct {
 		labelKeys []string
-		valueFn   func() float64
+		//valueFn   func() float64
 	}
 )
 
-func (dm *disabledMetric) ValueFrom(valueFn func() float64, labelValues ...string) {
+func (dm *disabledMetric) ValueFrom(valueFn func() float64, labelValues ...Attr) {
 }
 
 // Decrement implements Metric
@@ -145,7 +147,7 @@ func (dm *disabledMetric) Register() error {
 }
 
 // With implements Metric
-func (dm *disabledMetric) With(labelValues ...string) Metric {
+func (dm *disabledMetric) With(labelValues ...Attr) Metric {
 	return dm
 }
 
@@ -157,7 +159,7 @@ var (
 
 // WithLabels provides configuration options for a new Metric, providing the expected
 // dimensions for data collection for that Metric.
-func WithLabels(labels ...string) Options {
+func WithLabels(labels ...Label) Options {
 	return func(opts *options) {
 		opts.labels = labels
 	}
@@ -165,20 +167,23 @@ func WithLabels(labels ...string) Options {
 
 // WithUnit provides configuration options for a new Metric, providing unit of measure
 // information for a new Metric.
+// Used only 2x - once the type is part of the name ( as recommended), once is not.
+// TODO: get rid of it.
 func WithUnit(unit Unit) Options {
 	return func(opts *options) {
 		opts.unit = unit
 	}
 }
 
-// WithInt64Values provides configuration options for a new Metric, indicating that
-// recorded values will be saved as int64 values. Any float64 values recorded will
-// converted to int64s via math.Floor-based conversion.
-func WithInt64Values() Options {
-	return func(opts *options) {
-		opts.useInt64 = true
-	}
-}
+// Not used
+//// WithInt64Values provides configuration options for a new Metric, indicating that
+//// recorded values will be saved as int64 values. Any float64 values recorded will
+//// converted to int64s via math.Floor-based conversion.
+//func WithInt64Values() Options {
+//	return func(opts *options) {
+//		opts.useInt64 = true
+//	}
+//}
 
 // WithLabelKeys is used to configure the label keys used by a DerivedMetric. This
 // option is mutually exclusive with the derived option `WithValueFrom` and will be ignored
@@ -189,14 +194,14 @@ func WithLabelKeys(keys ...string) DerivedOptions {
 	}
 }
 
-// WithValueFrom is used to configure the derivation of a DerivedMetric. This option
-// is mutually exclusive with the derived option `WithLabelKeys`. It acts as syntactic sugar
-// that elides the need to create a DerivedMetric (with no labels) and then call `ValueFrom`.
-func WithValueFrom(valueFn func() float64) DerivedOptions {
-	return func(opts *derivedOptions) {
-		opts.valueFn = valueFn
-	}
-}
+//// WithValueFrom is used to configure the derivation of a DerivedMetric. This option
+//// is mutually exclusive with the derived option `WithLabelKeys`. It acts as syntactic sugar
+//// that elides the need to create a DerivedMetric (with no labels) and then call `ValueFrom`.
+//func WithValueFrom(valueFn func() float64) DerivedOptions {
+//	return func(opts *derivedOptions) {
+//		opts.valueFn = valueFn
+//	}
+//}
 
 //// Value creates a new LabelValue for the Label.
 //func (l Label) Value(value string) LabelValue {
@@ -212,6 +217,25 @@ func WithValueFrom(valueFn func() float64) DerivedOptions {
 //	}
 //	return Label(k)
 //}
+
+type Label string
+
+type Attr struct {
+	Key   string
+	Value string
+}
+
+// MustCreateLabel is a temporary method to ease migration.
+func MustCreateLabel(key string) Label {
+	return Label(key)
+}
+
+func (l Label) Value(v string) Attr {
+	return Attr{
+		Key:   string(l),
+		Value: v,
+	}
+}
 
 // MustRegister is a helper function that will ensure that the provided Metrics are
 // registered. If a metric fails to register, this method will panic.
@@ -240,6 +264,37 @@ func RegisterIf(metric Metric, enabled func() bool) Metric {
 
 // NewSum creates a new Metric with an aggregation type of Sum (the values will be cumulative).
 // That means that data collected by the new Metric will be summed before export.
+// Per prom conventions, must have a name ending in _total or _unit_total
+//
+// _count _sum and _bucket should be used with histograms
+//
+// Istio doesn't do this for:
+//
+// num_outgoing_retries
+// pilot_total_rejected_configs
+// provider_lookup_cluster_failures
+// xds_cache_reads
+// xds_cache_evictions
+// pilot_k8s_cfg_events
+// pilot_k8s_reg_events
+// pilot_k8s_endpoints_with_no_pods
+// pilot_total_xds_rejects
+// pilot_xds_expired_nonce
+// pilot_xds_write_timeout
+// pilot_xds_pushes
+// pilot_push_triggers
+// pilot_xds_push_context_errors
+// pilot_total_xds_internal_errors
+// pilot_inbound_updates
+// wasm_cache_lookup_count
+// wasm_remote_fetch_count
+// wasm_config_conversion_count
+// citadel_server_csr_count
+// citadel_server_authentication_failure_count
+// citadel_server_csr_parsing_err_count
+// citadel_server_id_extraction_err_count
+// citadel_server_csr_sign_err_count
+// citadel_server_success_cert_issuance_count
 func NewSum(name, description string, opts ...Options) Metric {
 	return newSum(name, description, opts...)
 }
@@ -247,6 +302,9 @@ func NewSum(name, description string, opts ...Options) Metric {
 // NewGauge creates a new Metric with an aggregation type of LastValue. That means that data collected
 // by the new Metric will export only the last recorded value.
 func NewGauge(name, description string, opts ...Options) Metric {
+	if strings.HasSuffix(name, "_total") {
+		fmt.Println(name)
+	}
 	return newGauge(name, description, opts...)
 }
 
@@ -271,7 +329,7 @@ var newDistribution func(name, description string, bounds []float64, opts ...Opt
 var newDerivedGauge func(name, description string, opts ...DerivedOptions) DerivedMetric
 
 func createOptions(opts ...Options) *options {
-	o := &options{unit: None, labels: make([]string, 0)}
+	o := &options{unit: None, labels: make([]Label, 0)}
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -283,10 +341,10 @@ func createDerivedOptions(opts ...DerivedOptions) *derivedOptions {
 	for _, opt := range opts {
 		opt(o)
 	}
-	// if a valueFn is supplied, then no label values can be supplied.
-	// to prevent issues, drop the label keys
-	if o.valueFn != nil {
-		o.labelKeys = []string{}
-	}
+	//// if a valueFn is supplied, then no label values can be supplied.
+	//// to prevent issues, drop the label keys
+	//if o.valueFn != nil {
+	//	o.labelKeys = []string{}
+	//}
 	return o
 }
