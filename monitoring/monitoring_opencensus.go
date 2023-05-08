@@ -18,6 +18,7 @@ package monitoring
 
 import (
 	"context"
+	"sync"
 
 	"go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
@@ -29,6 +30,7 @@ import (
 )
 
 var (
+	recordHookMutex sync.RWMutex
 	recordHooks     map[string]RecordHook
 	derivedRegistry = metric.NewRegistry()
 )

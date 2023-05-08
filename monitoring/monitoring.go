@@ -14,15 +14,7 @@
 
 package monitoring
 
-import (
-	"fmt"
-	"strings"
-	"sync"
-)
-
 // OpenCensus independent metrics
-// Removed unused code:
-// - Metric.Decrement
 
 type (
 	// A Metric collects numerical observations.
@@ -42,7 +34,7 @@ type (
 		//Decrement()
 
 		// Name returns the name value of a Metric.
-		// TODO: internal use only
+		// TODO: internal use only, make private
 		Name() string
 
 		// Record makes an observation of the provided value for the given measure.
@@ -52,17 +44,6 @@ type (
 		// RecordInt makes an observation of the provided value for the measure.
 		// Not actually used in Istio.
 		//RecordInt(value int64)
-
-		// Prometheus uses ConterVec and With(map[string]string) returning Counter
-		//
-		// Expvar doesn't support labels - but can be used in the name, creating a new expvar in a map
-		// The labels are really made part of the name when exporting and is the name of the TS
-		//
-		// Otel uses attribute.Int("name", val) and similar - from the stable package -
-		// but doesn't create a new Metric, it is an option to Add().
-		//
-		// Istio only uses string/string - so using the pattern from slog works.
-		// Once we adopt slog, we can start using slog.Attr pattern
 
 		// With creates a new Metric, with the LabelValues provided. This allows creating
 		// a set of pre-dimensioned data for recording purposes. This is primarily used
@@ -106,56 +87,38 @@ type (
 	// DerivedOptions encode changes to the options passed to a DerivedMetric at creation time.
 	DerivedOptions func(*derivedOptions)
 
-	// A Label provides a named dimension for a Metric.
-	//Label Key
-
 	options struct {
 		unit   Unit
 		labels []Label // Label
-		//useInt64 bool
 	}
 
 	derivedOptions struct {
 		labelKeys []string
-		//valueFn   func() float64
 	}
 )
 
-func (dm *disabledMetric) ValueFrom(valueFn func() float64, labelValues ...Attr) {
+func (dm *disabledMetric) ValueFrom(func() float64, ...Attr) {
 }
 
-// Decrement implements Metric
-func (dm *disabledMetric) Decrement() {}
-
-// Increment implements Metric
 func (dm *disabledMetric) Increment() {}
 
-// Name implements Metric
 func (dm *disabledMetric) Name() string {
 	return dm.name
 }
 
-// Record implements Metric
 func (dm *disabledMetric) Record(value float64) {}
 
-// RecordInt implements Metric
 func (dm *disabledMetric) RecordInt(value int64) {}
 
-// Register implements Metric
 func (dm *disabledMetric) Register() error {
 	return nil
 }
 
-// With implements Metric
 func (dm *disabledMetric) With(labelValues ...Attr) Metric {
 	return dm
 }
 
 var _ Metric = &disabledMetric{}
-
-var (
-	recordHookMutex sync.RWMutex
-)
 
 // WithLabels provides configuration options for a new Metric, providing the expected
 // dimensions for data collection for that Metric.
@@ -168,22 +131,12 @@ func WithLabels(labels ...Label) Options {
 // WithUnit provides configuration options for a new Metric, providing unit of measure
 // information for a new Metric.
 // Used only 2x - once the type is part of the name ( as recommended), once is not.
-// TODO: get rid of it.
+// TODO: get rid of it or use consistently in ALL metrics.
 func WithUnit(unit Unit) Options {
 	return func(opts *options) {
 		opts.unit = unit
 	}
 }
-
-// Not used
-//// WithInt64Values provides configuration options for a new Metric, indicating that
-//// recorded values will be saved as int64 values. Any float64 values recorded will
-//// converted to int64s via math.Floor-based conversion.
-//func WithInt64Values() Options {
-//	return func(opts *options) {
-//		opts.useInt64 = true
-//	}
-//}
 
 // WithLabelKeys is used to configure the label keys used by a DerivedMetric. This
 // option is mutually exclusive with the derived option `WithValueFrom` and will be ignored
@@ -194,32 +147,11 @@ func WithLabelKeys(keys ...string) DerivedOptions {
 	}
 }
 
-//// WithValueFrom is used to configure the derivation of a DerivedMetric. This option
-//// is mutually exclusive with the derived option `WithLabelKeys`. It acts as syntactic sugar
-//// that elides the need to create a DerivedMetric (with no labels) and then call `ValueFrom`.
-//func WithValueFrom(valueFn func() float64) DerivedOptions {
-//	return func(opts *derivedOptions) {
-//		opts.valueFn = valueFn
-//	}
-//}
-
-//// Value creates a new LabelValue for the Label.
-//func (l Label) Value(value string) LabelValue {
-//	return tag.Upsert(tag.Key(l), value)
-//}
-//
-//// MustCreateLabel will attempt to create a new Label. If
-//// creation fails, then this method will panic.
-//func MustCreateLabel(key string) Label {
-//	k, err := NewKey(key)
-//	if err != nil {
-//		panic(fmt.Errorf("could not create label %q: %v", key, err))
-//	}
-//	return Label(k)
-//}
-
+// Label is used to ease migration from opencensus. Will be eventually replaced
+// with the otel attributes, but in a second stage.
 type Label string
 
+// Attr is used to ease migration and minimize changes. Will be replaced by otel attributes.
 type Attr struct {
 	Key   string
 	Value string
@@ -264,9 +196,7 @@ func RegisterIf(metric Metric, enabled func() bool) Metric {
 
 // NewSum creates a new Metric with an aggregation type of Sum (the values will be cumulative).
 // That means that data collected by the new Metric will be summed before export.
-// Per prom conventions, must have a name ending in _total or _unit_total
-//
-// _count _sum and _bucket should be used with histograms
+// Per prom conventions, must have a name ending in _total.
 //
 // Istio doesn't do this for:
 //
@@ -302,9 +232,6 @@ func NewSum(name, description string, opts ...Options) Metric {
 // NewGauge creates a new Metric with an aggregation type of LastValue. That means that data collected
 // by the new Metric will export only the last recorded value.
 func NewGauge(name, description string, opts ...Options) Metric {
-	if strings.HasSuffix(name, "_total") {
-		fmt.Println(name)
-	}
 	return newGauge(name, description, opts...)
 }
 
@@ -323,6 +250,7 @@ func NewDistribution(name, description string, bounds []float64, opts ...Options
 	return newDistribution(name, description, bounds, opts...)
 }
 
+// Internal methods used to hook one of the conditionally compiled implementations.
 var newSum func(name, description string, opts ...Options) Metric
 var newGauge func(name, description string, opts ...Options) Metric
 var newDistribution func(name, description string, bounds []float64, opts ...Options) Metric
@@ -341,10 +269,5 @@ func createDerivedOptions(opts ...DerivedOptions) *derivedOptions {
 	for _, opt := range opts {
 		opt(o)
 	}
-	//// if a valueFn is supplied, then no label values can be supplied.
-	//// to prevent issues, drop the label keys
-	//if o.valueFn != nil {
-	//	o.labelKeys = []string{}
-	//}
 	return o
 }
