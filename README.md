@@ -3,6 +3,12 @@
 [![GolangCI](https://golangci.com/badges/github.com/istio/pkg.svg)](https://golangci.com/r/github.com/istio/pkg)
 [![GoDoc](https://godoc.org/istio.io/pkg?status.svg)](https://godoc.org/istio.io/pkg)
 
+# Deprecation Notice
+
+This repo has been merged into [istio.io/istio/pkg](https://github.com/istio/istio/blob/master/pkg/). Please go to that repo
+to make any changes. The only exception is bug backports, which should be submitted here. The text
+below is preserved for reference but is no longer maintained at this location.
+
 # Common Istio Packages
 
 Common utility packages leveraged by other repos.
